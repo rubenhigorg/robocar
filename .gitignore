@@ -1,2 +1,7 @@
 .vscode/*
 .venv/*
+
+# Ficheros generados por colcon
+install/*
+log/*
+build/*
