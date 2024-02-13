@@ -18,8 +18,8 @@ class MotorNode(Node):
     def listener_callback(self, msg):
         # Aquí puedes añadir el código para controlar los motores con self.kit
         # Por ejemplo:
-        self.kit.servo[0].angle = msg.linear_x
-        self.kit.servo[1].angle = msg.angular_z
+        self.kit.servo[0].angle = msg.linear.x * 10
+        # self.kit.servo[1].angle = msg.angular_z
 
 def main(args=None):
     rclpy.init(args=args)
