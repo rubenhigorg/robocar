@@ -1,6 +1,9 @@
 .vscode/*
 .venv/*
 
+# Binarios de prueba
+pruebas/VL53L0X_rasp
+
 # Ficheros generados por colcon
 install/*
 log/*
