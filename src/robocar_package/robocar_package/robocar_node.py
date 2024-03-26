@@ -1,4 +1,5 @@
 from os import wait
+import time
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Joy
@@ -13,18 +14,20 @@ class MotorNode(Node):
             'joy',
             self.listener_callback_motor,
             10)
-        #self.subscription  # prevent unused variable warning
         self.kit = ServoKit(channels=16)
-        #self.kit.servo[2].angle = 101
-        #self.kit.servo[1].angle = 91
+
 
     def listener_callback_motor(self, msg):
         # Mapear la velocidad angular a la dirección
-        angleDir = self.map_value_direction(msg.axes[0], 1.0, -1.0, 23.0, 180.0)
+        angleDir = self.map_value_direction(msg.axes[0], 1.0, -1.0, 170.0, 40.0)
         self.get_logger().info('Dir: %s' % angleDir)
         self.kit.servo[2].angle = angleDir
 
-        angleMotor = self.map_value_motor(msg.axes[5], 0.9999, -0.9999, 51, 15) * 1.8  # msg.axes[5] = R2 potenciometro
+        if msg.buttons[4] == 1: # Si esta pulsado L1 ira marcha atras:
+            angleMotor = self.map_value_motor(msg.axes[5], 0.9999, -0.9999, 55, 80) * 1.8  # msg.axes[5] = R2 potenciometro    
+        else:
+            angleMotor = self.map_value_motor(msg.axes[5], 0.9999, -0.9999, 51, 15) * 1.8  # msg.axes[5] = R2 potenciometro
+
         self.get_logger().info('Motor 0: %s' % angleMotor)
         self.kit.servo[0].angle = float(angleMotor)
         self.kit.servo[1].angle = float(angleMotor)
