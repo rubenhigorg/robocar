@@ -1,0 +1,46 @@
+[3.783s] Invoking command in '/home/lab/robocar/src/robocar_package': PYTHONPATH=/home/lab/robocar/src/build/robocar_package/prefix_override:/home/lab/robocar/src/install/robocar_package/lib/python3.10/site-packages:${PYTHONPATH} VIRTUAL_ENV_PROMPT=(.venv) /home/lab/robocar/.venv/bin/python3 -W ignore:setup.py install is deprecated setup.py egg_info --egg-base ../build/robocar_package build --build-base /home/lab/robocar/src/build/robocar_package/build install --record /home/lab/robocar/src/build/robocar_package/install.log --single-version-externally-managed install_data
+[5.085s] running egg_info
+[5.088s] creating ../build/robocar_package/robocar_package.egg-info
+[5.090s] writing ../build/robocar_package/robocar_package.egg-info/PKG-INFO
+[5.092s] writing dependency_links to ../build/robocar_package/robocar_package.egg-info/dependency_links.txt
+[5.094s] writing entry points to ../build/robocar_package/robocar_package.egg-info/entry_points.txt
+[5.096s] writing requirements to ../build/robocar_package/robocar_package.egg-info/requires.txt
+[5.097s] writing top-level names to ../build/robocar_package/robocar_package.egg-info/top_level.txt
+[5.099s] writing manifest file '../build/robocar_package/robocar_package.egg-info/SOURCES.txt'
+[5.109s] reading manifest file '../build/robocar_package/robocar_package.egg-info/SOURCES.txt'
+[5.110s] adding license file 'LICENSE'
+[5.115s] writing manifest file '../build/robocar_package/robocar_package.egg-info/SOURCES.txt'
+[5.116s] running build
+[5.117s] running build_py
+[5.118s] creating /home/lab/robocar/src/build/robocar_package/build
+[5.119s] creating /home/lab/robocar/src/build/robocar_package/build/lib
+[5.119s] creating /home/lab/robocar/src/build/robocar_package/build/lib/robocar_package
+[5.123s] copying robocar_package/energy_node.py -> /home/lab/robocar/src/build/robocar_package/build/lib/robocar_package
+[5.124s] copying robocar_package/robocar_node.py -> /home/lab/robocar/src/build/robocar_package/build/lib/robocar_package
+[5.125s] copying robocar_package/__init__.py -> /home/lab/robocar/src/build/robocar_package/build/lib/robocar_package
+[5.135s] running install
+[5.140s] running install_lib
+[5.140s] creating /home/lab/robocar/src/install/robocar_package/lib/python3.10/site-packages/robocar_package
+[5.141s] copying /home/lab/robocar/src/build/robocar_package/build/lib/robocar_package/energy_node.py -> /home/lab/robocar/src/install/robocar_package/lib/python3.10/site-packages/robocar_package
+[5.142s] copying /home/lab/robocar/src/build/robocar_package/build/lib/robocar_package/robocar_node.py -> /home/lab/robocar/src/install/robocar_package/lib/python3.10/site-packages/robocar_package
+[5.142s] copying /home/lab/robocar/src/build/robocar_package/build/lib/robocar_package/__init__.py -> /home/lab/robocar/src/install/robocar_package/lib/python3.10/site-packages/robocar_package
+[5.143s] byte-compiling /home/lab/robocar/src/install/robocar_package/lib/python3.10/site-packages/robocar_package/energy_node.py to energy_node.cpython-310.pyc
+[5.143s] byte-compiling /home/lab/robocar/src/install/robocar_package/lib/python3.10/site-packages/robocar_package/robocar_node.py to robocar_node.cpython-310.pyc
+[5.144s] byte-compiling /home/lab/robocar/src/install/robocar_package/lib/python3.10/site-packages/robocar_package/__init__.py to __init__.cpython-310.pyc
+[5.145s] running install_data
+[5.147s] creating /home/lab/robocar/src/install/robocar_package/share
+[5.147s] creating /home/lab/robocar/src/install/robocar_package/share/ament_index
+[5.150s] creating /home/lab/robocar/src/install/robocar_package/share/ament_index/resource_index
+[5.150s] creating /home/lab/robocar/src/install/robocar_package/share/ament_index/resource_index/packages
+[5.151s] copying resource/robocar_package -> /home/lab/robocar/src/install/robocar_package/share/ament_index/resource_index/packages
+[5.152s] creating /home/lab/robocar/src/install/robocar_package/share/robocar_package
+[5.153s] copying package.xml -> /home/lab/robocar/src/install/robocar_package/share/robocar_package
+[5.153s] creating /home/lab/robocar/src/install/robocar_package/share/robocar_package/msg
+[5.154s] copying msg/Energy.msg -> /home/lab/robocar/src/install/robocar_package/share/robocar_package/msg
+[5.160s] running install_egg_info
+[5.169s] Copying ../build/robocar_package/robocar_package.egg-info to /home/lab/robocar/src/install/robocar_package/lib/python3.10/site-packages/robocar_package-0.0.0-py3.10.egg-info
+[5.178s] running install_scripts
+[5.277s] Installing energy_node script to /home/lab/robocar/src/install/robocar_package/lib/robocar_package
+[5.278s] Installing robocar_node script to /home/lab/robocar/src/install/robocar_package/lib/robocar_package
+[5.281s] writing list of installed files to '/home/lab/robocar/src/build/robocar_package/install.log'
+[5.420s] Invoked command in '/home/lab/robocar/src/robocar_package' returned '0': PYTHONPATH=/home/lab/robocar/src/build/robocar_package/prefix_override:/home/lab/robocar/src/install/robocar_package/lib/python3.10/site-packages:${PYTHONPATH} VIRTUAL_ENV_PROMPT=(.venv) /home/lab/robocar/.venv/bin/python3 -W ignore:setup.py install is deprecated setup.py egg_info --egg-base ../build/robocar_package build --build-base /home/lab/robocar/src/build/robocar_package/build install --record /home/lab/robocar/src/build/robocar_package/install.log --single-version-externally-managed install_data

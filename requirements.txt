@@ -2,3 +2,5 @@ adafruit-circuitpython-servokit
 setuptools==65.5.1
 RPi.GPIO
 smbus2
+empy==3.3.4
+lark-parser

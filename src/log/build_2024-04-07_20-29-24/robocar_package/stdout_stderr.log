@@ -1,0 +1,21 @@
+running egg_info
+writing ../build/robocar_package/robocar_package.egg-info/PKG-INFO
+writing dependency_links to ../build/robocar_package/robocar_package.egg-info/dependency_links.txt
+writing entry points to ../build/robocar_package/robocar_package.egg-info/entry_points.txt
+writing requirements to ../build/robocar_package/robocar_package.egg-info/requires.txt
+writing top-level names to ../build/robocar_package/robocar_package.egg-info/top_level.txt
+reading manifest file '../build/robocar_package/robocar_package.egg-info/SOURCES.txt'
+adding license file 'LICENSE'
+writing manifest file '../build/robocar_package/robocar_package.egg-info/SOURCES.txt'
+running build
+running build_py
+running install
+running install_lib
+running install_data
+running install_egg_info
+removing '/home/lab/robocar/src/install/robocar_package/lib/python3.10/site-packages/robocar_package-0.0.0-py3.10.egg-info' (and everything under it)
+Copying ../build/robocar_package/robocar_package.egg-info to /home/lab/robocar/src/install/robocar_package/lib/python3.10/site-packages/robocar_package-0.0.0-py3.10.egg-info
+running install_scripts
+Installing car_control_node script to /home/lab/robocar/src/install/robocar_package/lib/robocar_package
+Installing energy_node script to /home/lab/robocar/src/install/robocar_package/lib/robocar_package
+writing list of installed files to '/home/lab/robocar/src/build/robocar_package/install.log'

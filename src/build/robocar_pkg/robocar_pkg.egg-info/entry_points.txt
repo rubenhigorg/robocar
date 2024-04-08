@@ -1,0 +1,4 @@
+[console_scripts]
+car_control_node = robocar_pkg.car_control_node:main
+energy_node = robocar_pkg.energy_node:main
+

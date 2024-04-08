@@ -1,0 +1,4 @@
+Invoking command in '/home/lab/robocar/src/build/teleop_twist_joy': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/iron VIRTUAL_ENV_PROMPT=(.venv) /usr/bin/cmake --build /home/lab/robocar/src/build/teleop_twist_joy -- -j4 -l4
+Invoked command in '/home/lab/robocar/src/build/teleop_twist_joy' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/iron VIRTUAL_ENV_PROMPT=(.venv) /usr/bin/cmake --build /home/lab/robocar/src/build/teleop_twist_joy -- -j4 -l4
+Invoking command in '/home/lab/robocar/src/build/teleop_twist_joy': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/iron VIRTUAL_ENV_PROMPT=(.venv) /usr/bin/cmake --install /home/lab/robocar/src/build/teleop_twist_joy
+Invoked command in '/home/lab/robocar/src/build/teleop_twist_joy' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/iron VIRTUAL_ENV_PROMPT=(.venv) /usr/bin/cmake --install /home/lab/robocar/src/build/teleop_twist_joy

@@ -1,0 +1,38 @@
+[16.075s] Invoking command in '/home/lab/robocar/src/robocar_pkg': PYTHONPATH=/home/lab/robocar/src/build/robocar_pkg/prefix_override:/home/lab/robocar/src/install/robocar_pkg/lib/python3.10/site-packages:${PYTHONPATH} VIRTUAL_ENV_PROMPT=(.venv) /home/lab/robocar/.venv/bin/python3 -W ignore:setup.py install is deprecated setup.py egg_info --egg-base ../build/robocar_pkg build --build-base /home/lab/robocar/src/build/robocar_pkg/build install --record /home/lab/robocar/src/build/robocar_pkg/install.log --single-version-externally-managed install_data
+[18.428s] running egg_info
+[18.432s] creating ../build/robocar_pkg/robocar_pkg.egg-info
+[18.433s] writing ../build/robocar_pkg/robocar_pkg.egg-info/PKG-INFO
+[18.436s] writing dependency_links to ../build/robocar_pkg/robocar_pkg.egg-info/dependency_links.txt
+[18.441s] writing entry points to ../build/robocar_pkg/robocar_pkg.egg-info/entry_points.txt
+[18.442s] writing requirements to ../build/robocar_pkg/robocar_pkg.egg-info/requires.txt
+[18.442s] writing top-level names to ../build/robocar_pkg/robocar_pkg.egg-info/top_level.txt
+[18.443s] writing manifest file '../build/robocar_pkg/robocar_pkg.egg-info/SOURCES.txt'
+[18.458s] reading manifest file '../build/robocar_pkg/robocar_pkg.egg-info/SOURCES.txt'
+[18.464s] adding license file 'LICENSE'
+[18.465s] writing manifest file '../build/robocar_pkg/robocar_pkg.egg-info/SOURCES.txt'
+[18.470s] running build
+[18.471s] running build_py
+[18.472s] creating /home/lab/robocar/src/build/robocar_pkg/build
+[18.483s] creating /home/lab/robocar/src/build/robocar_pkg/build/lib
+[18.492s] creating /home/lab/robocar/src/build/robocar_pkg/build/lib/robocar_pkg
+[18.492s] copying robocar_pkg/car_control_node.py -> /home/lab/robocar/src/build/robocar_pkg/build/lib/robocar_pkg
+[18.493s] copying robocar_pkg/__init__.py -> /home/lab/robocar/src/build/robocar_pkg/build/lib/robocar_pkg
+[18.498s] running install
+[18.499s] running install_lib
+[18.500s] creating /home/lab/robocar/src/install/robocar_pkg/lib/python3.10/site-packages/robocar_pkg
+[18.501s] copying /home/lab/robocar/src/build/robocar_pkg/build/lib/robocar_pkg/car_control_node.py -> /home/lab/robocar/src/install/robocar_pkg/lib/python3.10/site-packages/robocar_pkg
+[18.502s] copying /home/lab/robocar/src/build/robocar_pkg/build/lib/robocar_pkg/__init__.py -> /home/lab/robocar/src/install/robocar_pkg/lib/python3.10/site-packages/robocar_pkg
+[18.502s] byte-compiling /home/lab/robocar/src/install/robocar_pkg/lib/python3.10/site-packages/robocar_pkg/car_control_node.py to car_control_node.cpython-310.pyc
+[18.503s] byte-compiling /home/lab/robocar/src/install/robocar_pkg/lib/python3.10/site-packages/robocar_pkg/__init__.py to __init__.cpython-310.pyc
+[18.521s] running install_data
+[18.522s] creating /home/lab/robocar/src/install/robocar_pkg/share/ament_index
+[18.523s] creating /home/lab/robocar/src/install/robocar_pkg/share/ament_index/resource_index
+[18.524s] creating /home/lab/robocar/src/install/robocar_pkg/share/ament_index/resource_index/packages
+[18.524s] copying resource/robocar_pkg -> /home/lab/robocar/src/install/robocar_pkg/share/ament_index/resource_index/packages
+[18.525s] copying package.xml -> /home/lab/robocar/src/install/robocar_pkg/share/robocar_pkg
+[18.533s] running install_egg_info
+[18.539s] Copying ../build/robocar_pkg/robocar_pkg.egg-info to /home/lab/robocar/src/install/robocar_pkg/lib/python3.10/site-packages/robocar_pkg-0.0.0-py3.10.egg-info
+[18.549s] running install_scripts
+[18.650s] Installing car_control_node script to /home/lab/robocar/src/install/robocar_pkg/lib/robocar_pkg
+[18.652s] writing list of installed files to '/home/lab/robocar/src/build/robocar_pkg/install.log'
+[18.798s] Invoked command in '/home/lab/robocar/src/robocar_pkg' returned '0': PYTHONPATH=/home/lab/robocar/src/build/robocar_pkg/prefix_override:/home/lab/robocar/src/install/robocar_pkg/lib/python3.10/site-packages:${PYTHONPATH} VIRTUAL_ENV_PROMPT=(.venv) /home/lab/robocar/.venv/bin/python3 -W ignore:setup.py install is deprecated setup.py egg_info --egg-base ../build/robocar_pkg build --build-base /home/lab/robocar/src/build/robocar_pkg/build install --record /home/lab/robocar/src/build/robocar_pkg/install.log --single-version-externally-managed install_data

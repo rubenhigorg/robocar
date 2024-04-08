@@ -1,0 +1,108 @@
+[1.672s] Invoking command in '/home/lab/robocar/src/build/teleop_twist_joy': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/iron VIRTUAL_ENV_PROMPT=(.venv) /usr/bin/cmake /home/lab/robocar/src/teleop_twist_joy -DCMAKE_INSTALL_PREFIX=/home/lab/robocar/src/install/teleop_twist_joy
+[2.132s] -- The C compiler identification is GNU 11.4.0
+[2.741s] -- The CXX compiler identification is GNU 11.4.0
+[2.786s] -- Detecting C compiler ABI info
+[3.424s] -- Detecting C compiler ABI info - done
+[3.495s] -- Check for working C compiler: /usr/bin/cc - skipped
+[3.497s] -- Detecting C compile features
+[3.501s] -- Detecting C compile features - done
+[3.535s] -- Detecting CXX compiler ABI info
+[4.302s] -- Detecting CXX compiler ABI info - done
+[4.368s] -- Check for working CXX compiler: /usr/bin/c++ - skipped
+[4.371s] -- Detecting CXX compile features
+[4.383s] -- Detecting CXX compile features - done
+[4.929s] -- Found ament_cmake: 2.0.4 (/opt/ros/iron/share/ament_cmake/cmake)
+[7.255s] -- Found Python3: /home/lab/robocar/.venv/bin/python3.10 (found version "3.10.12") found components: Interpreter 
+[10.993s] -- Found geometry_msgs: 5.0.0 (/opt/ros/iron/share/geometry_msgs/cmake)
+[13.305s] -- Found rosidl_generator_c: 4.0.1 (/opt/ros/iron/share/rosidl_generator_c/cmake)
+[13.577s] -- Found rosidl_generator_cpp: 4.0.1 (/opt/ros/iron/share/rosidl_generator_cpp/cmake)
+[15.459s] -- Using all available rosidl_typesupport_c: rosidl_typesupport_fastrtps_c;rosidl_typesupport_introspection_c
+[15.587s] -- Using all available rosidl_typesupport_cpp: rosidl_typesupport_fastrtps_cpp;rosidl_typesupport_introspection_cpp
+[18.466s] -- Found rclcpp: 21.0.5 (/opt/ros/iron/share/rclcpp/cmake)
+[23.160s] -- Found rmw_implementation_cmake: 7.1.0 (/opt/ros/iron/share/rmw_implementation_cmake/cmake)
+[23.329s] -- Found rmw_fastrtps_cpp: 7.1.3 (/opt/ros/iron/share/rmw_fastrtps_cpp/cmake)
+[26.989s] -- Found OpenSSL: /usr/lib/aarch64-linux-gnu/libcrypto.so (found version "3.0.2")  
+[27.371s] -- Found FastRTPS: /opt/ros/iron/include  
+[27.947s] -- Using RMW implementation 'rmw_fastrtps_cpp' as default
+[29.846s] -- Found rclcpp_components: 21.0.5 (/opt/ros/iron/share/rclcpp_components/cmake)
+[31.380s] -- Found sensor_msgs: 5.0.0 (/opt/ros/iron/share/sensor_msgs/cmake)
+[32.653s] -- Performing Test COMPILER_HAS_HIDDEN_VISIBILITY
+[33.650s] -- Performing Test COMPILER_HAS_HIDDEN_VISIBILITY - Success
+[33.654s] -- Performing Test COMPILER_HAS_HIDDEN_INLINE_VISIBILITY
+[34.339s] -- Performing Test COMPILER_HAS_HIDDEN_INLINE_VISIBILITY - Success
+[34.356s] -- Performing Test COMPILER_HAS_DEPRECATED_ATTR
+[35.184s] -- Performing Test COMPILER_HAS_DEPRECATED_ATTR - Success
+[35.226s] -- Found ament_lint_auto: 0.14.3 (/opt/ros/iron/share/ament_lint_auto/cmake)
+[36.753s] -- Found python_cmake_module: 0.10.2 (/opt/ros/iron/share/python_cmake_module/cmake)
+[36.904s] -- Found PythonInterp: /home/lab/robocar/.venv/bin/python3 (found suitable version "3.10.12", minimum required is "3.6") 
+[36.938s] -- Found PythonLibs: /usr/lib/aarch64-linux-gnu/libpython3.10.so (found suitable version "3.10.12", minimum required is "3.5") 
+[36.940s] -- Using PYTHON_EXECUTABLE: /home/lab/robocar/.venv/bin/python3
+[36.941s] -- Using PYTHON_INCLUDE_DIRS: /usr/include/python3.10
+[36.942s] -- Using PYTHON_LIBRARIES: /usr/lib/aarch64-linux-gnu/libpython3.10.so
+[37.093s] -- Found PythonExtra: .so  
+[37.616s] -- Added test 'cppcheck' to perform static code analysis on C / C++ code
+[37.618s] -- Configured cppcheck include dirs: $<BUILD_INTERFACE:/home/lab/robocar/src/teleop_twist_joy/include>
+[37.620s] -- Configured cppcheck exclude dirs and/or files: 
+[37.737s] -- Added test 'cpplint' to check C / C++ code against the Google style
+[37.737s] -- Configured cpplint exclude dirs and/or files: 
+[37.743s] -- Added test 'flake8' to check Python code syntax and style conventions
+[37.744s] -- Configured 'flake8' exclude dirs and/or files: 
+[37.759s] -- Added test 'lint_cmake' to check CMake code style
+[37.822s] -- Added test 'pep257' to check Python code against some of the docstring style conventions in PEP 257
+[37.850s] -- Added test 'uncrustify' to check C / C++ code style
+[37.852s] -- Configured uncrustify additional arguments: 
+[37.862s] -- Added test 'xmllint' to check XML markup files
+[37.949s] -- Configuring done
+[38.132s] -- Generating done
+[38.148s] -- Build files have been written to: /home/lab/robocar/src/build/teleop_twist_joy
+[38.228s] Invoked command in '/home/lab/robocar/src/build/teleop_twist_joy' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/iron VIRTUAL_ENV_PROMPT=(.venv) /usr/bin/cmake /home/lab/robocar/src/teleop_twist_joy -DCMAKE_INSTALL_PREFIX=/home/lab/robocar/src/install/teleop_twist_joy
+[38.230s] Invoking command in '/home/lab/robocar/src/build/teleop_twist_joy': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/iron VIRTUAL_ENV_PROMPT=(.venv) /usr/bin/cmake --build /home/lab/robocar/src/build/teleop_twist_joy -- -j4 -l4
+[38.745s] [ 25%] [32mBuilding CXX object CMakeFiles/teleop_twist_joy.dir/src/teleop_twist_joy.cpp.o[0m
+[113.442s] [ 50%] [32m[1mLinking CXX shared library libteleop_twist_joy.so[0m
+[126.690s] [ 50%] Built target teleop_twist_joy
+[126.802s] [ 75%] [32mBuilding CXX object CMakeFiles/teleop_twist_joy_node.dir/src/teleop_node.cpp.o[0m
+[149.869s] [100%] [32m[1mLinking CXX executable teleop_node[0m
+[151.488s] [100%] Built target teleop_twist_joy_node
+[151.543s] Invoked command in '/home/lab/robocar/src/build/teleop_twist_joy' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/iron VIRTUAL_ENV_PROMPT=(.venv) /usr/bin/cmake --build /home/lab/robocar/src/build/teleop_twist_joy -- -j4 -l4
+[151.776s] Invoking command in '/home/lab/robocar/src/build/teleop_twist_joy': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/iron VIRTUAL_ENV_PROMPT=(.venv) /usr/bin/cmake --install /home/lab/robocar/src/build/teleop_twist_joy
+[151.815s] -- Install configuration: ""
+[151.816s] -- Installing: /home/lab/robocar/src/install/teleop_twist_joy/lib/libteleop_twist_joy.so
+[151.882s] -- Set runtime path of "/home/lab/robocar/src/install/teleop_twist_joy/lib/libteleop_twist_joy.so" to ""
+[151.883s] -- Installing: /home/lab/robocar/src/install/teleop_twist_joy/lib/teleop_twist_joy/teleop_node
+[151.887s] -- Set runtime path of "/home/lab/robocar/src/install/teleop_twist_joy/lib/teleop_twist_joy/teleop_node" to ""
+[151.888s] -- Installing: /home/lab/robocar/src/install/teleop_twist_joy/include/teleop_twist_joy
+[151.889s] -- Installing: /home/lab/robocar/src/install/teleop_twist_joy/include/teleop_twist_joy/teleop_twist_joy
+[151.889s] -- Installing: /home/lab/robocar/src/install/teleop_twist_joy/include/teleop_twist_joy/teleop_twist_joy/teleop_twist_joy.hpp
+[151.891s] -- Installing: /home/lab/robocar/src/install/teleop_twist_joy/include/teleop_twist_joy/teleop_twist_joy/teleop_twist_joy_export.h
+[151.892s] -- Installing: /home/lab/robocar/src/install/teleop_twist_joy/share/teleop_twist_joy/launch
+[151.893s] -- Installing: /home/lab/robocar/src/install/teleop_twist_joy/share/teleop_twist_joy/launch/teleop-launch.py
+[151.895s] -- Installing: /home/lab/robocar/src/install/teleop_twist_joy/share/teleop_twist_joy/config
+[151.895s] -- Installing: /home/lab/robocar/src/install/teleop_twist_joy/share/teleop_twist_joy/config/xbox.config.yaml
+[151.897s] -- Installing: /home/lab/robocar/src/install/teleop_twist_joy/share/teleop_twist_joy/config/ps3-holonomic.config.yaml
+[151.899s] -- Installing: /home/lab/robocar/src/install/teleop_twist_joy/share/teleop_twist_joy/config/atk3.config.yaml
+[151.901s] -- Installing: /home/lab/robocar/src/install/teleop_twist_joy/share/teleop_twist_joy/config/xd3.config.yaml
+[151.903s] -- Installing: /home/lab/robocar/src/install/teleop_twist_joy/share/teleop_twist_joy/config/ps3.config.yaml
+[151.905s] -- Installing: /home/lab/robocar/src/install/teleop_twist_joy/share/teleop_twist_joy/environment/library_path.sh
+[151.907s] -- Installing: /home/lab/robocar/src/install/teleop_twist_joy/share/teleop_twist_joy/environment/library_path.dsv
+[151.909s] -- Installing: /home/lab/robocar/src/install/teleop_twist_joy/share/ament_index/resource_index/package_run_dependencies/teleop_twist_joy
+[151.912s] -- Installing: /home/lab/robocar/src/install/teleop_twist_joy/share/ament_index/resource_index/parent_prefix_path/teleop_twist_joy
+[151.913s] -- Installing: /home/lab/robocar/src/install/teleop_twist_joy/share/teleop_twist_joy/environment/ament_prefix_path.sh
+[151.915s] -- Installing: /home/lab/robocar/src/install/teleop_twist_joy/share/teleop_twist_joy/environment/ament_prefix_path.dsv
+[151.917s] -- Installing: /home/lab/robocar/src/install/teleop_twist_joy/share/teleop_twist_joy/environment/path.sh
+[151.918s] -- Installing: /home/lab/robocar/src/install/teleop_twist_joy/share/teleop_twist_joy/environment/path.dsv
+[151.920s] -- Installing: /home/lab/robocar/src/install/teleop_twist_joy/share/teleop_twist_joy/local_setup.bash
+[151.922s] -- Installing: /home/lab/robocar/src/install/teleop_twist_joy/share/teleop_twist_joy/local_setup.sh
+[151.923s] -- Installing: /home/lab/robocar/src/install/teleop_twist_joy/share/teleop_twist_joy/local_setup.zsh
+[151.925s] -- Installing: /home/lab/robocar/src/install/teleop_twist_joy/share/teleop_twist_joy/local_setup.dsv
+[151.928s] -- Installing: /home/lab/robocar/src/install/teleop_twist_joy/share/teleop_twist_joy/package.dsv
+[151.929s] -- Installing: /home/lab/robocar/src/install/teleop_twist_joy/share/ament_index/resource_index/packages/teleop_twist_joy
+[151.931s] -- Installing: /home/lab/robocar/src/install/teleop_twist_joy/share/ament_index/resource_index/rclcpp_components/teleop_twist_joy
+[151.935s] -- Installing: /home/lab/robocar/src/install/teleop_twist_joy/share/teleop_twist_joy/cmake/export_teleop_twist_joyExport.cmake
+[151.935s] -- Installing: /home/lab/robocar/src/install/teleop_twist_joy/share/teleop_twist_joy/cmake/export_teleop_twist_joyExport-noconfig.cmake
+[151.937s] -- Installing: /home/lab/robocar/src/install/teleop_twist_joy/share/teleop_twist_joy/cmake/ament_cmake_export_include_directories-extras.cmake
+[151.938s] -- Installing: /home/lab/robocar/src/install/teleop_twist_joy/share/teleop_twist_joy/cmake/ament_cmake_export_libraries-extras.cmake
+[151.950s] -- Installing: /home/lab/robocar/src/install/teleop_twist_joy/share/teleop_twist_joy/cmake/ament_cmake_export_targets-extras.cmake
+[151.952s] -- Installing: /home/lab/robocar/src/install/teleop_twist_joy/share/teleop_twist_joy/cmake/teleop_twist_joyConfig.cmake
+[151.957s] -- Installing: /home/lab/robocar/src/install/teleop_twist_joy/share/teleop_twist_joy/cmake/teleop_twist_joyConfig-version.cmake
+[151.958s] -- Installing: /home/lab/robocar/src/install/teleop_twist_joy/share/teleop_twist_joy/package.xml
+[151.960s] Invoked command in '/home/lab/robocar/src/build/teleop_twist_joy' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/iron VIRTUAL_ENV_PROMPT=(.venv) /usr/bin/cmake --install /home/lab/robocar/src/build/teleop_twist_joy

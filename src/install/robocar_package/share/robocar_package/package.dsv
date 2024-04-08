@@ -1,0 +1,3 @@
+source;share/robocar_package/hook/pythonpath.ps1
+source;share/robocar_package/hook/pythonpath.dsv
+source;share/robocar_package/hook/pythonpath.sh

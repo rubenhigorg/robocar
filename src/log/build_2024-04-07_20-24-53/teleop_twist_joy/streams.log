@@ -1,0 +1,46 @@
+[2.711s] Invoking command in '/home/lab/robocar/src/build/teleop_twist_joy': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/iron VIRTUAL_ENV_PROMPT=(.venv) /usr/bin/cmake --build /home/lab/robocar/src/build/teleop_twist_joy -- -j4 -l4
+[3.015s] [35m[1mConsolidate compiler generated dependencies of target teleop_twist_joy[0m
+[3.173s] [ 50%] Built target teleop_twist_joy
+[3.243s] [35m[1mConsolidate compiler generated dependencies of target teleop_twist_joy_node[0m
+[3.380s] [100%] Built target teleop_twist_joy_node
+[3.439s] Invoked command in '/home/lab/robocar/src/build/teleop_twist_joy' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/iron VIRTUAL_ENV_PROMPT=(.venv) /usr/bin/cmake --build /home/lab/robocar/src/build/teleop_twist_joy -- -j4 -l4
+[3.875s] Invoking command in '/home/lab/robocar/src/build/teleop_twist_joy': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/iron VIRTUAL_ENV_PROMPT=(.venv) /usr/bin/cmake --install /home/lab/robocar/src/build/teleop_twist_joy
+[3.944s] -- Install configuration: ""
+[3.954s] -- Up-to-date: /home/lab/robocar/src/install/teleop_twist_joy/lib/libteleop_twist_joy.so
+[3.961s] -- Up-to-date: /home/lab/robocar/src/install/teleop_twist_joy/lib/teleop_twist_joy/teleop_node
+[3.966s] -- Up-to-date: /home/lab/robocar/src/install/teleop_twist_joy/include/teleop_twist_joy
+[3.969s] -- Up-to-date: /home/lab/robocar/src/install/teleop_twist_joy/include/teleop_twist_joy/teleop_twist_joy
+[3.973s] -- Up-to-date: /home/lab/robocar/src/install/teleop_twist_joy/include/teleop_twist_joy/teleop_twist_joy/teleop_twist_joy.hpp
+[3.977s] -- Up-to-date: /home/lab/robocar/src/install/teleop_twist_joy/include/teleop_twist_joy/teleop_twist_joy/teleop_twist_joy_export.h
+[3.988s] -- Up-to-date: /home/lab/robocar/src/install/teleop_twist_joy/share/teleop_twist_joy/launch
+[3.992s] -- Up-to-date: /home/lab/robocar/src/install/teleop_twist_joy/share/teleop_twist_joy/launch/teleop-launch.py
+[3.997s] -- Up-to-date: /home/lab/robocar/src/install/teleop_twist_joy/share/teleop_twist_joy/config
+[3.998s] -- Up-to-date: /home/lab/robocar/src/install/teleop_twist_joy/share/teleop_twist_joy/config/xbox.config.yaml
+[3.999s] -- Up-to-date: /home/lab/robocar/src/install/teleop_twist_joy/share/teleop_twist_joy/config/ps3-holonomic.config.yaml
+[4.000s] -- Up-to-date: /home/lab/robocar/src/install/teleop_twist_joy/share/teleop_twist_joy/config/atk3.config.yaml
+[4.009s] -- Up-to-date: /home/lab/robocar/src/install/teleop_twist_joy/share/teleop_twist_joy/config/xd3.config.yaml
+[4.010s] -- Up-to-date: /home/lab/robocar/src/install/teleop_twist_joy/share/teleop_twist_joy/config/ps3.config.yaml
+[4.012s] -- Up-to-date: /home/lab/robocar/src/install/teleop_twist_joy/share/teleop_twist_joy/environment/library_path.sh
+[4.013s] -- Up-to-date: /home/lab/robocar/src/install/teleop_twist_joy/share/teleop_twist_joy/environment/library_path.dsv
+[4.014s] -- Up-to-date: /home/lab/robocar/src/install/teleop_twist_joy/share/ament_index/resource_index/package_run_dependencies/teleop_twist_joy
+[4.032s] -- Up-to-date: /home/lab/robocar/src/install/teleop_twist_joy/share/ament_index/resource_index/parent_prefix_path/teleop_twist_joy
+[4.035s] -- Up-to-date: /home/lab/robocar/src/install/teleop_twist_joy/share/teleop_twist_joy/environment/ament_prefix_path.sh
+[4.037s] -- Up-to-date: /home/lab/robocar/src/install/teleop_twist_joy/share/teleop_twist_joy/environment/ament_prefix_path.dsv
+[4.040s] -- Up-to-date: /home/lab/robocar/src/install/teleop_twist_joy/share/teleop_twist_joy/environment/path.sh
+[4.042s] -- Up-to-date: /home/lab/robocar/src/install/teleop_twist_joy/share/teleop_twist_joy/environment/path.dsv
+[4.043s] -- Up-to-date: /home/lab/robocar/src/install/teleop_twist_joy/share/teleop_twist_joy/local_setup.bash
+[4.049s] -- Up-to-date: /home/lab/robocar/src/install/teleop_twist_joy/share/teleop_twist_joy/local_setup.sh
+[4.057s] -- Up-to-date: /home/lab/robocar/src/install/teleop_twist_joy/share/teleop_twist_joy/local_setup.zsh
+[4.057s] -- Up-to-date: /home/lab/robocar/src/install/teleop_twist_joy/share/teleop_twist_joy/local_setup.dsv
+[4.058s] -- Installing: /home/lab/robocar/src/install/teleop_twist_joy/share/teleop_twist_joy/package.dsv
+[4.059s] -- Up-to-date: /home/lab/robocar/src/install/teleop_twist_joy/share/ament_index/resource_index/packages/teleop_twist_joy
+[4.065s] -- Up-to-date: /home/lab/robocar/src/install/teleop_twist_joy/share/ament_index/resource_index/rclcpp_components/teleop_twist_joy
+[4.068s] -- Up-to-date: /home/lab/robocar/src/install/teleop_twist_joy/share/teleop_twist_joy/cmake/export_teleop_twist_joyExport.cmake
+[4.072s] -- Up-to-date: /home/lab/robocar/src/install/teleop_twist_joy/share/teleop_twist_joy/cmake/export_teleop_twist_joyExport-noconfig.cmake
+[4.073s] -- Up-to-date: /home/lab/robocar/src/install/teleop_twist_joy/share/teleop_twist_joy/cmake/ament_cmake_export_include_directories-extras.cmake
+[4.078s] -- Up-to-date: /home/lab/robocar/src/install/teleop_twist_joy/share/teleop_twist_joy/cmake/ament_cmake_export_libraries-extras.cmake
+[4.084s] -- Up-to-date: /home/lab/robocar/src/install/teleop_twist_joy/share/teleop_twist_joy/cmake/ament_cmake_export_targets-extras.cmake
+[4.084s] -- Up-to-date: /home/lab/robocar/src/install/teleop_twist_joy/share/teleop_twist_joy/cmake/teleop_twist_joyConfig.cmake
+[4.086s] -- Up-to-date: /home/lab/robocar/src/install/teleop_twist_joy/share/teleop_twist_joy/cmake/teleop_twist_joyConfig-version.cmake
+[4.117s] -- Up-to-date: /home/lab/robocar/src/install/teleop_twist_joy/share/teleop_twist_joy/package.xml
+[4.128s] Invoked command in '/home/lab/robocar/src/build/teleop_twist_joy' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/iron VIRTUAL_ENV_PROMPT=(.venv) /usr/bin/cmake --install /home/lab/robocar/src/build/teleop_twist_joy

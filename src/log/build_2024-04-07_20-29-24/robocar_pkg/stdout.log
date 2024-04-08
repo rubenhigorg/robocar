@@ -1,0 +1,36 @@
+running egg_info
+creating ../build/robocar_pkg/robocar_pkg.egg-info
+writing ../build/robocar_pkg/robocar_pkg.egg-info/PKG-INFO
+writing dependency_links to ../build/robocar_pkg/robocar_pkg.egg-info/dependency_links.txt
+writing entry points to ../build/robocar_pkg/robocar_pkg.egg-info/entry_points.txt
+writing requirements to ../build/robocar_pkg/robocar_pkg.egg-info/requires.txt
+writing top-level names to ../build/robocar_pkg/robocar_pkg.egg-info/top_level.txt
+writing manifest file '../build/robocar_pkg/robocar_pkg.egg-info/SOURCES.txt'
+reading manifest file '../build/robocar_pkg/robocar_pkg.egg-info/SOURCES.txt'
+adding license file 'LICENSE'
+writing manifest file '../build/robocar_pkg/robocar_pkg.egg-info/SOURCES.txt'
+running build
+running build_py
+creating /home/lab/robocar/src/build/robocar_pkg/build
+creating /home/lab/robocar/src/build/robocar_pkg/build/lib
+creating /home/lab/robocar/src/build/robocar_pkg/build/lib/robocar_pkg
+copying robocar_pkg/car_control_node.py -> /home/lab/robocar/src/build/robocar_pkg/build/lib/robocar_pkg
+copying robocar_pkg/__init__.py -> /home/lab/robocar/src/build/robocar_pkg/build/lib/robocar_pkg
+running install
+running install_lib
+creating /home/lab/robocar/src/install/robocar_pkg/lib/python3.10/site-packages/robocar_pkg
+copying /home/lab/robocar/src/build/robocar_pkg/build/lib/robocar_pkg/car_control_node.py -> /home/lab/robocar/src/install/robocar_pkg/lib/python3.10/site-packages/robocar_pkg
+copying /home/lab/robocar/src/build/robocar_pkg/build/lib/robocar_pkg/__init__.py -> /home/lab/robocar/src/install/robocar_pkg/lib/python3.10/site-packages/robocar_pkg
+byte-compiling /home/lab/robocar/src/install/robocar_pkg/lib/python3.10/site-packages/robocar_pkg/car_control_node.py to car_control_node.cpython-310.pyc
+byte-compiling /home/lab/robocar/src/install/robocar_pkg/lib/python3.10/site-packages/robocar_pkg/__init__.py to __init__.cpython-310.pyc
+running install_data
+creating /home/lab/robocar/src/install/robocar_pkg/share/ament_index
+creating /home/lab/robocar/src/install/robocar_pkg/share/ament_index/resource_index
+creating /home/lab/robocar/src/install/robocar_pkg/share/ament_index/resource_index/packages
+copying resource/robocar_pkg -> /home/lab/robocar/src/install/robocar_pkg/share/ament_index/resource_index/packages
+copying package.xml -> /home/lab/robocar/src/install/robocar_pkg/share/robocar_pkg
+running install_egg_info
+Copying ../build/robocar_pkg/robocar_pkg.egg-info to /home/lab/robocar/src/install/robocar_pkg/lib/python3.10/site-packages/robocar_pkg-0.0.0-py3.10.egg-info
+running install_scripts
+Installing car_control_node script to /home/lab/robocar/src/install/robocar_pkg/lib/robocar_pkg
+writing list of installed files to '/home/lab/robocar/src/build/robocar_pkg/install.log'

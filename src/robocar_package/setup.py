@@ -20,8 +20,8 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'robocar_node = robocar_package.robocar_node:main',
-            'current_node = robocar_package.current_node:main',
+            'car_control_node = robocar_package.car_control_node:main',
+            'energy_node = robocar_package.energy_node:main',
         ],
     },
 )
