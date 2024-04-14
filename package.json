@@ -1,0 +1,5 @@
+{
+  "dependencies": {
+    "node-red-contrib-image-output": "^0.6.4"
+  }
+}

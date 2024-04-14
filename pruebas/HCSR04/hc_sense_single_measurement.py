@@ -5,6 +5,14 @@ GPIO.setmode (GPIO.BCM)
 TRIG = 23
 ECHO = 24
 
+''' Los pines listos para recibir señales son: 
+HC derecha (TRIG = 23, ECHO = 24)
+HC frente (TRIG = 5, ECHO = 6)
+HC izquierda (TRIG = 17, ECHO = 27)
+*derecha e izquierda mirando hacia delante del coche como si lo condujeses
+*Chequear pines físicos en  KentoDrafts/I2C_adress_table&Rpi_pin_table.docx
+'''
+
 print("Distance Measurement In Progress")
 GPIO.setup (TRIG, GPIO.OUT)
 GPIO.setup (ECHO, GPIO.IN)

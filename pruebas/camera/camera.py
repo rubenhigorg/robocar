@@ -3,7 +3,8 @@ import cv2
 
 app = Flask(__name__)
 
-camera = cv2.VideoCapture('/dev/video2', cv2.CAP_V4L)  # Use 0 for web camera
+# Use command v4l2-ctl --list-devices
+camera = cv2.VideoCapture('/dev/video0', cv2.CAP_V4L)  # Use 0 for web camera
 
 # Set the resolution
 camera.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
