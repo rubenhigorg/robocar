@@ -1,0 +1,4 @@
+float64 left_distance
+float64 right_distance
+float64 center_distance
+bool emergency_stop

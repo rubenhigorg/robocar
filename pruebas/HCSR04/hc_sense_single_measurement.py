@@ -2,8 +2,10 @@ import RPi.GPIO as GPIO
 import time
 GPIO.setmode (GPIO.BCM)
 
-TRIG = 23
-ECHO = 24
+
+# amarillo
+TRIG = 12
+ECHO = 13
 
 ''' Los pines listos para recibir señales son: 
 HC derecha (TRIG = 23, ECHO = 24)
