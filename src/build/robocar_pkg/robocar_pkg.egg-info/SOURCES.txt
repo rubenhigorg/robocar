@@ -10,10 +10,12 @@ setup.py
 ../build/robocar_pkg/robocar_pkg.egg-info/top_level.txt
 ../build/robocar_pkg/robocar_pkg.egg-info/zip-safe
 lib/INA226Lib.py
+lib/MPU6050.py
 lib/SDL_Pi_INA3221.py
 lib/__init__.py
 resource/robocar_pkg
 robocar_pkg/__init__.py
+robocar_pkg/accelerometer_node.py
 robocar_pkg/camera_node.py
 robocar_pkg/car_control_node.py
 robocar_pkg/energy_node.py

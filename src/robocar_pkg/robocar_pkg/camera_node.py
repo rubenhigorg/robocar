@@ -12,11 +12,15 @@ class CameraPublisher(Node):
         self.publisher_ = self.create_publisher(Image, 'camera_image', 10)
         self.publisher_nodered = self.create_publisher(ByteMultiArray,'camera_image_nodered', 10)
 
-        self.timer_period = 0.5  # seconds
+        self.timer_period = 1  # seconds
         self.timer = self.create_timer(self.timer_period, self.timer_callback)
         self.i = 0
         self.bridge = CvBridge()
         self.camera = cv2.VideoCapture('/dev/video0', cv2.CAP_V4L)
+    # definimos la calidad del frame
+        self.camera.set(cv2.CAP_PROP_FRAME_WIDTH, 160)
+        self.camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 120) 
+       
 
     def timer_callback(self):
         ret, frame = self.camera.read()

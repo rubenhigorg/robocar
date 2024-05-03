@@ -22,7 +22,8 @@ setup(
         'console_scripts': [
             'car_control_node = robocar_pkg.car_control_node:main',
             'energy_node = robocar_pkg.energy_node:main',
-            'camera_node = robocar_pkg.camera_node:main'
+            'camera_node = robocar_pkg.camera_node:main',
+            'accelerometer_node = robocar_pkg.accelerometer_node:main',
         ],
     },
 )
