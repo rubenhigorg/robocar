@@ -15,30 +15,56 @@ class CannyEdgeDetectionNode(Node):
             10)
         self.subscription  # prevent unused variable warning
         self.bridge = CvBridge()
+    
 
     def image_callback(self, msg):
         # Convert ROS2 Image message to OpenCV format
         self.get_logger().info('IMAGE RECEIVED. Executing callback')
         cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding='bgr8')
-
+        cv2.imshow('result', cv_image)
         # Process the image
         canny_image = self.canny(cv_image)
-        cropped_image = self.region_of_interest(canny_image)
-        lines = cv2.HoughLinesP(cropped_image, 2, np.pi/180, 100, np.array([]), minLineLength=40, maxLineGap=5)
-        averaged_lines = self.average_slope_intercept(cv_image, lines)
+        lines = cv2.HoughLinesP(canny_image, 2, np.pi/180, 100, np.array([]), minLineLength=40, maxLineGap=5)
+        self.get_logger().info(lines)
+
+
+
+
+        # canny_image = self.canny(cv_image)
+        # # cropped_image = self.region_of_interest(canny_image)
+        # lines = cv2.HoughLinesP(canny_image, 2, np.pi/180, 100, np.array([]), minLineLength=40, maxLineGap=5)
+        # # cv2.imshow('result', _image)
+        # averaged_lines = self.average_slope_intercept(cv_image, lines)
+        # self.get_logger.info(averaged_lines)
+
+        # if all(line is not None for line in averaged_lines):
+        #     self.get_logger().info('Drawing lines')
+        #     line_image = self.display_lines(cv_image, averaged_lines)
+        #     combo_image = cv2.addWeighted(cv_image, 0.8, line_image, 1, 1)
+        #     cv2.imshow('result', combo_image)
+        # else: 
+        #     cv2.imshow('result', cv_image)
+        # cv2.waitKey(1)
+
+
+    def detect_black_lines(self, image):
+        # Convertir la imagen a escala de grises
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         
-        if all(line is not None for line in averaged_lines):
-            self.get_logger().info('Drawing lines')
-            line_image = self.display_lines(cv_image, averaged_lines)
-            combo_image = cv2.addWeighted(cv_image, 0.8, line_image, 1, 1)
-            cv2.imshow('result', combo_image)
-        else: 
-            cv2.imshow('result', cv_image)
-        cv2.waitKey(1)
-
-
-
-
+        # Aplicar umbralización para obtener una imagen binaria de las líneas negras
+        _, binary = cv2.threshold(gray, 50, 255, cv2.THRESH_BINARY)
+        
+        # Encontrar contornos en la imagen binaria
+        contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        
+        # Crear una máscara dinámica basada en los contornos de las líneas negras
+        mask = np.zeros_like(gray)
+        cv2.drawContours(mask, contours, -1, (255), thickness=cv2.FILLED)
+        
+        # Aplicar la máscara a la imagen original
+        result = cv2.bitwise_and(image, image, mask=mask)
+        
+        return result
     
     # This function is responsible for translating the mathematical slope-intercept form of a line to pixel coordinates.
     def make_coordinates(self, image, line_parameters):
