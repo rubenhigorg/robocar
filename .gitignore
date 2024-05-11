@@ -5,6 +5,6 @@
 pruebas/VL53L0X_rasp
 
 # Ficheros generados por colcon
-src/build/*
-src/install/*
-src/log/*
+build/*
+install/*
+log/*

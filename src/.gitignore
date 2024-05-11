@@ -1,0 +1,4 @@
+# Ficheros generados por colcon
+build/*
+install/*
+log/*
