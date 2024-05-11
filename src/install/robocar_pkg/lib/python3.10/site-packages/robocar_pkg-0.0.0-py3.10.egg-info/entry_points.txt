@@ -1,8 +1,0 @@
-[console_scripts]
-accelerometer_node = robocar_pkg.accelerometer_node:main
-camera_node = robocar_pkg.camera_node:main
-car_control_node = robocar_pkg.car_control_node:main
-distance_node = robocar_pkg.distance_node:main
-energy_node = robocar_pkg.energy_node:main
-image_test_node = robocar_pkg.image_test_node:main
-

@@ -1,7 +1,0 @@
-{
-  "package_name": "messages_pkg",
-  "non_idl_tuples": [
-    "/home/lab/robocar/src/messages_pkg:msg/Energy.msg",
-    "/home/lab/robocar/src/messages_pkg:msg/Distance.msg"
-  ]
-}
