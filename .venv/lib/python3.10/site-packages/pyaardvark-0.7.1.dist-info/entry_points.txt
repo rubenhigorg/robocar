@@ -1,0 +1,2 @@
+[console_scripts]
+aardvark = pyaardvark.cli_tool:main
