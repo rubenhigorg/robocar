@@ -2,6 +2,7 @@ import rclpy
 from rclpy.node import Node
 import cv2
 from sensor_msgs.msg import Image
+from cv_bridge import CvBridge
 
 class CannyEdgeDetectionNode(Node):
     def __init__(self):
@@ -12,13 +13,15 @@ class CannyEdgeDetectionNode(Node):
             self.image_callback,
             10)
         self.subscription  # prevent unused variable warning
+        self.bridge = CvBridge()
 
     def image_callback(self, msg):
         # Convert ROS2 Image message to OpenCV format
+        self.get_logger().info('IMAGE RECEIVED. Executing callback')
         cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding='bgr8')
 
         # Apply Canny edge detection
-        edges = cv2.Canny(cv_image, 100, 200)
+        edges = cv2.Canny(cv_image, 50, 150)
 
         # Process the detected edges further if needed
 
