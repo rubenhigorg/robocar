@@ -1,0 +1,29 @@
+{
+    "configurations": [
+        {
+            "browse": {
+                "databaseFilename": "${default}",
+                "limitSymbolsToIncludedHeaders": false
+            },
+            "includePath": [
+                "/home/lab/robocar/install/wiimote/include/**",
+                "/home/lab/robocar/install/wiimote_msgs/include/**",
+                "/home/lab/robocar/install/teleop_twist_joy/include/**",
+                "/home/lab/robocar/install/spacenav/include/**",
+                "/home/lab/robocar/install/joy/include/**",
+                "/home/lab/robocar/install/sdl2_vendor/include/**",
+                "/opt/ros/iron/include/**",
+                "/home/lab/robocar/src/teleop_twist_joy/include/**",
+                "/usr/include/**",
+                "${workspaceFolder}/pruebas/VL53L0X_rasp/Api/core/inc",
+                "${workspaceFolder}/pruebas/VL53L0X_rasp/platform/inc"
+            ],
+            "name": "ROS",
+            "intelliSenseMode": "gcc-arm64",
+            "compilerPath": "/usr/bin/gcc",
+            "cStandard": "gnu11",
+            "cppStandard": "c++14"
+        }
+    ],
+    "version": 4
+}
