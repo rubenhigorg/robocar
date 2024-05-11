@@ -3,7 +3,8 @@
   "output_dir": "/home/lab/robocar/src/build/messages_pkg/rosidl_generator_py/messages_pkg",
   "template_dir": "/opt/ros/iron/share/rosidl_generator_py/cmake/../resource",
   "idl_tuples": [
-    "/home/lab/robocar/src/build/messages_pkg/rosidl_adapter/messages_pkg:msg/Energy.idl"
+    "/home/lab/robocar/src/build/messages_pkg/rosidl_adapter/messages_pkg:msg/Energy.idl",
+    "/home/lab/robocar/src/build/messages_pkg/rosidl_adapter/messages_pkg:msg/Distance.idl"
   ],
   "target_dependencies": [
     "/opt/ros/iron/share/rosidl_generator_py/cmake/../../../lib/rosidl_generator_py/rosidl_generator_py",
@@ -19,6 +20,7 @@
     "/opt/ros/iron/share/rosidl_generator_py/cmake/../resource/_msg.py.em",
     "/opt/ros/iron/share/rosidl_generator_py/cmake/../resource/_srv_pkg_typesupport_entry_point.c.em",
     "/opt/ros/iron/share/rosidl_generator_py/cmake/../resource/_srv.py.em",
-    "/home/lab/robocar/src/build/messages_pkg/rosidl_adapter/messages_pkg/msg/Energy.idl"
+    "/home/lab/robocar/src/build/messages_pkg/rosidl_adapter/messages_pkg/msg/Energy.idl",
+    "/home/lab/robocar/src/build/messages_pkg/rosidl_adapter/messages_pkg/msg/Distance.idl"
   ]
 }

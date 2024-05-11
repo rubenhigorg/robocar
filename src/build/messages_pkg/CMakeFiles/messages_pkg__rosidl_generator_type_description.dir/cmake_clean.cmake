@@ -1,5 +1,6 @@
 file(REMOVE_RECURSE
   "CMakeFiles/messages_pkg__rosidl_generator_type_description"
+  "rosidl_generator_type_description/messages_pkg/msg/Distance.json"
   "rosidl_generator_type_description/messages_pkg/msg/Energy.json"
 )
 

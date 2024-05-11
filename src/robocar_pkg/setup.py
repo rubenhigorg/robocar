@@ -24,6 +24,8 @@ setup(
             'energy_node = robocar_pkg.energy_node:main',
             'camera_node = robocar_pkg.camera_node:main',
             'accelerometer_node = robocar_pkg.accelerometer_node:main',
+            'distance_node = robocar_pkg.distance_node:main',
+            'processing_node = robocar_pkg.processing_node:main',
         ],
     },
 )

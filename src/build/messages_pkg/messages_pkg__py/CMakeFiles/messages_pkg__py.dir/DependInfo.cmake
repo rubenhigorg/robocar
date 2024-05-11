@@ -15,6 +15,8 @@ set(CMAKE_MULTIPLE_OUTPUT_PAIRS
   "/home/lab/robocar/src/build/messages_pkg/rosidl_generator_py/messages_pkg/_messages_pkg_s.ep.rosidl_typesupport_c.c" "/home/lab/robocar/src/build/messages_pkg/rosidl_generator_py/messages_pkg/_messages_pkg_s.ep.rosidl_typesupport_fastrtps_c.c"
   "/home/lab/robocar/src/build/messages_pkg/rosidl_generator_py/messages_pkg/_messages_pkg_s.ep.rosidl_typesupport_introspection_c.c" "/home/lab/robocar/src/build/messages_pkg/rosidl_generator_py/messages_pkg/_messages_pkg_s.ep.rosidl_typesupport_fastrtps_c.c"
   "/home/lab/robocar/src/build/messages_pkg/rosidl_generator_py/messages_pkg/msg/__init__.py" "/home/lab/robocar/src/build/messages_pkg/rosidl_generator_py/messages_pkg/_messages_pkg_s.ep.rosidl_typesupport_fastrtps_c.c"
+  "/home/lab/robocar/src/build/messages_pkg/rosidl_generator_py/messages_pkg/msg/_distance.py" "/home/lab/robocar/src/build/messages_pkg/rosidl_generator_py/messages_pkg/_messages_pkg_s.ep.rosidl_typesupport_fastrtps_c.c"
+  "/home/lab/robocar/src/build/messages_pkg/rosidl_generator_py/messages_pkg/msg/_distance_s.c" "/home/lab/robocar/src/build/messages_pkg/rosidl_generator_py/messages_pkg/_messages_pkg_s.ep.rosidl_typesupport_fastrtps_c.c"
   "/home/lab/robocar/src/build/messages_pkg/rosidl_generator_py/messages_pkg/msg/_energy.py" "/home/lab/robocar/src/build/messages_pkg/rosidl_generator_py/messages_pkg/_messages_pkg_s.ep.rosidl_typesupport_fastrtps_c.c"
   "/home/lab/robocar/src/build/messages_pkg/rosidl_generator_py/messages_pkg/msg/_energy_s.c" "/home/lab/robocar/src/build/messages_pkg/rosidl_generator_py/messages_pkg/_messages_pkg_s.ep.rosidl_typesupport_fastrtps_c.c"
   )

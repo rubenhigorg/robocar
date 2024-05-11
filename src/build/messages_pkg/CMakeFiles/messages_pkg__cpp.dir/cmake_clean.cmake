@@ -1,8 +1,12 @@
 file(REMOVE_RECURSE
   "CMakeFiles/messages_pkg__cpp"
+  "rosidl_generator_cpp/messages_pkg/msg/detail/distance__builder.hpp"
+  "rosidl_generator_cpp/messages_pkg/msg/detail/distance__struct.hpp"
+  "rosidl_generator_cpp/messages_pkg/msg/detail/distance__traits.hpp"
   "rosidl_generator_cpp/messages_pkg/msg/detail/energy__builder.hpp"
   "rosidl_generator_cpp/messages_pkg/msg/detail/energy__struct.hpp"
   "rosidl_generator_cpp/messages_pkg/msg/detail/energy__traits.hpp"
+  "rosidl_generator_cpp/messages_pkg/msg/distance.hpp"
   "rosidl_generator_cpp/messages_pkg/msg/energy.hpp"
 )
 

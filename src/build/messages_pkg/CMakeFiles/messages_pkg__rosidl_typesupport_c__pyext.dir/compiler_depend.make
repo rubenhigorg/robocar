@@ -258,8 +258,13 @@ CMakeFiles/messages_pkg__rosidl_typesupport_c__pyext.dir/rosidl_generator_py/mes
   rosidl_generator_c/messages_pkg/msg/detail/energy__type_support.h \
   rosidl_generator_c/messages_pkg/msg/rosidl_generator_c__visibility_control.h \
   rosidl_generator_c/messages_pkg/msg/detail/energy__struct.h \
-  rosidl_generator_c/messages_pkg/msg/detail/energy__functions.h
+  rosidl_generator_c/messages_pkg/msg/detail/energy__functions.h \
+  rosidl_generator_c/messages_pkg/msg/detail/distance__type_support.h \
+  rosidl_generator_c/messages_pkg/msg/detail/distance__struct.h \
+  rosidl_generator_c/messages_pkg/msg/detail/distance__functions.h
 
+
+rosidl_generator_c/messages_pkg/msg/detail/distance__functions.h:
 
 rosidl_generator_c/messages_pkg/msg/detail/energy__functions.h:
 
@@ -601,6 +606,8 @@ rosidl_generator_c/messages_pkg/msg/detail/energy__struct.h:
 
 /usr/include/python3.10/cpython/pymem.h:
 
+rosidl_generator_c/messages_pkg/msg/detail/distance__type_support.h:
+
 /usr/include/python3.10/object.h:
 
 /usr/include/python3.10/cpython/bytearrayobject.h:
@@ -750,6 +757,8 @@ rosidl_generator_c/messages_pkg/msg/detail/energy__struct.h:
 /usr/include/python3.10/eval.h:
 
 /usr/lib/gcc/aarch64-linux-gnu/11/include/stdbool.h:
+
+rosidl_generator_c/messages_pkg/msg/detail/distance__struct.h:
 
 /opt/ros/iron/include/rcutils/rcutils/macros.h:
 

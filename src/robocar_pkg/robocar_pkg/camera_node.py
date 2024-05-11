@@ -10,7 +10,7 @@ class CameraPublisher(Node):
     def __init__(self):
         super().__init__('camera_publisher')
         self.publisher_ = self.create_publisher(Image, 'camera_image', 10)
-        self.publisher_nodered = self.create_publisher(ByteMultiArray,'camera_image_nodered', 10)
+        # self.publisher_nodered = self.create_publisher(ByteMultiArray,'camera_image_nodered', 10)
 
         self.timer_period = 1  # seconds
         self.timer = self.create_timer(self.timer_period, self.timer_callback)
@@ -27,14 +27,15 @@ class CameraPublisher(Node):
         self.get_logger().info('Resultado:' + str(ret))
         if ret:
             msg = self.bridge.cv2_to_imgmsg(frame, "bgr8")
-            is_success, buffer = cv2.imencode(".jpg", frame)
-            byte_image = buffer.tobytes()
-            msg_nodered = ByteMultiArray()
-            msg_nodered.data = byte_image
-
+            # is_success, buffer = cv2.imencode(".jpg", frame)
+            # byte_image = buffer.tobytes()
+            # msg_nodered = ByteMultiArray()
+            # msg_nodered.data = byte_image
+            self.get_logger().info('BEFORE IMAGE')
             self.publisher_.publish(msg)
-            self.publisher_nodered.publish(msg_nodered)
-            self.get_logger().info('Publishing image #%d' % self.i)
+            self.get_logger().info('AFTER IMAGE')
+            # self.publisher_nodered.publish(msg_nodered)
+            # self.get_logger().info('Publishing image #%d' % self.i)
             self.i += 1
 
 def main(args=None):

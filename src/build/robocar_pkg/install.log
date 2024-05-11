@@ -1,5 +1,7 @@
 /home/lab/robocar/src/install/robocar_pkg/lib/python3.10/site-packages/robocar_pkg/car_control_node.py
 /home/lab/robocar/src/install/robocar_pkg/lib/python3.10/site-packages/robocar_pkg/energy_node.py
+/home/lab/robocar/src/install/robocar_pkg/lib/python3.10/site-packages/robocar_pkg/image_test_node.py
+/home/lab/robocar/src/install/robocar_pkg/lib/python3.10/site-packages/robocar_pkg/distance_node.py
 /home/lab/robocar/src/install/robocar_pkg/lib/python3.10/site-packages/robocar_pkg/camera_node.py
 /home/lab/robocar/src/install/robocar_pkg/lib/python3.10/site-packages/robocar_pkg/__init__.py
 /home/lab/robocar/src/install/robocar_pkg/lib/python3.10/site-packages/robocar_pkg/accelerometer_node.py
@@ -9,6 +11,8 @@
 /home/lab/robocar/src/install/robocar_pkg/lib/python3.10/site-packages/lib/INA226Lib.py
 /home/lab/robocar/src/install/robocar_pkg/lib/python3.10/site-packages/robocar_pkg/__pycache__/car_control_node.cpython-310.pyc
 /home/lab/robocar/src/install/robocar_pkg/lib/python3.10/site-packages/robocar_pkg/__pycache__/energy_node.cpython-310.pyc
+/home/lab/robocar/src/install/robocar_pkg/lib/python3.10/site-packages/robocar_pkg/__pycache__/image_test_node.cpython-310.pyc
+/home/lab/robocar/src/install/robocar_pkg/lib/python3.10/site-packages/robocar_pkg/__pycache__/distance_node.cpython-310.pyc
 /home/lab/robocar/src/install/robocar_pkg/lib/python3.10/site-packages/robocar_pkg/__pycache__/camera_node.cpython-310.pyc
 /home/lab/robocar/src/install/robocar_pkg/lib/python3.10/site-packages/robocar_pkg/__pycache__/__init__.cpython-310.pyc
 /home/lab/robocar/src/install/robocar_pkg/lib/python3.10/site-packages/robocar_pkg/__pycache__/accelerometer_node.cpython-310.pyc
@@ -28,4 +32,6 @@
 /home/lab/robocar/src/install/robocar_pkg/lib/robocar_pkg/accelerometer_node
 /home/lab/robocar/src/install/robocar_pkg/lib/robocar_pkg/camera_node
 /home/lab/robocar/src/install/robocar_pkg/lib/robocar_pkg/car_control_node
+/home/lab/robocar/src/install/robocar_pkg/lib/robocar_pkg/distance_node
 /home/lab/robocar/src/install/robocar_pkg/lib/robocar_pkg/energy_node
+/home/lab/robocar/src/install/robocar_pkg/lib/robocar_pkg/image_test_node

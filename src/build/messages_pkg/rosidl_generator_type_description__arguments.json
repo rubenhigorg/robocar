@@ -2,6 +2,7 @@
   "package_name": "messages_pkg",
   "output_dir": "/home/lab/robocar/src/build/messages_pkg/rosidl_generator_type_description/messages_pkg",
   "idl_tuples": [
-    "/home/lab/robocar/src/build/messages_pkg/rosidl_adapter/messages_pkg:msg/Energy.idl"
+    "/home/lab/robocar/src/build/messages_pkg/rosidl_adapter/messages_pkg:msg/Energy.idl",
+    "/home/lab/robocar/src/build/messages_pkg/rosidl_adapter/messages_pkg:msg/Distance.idl"
   ]
 }

@@ -67,6 +67,7 @@ include CMakeFiles/messages_pkg.dir/compiler_depend.make
 include CMakeFiles/messages_pkg.dir/progress.make
 
 CMakeFiles/messages_pkg: /home/lab/robocar/src/messages_pkg/msg/Energy.msg
+CMakeFiles/messages_pkg: /home/lab/robocar/src/messages_pkg/msg/Distance.msg
 
 messages_pkg: CMakeFiles/messages_pkg
 messages_pkg: CMakeFiles/messages_pkg.dir/build.make

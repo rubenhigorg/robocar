@@ -36,6 +36,8 @@ class UltrasoundNode(Node):
         GPIO.setup(TRIG3, GPIO.OUT)
         GPIO.setup(ECHO3, GPIO.IN)
 
+        GPIO.setup(6, GPIO.IN)
+
     def get_distance(self, TRIG, ECHO):
         GPIO.output(TRIG, True)
         time.sleep(0.00001)
@@ -57,13 +59,14 @@ class UltrasoundNode(Node):
         left_distance = self.get_distance(TRIG1, ECHO1)
         right_distance = self.get_distance(TRIG2, ECHO2)
         center_distance = self.get_distance(TRIG3, ECHO3)
-        emergency_stop = self.get_emergency_stop()  # Asume que tienes una función que obtiene el valor del sensor de emergencia
+        # emergency_stop = self.get_emergency_stop()  # Asume que tienes una función que obtiene el valor del sensor de emergencia
 
         msg = Distance()
         msg.left_distance = left_distance
         msg.right_distance = right_distance
         msg.center_distance = center_distance
-        msg.emergency_stop = emergency_stop
+        msg.emergency_stop = bool(GPIO.input(6)) # emergency_stop
+        self.get_logger().info(f'Publishing: {msg}')
         self.publisher_.publish(msg)
 
 def main(args=None):

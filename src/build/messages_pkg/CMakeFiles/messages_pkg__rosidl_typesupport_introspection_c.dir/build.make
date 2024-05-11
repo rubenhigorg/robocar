@@ -78,11 +78,18 @@ rosidl_typesupport_introspection_c/messages_pkg/msg/detail/energy__rosidl_typesu
 rosidl_typesupport_introspection_c/messages_pkg/msg/detail/energy__rosidl_typesupport_introspection_c.h: /opt/ros/iron/share/rosidl_typesupport_introspection_c/resource/srv__rosidl_typesupport_introspection_c.h.em
 rosidl_typesupport_introspection_c/messages_pkg/msg/detail/energy__rosidl_typesupport_introspection_c.h: /opt/ros/iron/share/rosidl_typesupport_introspection_c/resource/srv__type_support.c.em
 rosidl_typesupport_introspection_c/messages_pkg/msg/detail/energy__rosidl_typesupport_introspection_c.h: rosidl_adapter/messages_pkg/msg/Energy.idl
+rosidl_typesupport_introspection_c/messages_pkg/msg/detail/energy__rosidl_typesupport_introspection_c.h: rosidl_adapter/messages_pkg/msg/Distance.idl
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --blue --bold --progress-dir=/home/lab/robocar/src/build/messages_pkg/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Generating C introspection for ROS interfaces"
 	/home/lab/robocar/.venv/bin/python3.10 /opt/ros/iron/lib/rosidl_typesupport_introspection_c/rosidl_typesupport_introspection_c --generator-arguments-file /home/lab/robocar/src/build/messages_pkg/rosidl_typesupport_introspection_c__arguments.json
 
+rosidl_typesupport_introspection_c/messages_pkg/msg/detail/distance__rosidl_typesupport_introspection_c.h: rosidl_typesupport_introspection_c/messages_pkg/msg/detail/energy__rosidl_typesupport_introspection_c.h
+	@$(CMAKE_COMMAND) -E touch_nocreate rosidl_typesupport_introspection_c/messages_pkg/msg/detail/distance__rosidl_typesupport_introspection_c.h
+
 rosidl_typesupport_introspection_c/messages_pkg/msg/detail/energy__type_support.c: rosidl_typesupport_introspection_c/messages_pkg/msg/detail/energy__rosidl_typesupport_introspection_c.h
 	@$(CMAKE_COMMAND) -E touch_nocreate rosidl_typesupport_introspection_c/messages_pkg/msg/detail/energy__type_support.c
+
+rosidl_typesupport_introspection_c/messages_pkg/msg/detail/distance__type_support.c: rosidl_typesupport_introspection_c/messages_pkg/msg/detail/energy__rosidl_typesupport_introspection_c.h
+	@$(CMAKE_COMMAND) -E touch_nocreate rosidl_typesupport_introspection_c/messages_pkg/msg/detail/distance__type_support.c
 
 CMakeFiles/messages_pkg__rosidl_typesupport_introspection_c.dir/rosidl_typesupport_introspection_c/messages_pkg/msg/detail/energy__type_support.c.o: CMakeFiles/messages_pkg__rosidl_typesupport_introspection_c.dir/flags.make
 CMakeFiles/messages_pkg__rosidl_typesupport_introspection_c.dir/rosidl_typesupport_introspection_c/messages_pkg/msg/detail/energy__type_support.c.o: rosidl_typesupport_introspection_c/messages_pkg/msg/detail/energy__type_support.c
@@ -98,21 +105,37 @@ CMakeFiles/messages_pkg__rosidl_typesupport_introspection_c.dir/rosidl_typesuppo
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling C source to assembly CMakeFiles/messages_pkg__rosidl_typesupport_introspection_c.dir/rosidl_typesupport_introspection_c/messages_pkg/msg/detail/energy__type_support.c.s"
 	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/lab/robocar/src/build/messages_pkg/rosidl_typesupport_introspection_c/messages_pkg/msg/detail/energy__type_support.c -o CMakeFiles/messages_pkg__rosidl_typesupport_introspection_c.dir/rosidl_typesupport_introspection_c/messages_pkg/msg/detail/energy__type_support.c.s
 
+CMakeFiles/messages_pkg__rosidl_typesupport_introspection_c.dir/rosidl_typesupport_introspection_c/messages_pkg/msg/detail/distance__type_support.c.o: CMakeFiles/messages_pkg__rosidl_typesupport_introspection_c.dir/flags.make
+CMakeFiles/messages_pkg__rosidl_typesupport_introspection_c.dir/rosidl_typesupport_introspection_c/messages_pkg/msg/detail/distance__type_support.c.o: rosidl_typesupport_introspection_c/messages_pkg/msg/detail/distance__type_support.c
+CMakeFiles/messages_pkg__rosidl_typesupport_introspection_c.dir/rosidl_typesupport_introspection_c/messages_pkg/msg/detail/distance__type_support.c.o: CMakeFiles/messages_pkg__rosidl_typesupport_introspection_c.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/lab/robocar/src/build/messages_pkg/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Building C object CMakeFiles/messages_pkg__rosidl_typesupport_introspection_c.dir/rosidl_typesupport_introspection_c/messages_pkg/msg/detail/distance__type_support.c.o"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/messages_pkg__rosidl_typesupport_introspection_c.dir/rosidl_typesupport_introspection_c/messages_pkg/msg/detail/distance__type_support.c.o -MF CMakeFiles/messages_pkg__rosidl_typesupport_introspection_c.dir/rosidl_typesupport_introspection_c/messages_pkg/msg/detail/distance__type_support.c.o.d -o CMakeFiles/messages_pkg__rosidl_typesupport_introspection_c.dir/rosidl_typesupport_introspection_c/messages_pkg/msg/detail/distance__type_support.c.o -c /home/lab/robocar/src/build/messages_pkg/rosidl_typesupport_introspection_c/messages_pkg/msg/detail/distance__type_support.c
+
+CMakeFiles/messages_pkg__rosidl_typesupport_introspection_c.dir/rosidl_typesupport_introspection_c/messages_pkg/msg/detail/distance__type_support.c.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing C source to CMakeFiles/messages_pkg__rosidl_typesupport_introspection_c.dir/rosidl_typesupport_introspection_c/messages_pkg/msg/detail/distance__type_support.c.i"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/lab/robocar/src/build/messages_pkg/rosidl_typesupport_introspection_c/messages_pkg/msg/detail/distance__type_support.c > CMakeFiles/messages_pkg__rosidl_typesupport_introspection_c.dir/rosidl_typesupport_introspection_c/messages_pkg/msg/detail/distance__type_support.c.i
+
+CMakeFiles/messages_pkg__rosidl_typesupport_introspection_c.dir/rosidl_typesupport_introspection_c/messages_pkg/msg/detail/distance__type_support.c.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling C source to assembly CMakeFiles/messages_pkg__rosidl_typesupport_introspection_c.dir/rosidl_typesupport_introspection_c/messages_pkg/msg/detail/distance__type_support.c.s"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/lab/robocar/src/build/messages_pkg/rosidl_typesupport_introspection_c/messages_pkg/msg/detail/distance__type_support.c -o CMakeFiles/messages_pkg__rosidl_typesupport_introspection_c.dir/rosidl_typesupport_introspection_c/messages_pkg/msg/detail/distance__type_support.c.s
+
 # Object files for target messages_pkg__rosidl_typesupport_introspection_c
 messages_pkg__rosidl_typesupport_introspection_c_OBJECTS = \
-"CMakeFiles/messages_pkg__rosidl_typesupport_introspection_c.dir/rosidl_typesupport_introspection_c/messages_pkg/msg/detail/energy__type_support.c.o"
+"CMakeFiles/messages_pkg__rosidl_typesupport_introspection_c.dir/rosidl_typesupport_introspection_c/messages_pkg/msg/detail/energy__type_support.c.o" \
+"CMakeFiles/messages_pkg__rosidl_typesupport_introspection_c.dir/rosidl_typesupport_introspection_c/messages_pkg/msg/detail/distance__type_support.c.o"
 
 # External object files for target messages_pkg__rosidl_typesupport_introspection_c
 messages_pkg__rosidl_typesupport_introspection_c_EXTERNAL_OBJECTS =
 
 libmessages_pkg__rosidl_typesupport_introspection_c.so: CMakeFiles/messages_pkg__rosidl_typesupport_introspection_c.dir/rosidl_typesupport_introspection_c/messages_pkg/msg/detail/energy__type_support.c.o
+libmessages_pkg__rosidl_typesupport_introspection_c.so: CMakeFiles/messages_pkg__rosidl_typesupport_introspection_c.dir/rosidl_typesupport_introspection_c/messages_pkg/msg/detail/distance__type_support.c.o
 libmessages_pkg__rosidl_typesupport_introspection_c.so: CMakeFiles/messages_pkg__rosidl_typesupport_introspection_c.dir/build.make
 libmessages_pkg__rosidl_typesupport_introspection_c.so: libmessages_pkg__rosidl_generator_c.so
 libmessages_pkg__rosidl_typesupport_introspection_c.so: /opt/ros/iron/lib/librosidl_runtime_c.so
 libmessages_pkg__rosidl_typesupport_introspection_c.so: /opt/ros/iron/lib/librosidl_typesupport_introspection_c.so
 libmessages_pkg__rosidl_typesupport_introspection_c.so: /opt/ros/iron/lib/librcutils.so
 libmessages_pkg__rosidl_typesupport_introspection_c.so: CMakeFiles/messages_pkg__rosidl_typesupport_introspection_c.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/home/lab/robocar/src/build/messages_pkg/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Linking C shared library libmessages_pkg__rosidl_typesupport_introspection_c.so"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/home/lab/robocar/src/build/messages_pkg/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Linking C shared library libmessages_pkg__rosidl_typesupport_introspection_c.so"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/messages_pkg__rosidl_typesupport_introspection_c.dir/link.txt --verbose=$(VERBOSE)
 
 # Rule to build all files generated by this target.
@@ -123,6 +146,8 @@ CMakeFiles/messages_pkg__rosidl_typesupport_introspection_c.dir/clean:
 	$(CMAKE_COMMAND) -P CMakeFiles/messages_pkg__rosidl_typesupport_introspection_c.dir/cmake_clean.cmake
 .PHONY : CMakeFiles/messages_pkg__rosidl_typesupport_introspection_c.dir/clean
 
+CMakeFiles/messages_pkg__rosidl_typesupport_introspection_c.dir/depend: rosidl_typesupport_introspection_c/messages_pkg/msg/detail/distance__rosidl_typesupport_introspection_c.h
+CMakeFiles/messages_pkg__rosidl_typesupport_introspection_c.dir/depend: rosidl_typesupport_introspection_c/messages_pkg/msg/detail/distance__type_support.c
 CMakeFiles/messages_pkg__rosidl_typesupport_introspection_c.dir/depend: rosidl_typesupport_introspection_c/messages_pkg/msg/detail/energy__rosidl_typesupport_introspection_c.h
 CMakeFiles/messages_pkg__rosidl_typesupport_introspection_c.dir/depend: rosidl_typesupport_introspection_c/messages_pkg/msg/detail/energy__type_support.c
 	cd /home/lab/robocar/src/build/messages_pkg && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/lab/robocar/src/messages_pkg /home/lab/robocar/src/messages_pkg /home/lab/robocar/src/build/messages_pkg /home/lab/robocar/src/build/messages_pkg /home/lab/robocar/src/build/messages_pkg/CMakeFiles/messages_pkg__rosidl_typesupport_introspection_c.dir/DependInfo.cmake --color=$(COLOR)

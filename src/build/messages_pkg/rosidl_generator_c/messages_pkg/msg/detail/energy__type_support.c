@@ -4,10 +4,10 @@
 
 #include <string.h>
 
+#include "rosidl_typesupport_interface/macros.h"
+#include "messages_pkg/msg/detail/energy__functions.h"
 #include "messages_pkg/msg/detail/energy__type_support.h"
 #include "messages_pkg/msg/detail/energy__struct.h"
-#include "messages_pkg/msg/detail/energy__functions.h"
-#include "rosidl_typesupport_interface/macros.h"
 
 #ifdef __cplusplus
 extern "C"

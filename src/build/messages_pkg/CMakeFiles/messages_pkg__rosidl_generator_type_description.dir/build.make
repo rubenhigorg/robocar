@@ -67,14 +67,20 @@ include CMakeFiles/messages_pkg__rosidl_generator_type_description.dir/compiler_
 include CMakeFiles/messages_pkg__rosidl_generator_type_description.dir/progress.make
 
 CMakeFiles/messages_pkg__rosidl_generator_type_description: rosidl_generator_type_description/messages_pkg/msg/Energy.json
+CMakeFiles/messages_pkg__rosidl_generator_type_description: rosidl_generator_type_description/messages_pkg/msg/Distance.json
 
 rosidl_generator_type_description/messages_pkg/msg/Energy.json: /opt/ros/iron/lib/rosidl_generator_type_description/rosidl_generator_type_description
 rosidl_generator_type_description/messages_pkg/msg/Energy.json: /opt/ros/iron/lib/python3.10/site-packages/rosidl_generator_type_description/__init__.py
 rosidl_generator_type_description/messages_pkg/msg/Energy.json: rosidl_adapter/messages_pkg/msg/Energy.idl
+rosidl_generator_type_description/messages_pkg/msg/Energy.json: rosidl_adapter/messages_pkg/msg/Distance.idl
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --blue --bold --progress-dir=/home/lab/robocar/src/build/messages_pkg/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Generating type hashes for ROS interfaces"
 	/home/lab/robocar/.venv/bin/python3.10 /opt/ros/iron/lib/rosidl_generator_type_description/rosidl_generator_type_description --generator-arguments-file /home/lab/robocar/src/build/messages_pkg/rosidl_generator_type_description__arguments.json
 
+rosidl_generator_type_description/messages_pkg/msg/Distance.json: rosidl_generator_type_description/messages_pkg/msg/Energy.json
+	@$(CMAKE_COMMAND) -E touch_nocreate rosidl_generator_type_description/messages_pkg/msg/Distance.json
+
 messages_pkg__rosidl_generator_type_description: CMakeFiles/messages_pkg__rosidl_generator_type_description
+messages_pkg__rosidl_generator_type_description: rosidl_generator_type_description/messages_pkg/msg/Distance.json
 messages_pkg__rosidl_generator_type_description: rosidl_generator_type_description/messages_pkg/msg/Energy.json
 messages_pkg__rosidl_generator_type_description: CMakeFiles/messages_pkg__rosidl_generator_type_description.dir/build.make
 .PHONY : messages_pkg__rosidl_generator_type_description

@@ -1,4 +1,6 @@
 file(REMOVE_RECURSE
+  "CMakeFiles/messages_pkg__rosidl_generator_py.dir/rosidl_generator_py/messages_pkg/msg/_distance_s.c.o"
+  "CMakeFiles/messages_pkg__rosidl_generator_py.dir/rosidl_generator_py/messages_pkg/msg/_distance_s.c.o.d"
   "CMakeFiles/messages_pkg__rosidl_generator_py.dir/rosidl_generator_py/messages_pkg/msg/_energy_s.c.o"
   "CMakeFiles/messages_pkg__rosidl_generator_py.dir/rosidl_generator_py/messages_pkg/msg/_energy_s.c.o.d"
   "rosidl_generator_py/messages_pkg/libmessages_pkg__rosidl_generator_py.pdb"

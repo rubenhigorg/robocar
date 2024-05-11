@@ -28,3 +28,14 @@ IMPORTANTE: Para ejecutar el nodo del joystick, ejecutar el comando
 ros2 launch teleop_twist_joy teleop-launch.py
 ```
 Por defecto utiliza un mando de la ps3. Mirar readme.md del paquete teleop_twist_joy para más información.
+
+IMPORTANTE 2: Para que funcione node-red (desde 0):
+```
+npm install -g --unsafe-perm node-red rclnodejs cron
+cd /home/lab/edu_nodered_ros2_plugin
+npm install -g .
+```
+Debemos hacer source de los paquetes de ros2 que tenemos:
+```
+source /home/lab/robocar/src/install/setup.sh
+```

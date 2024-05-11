@@ -70,6 +70,10 @@ CMakeFiles/messages_pkg__cpp: rosidl_generator_cpp/messages_pkg/msg/energy.hpp
 CMakeFiles/messages_pkg__cpp: rosidl_generator_cpp/messages_pkg/msg/detail/energy__builder.hpp
 CMakeFiles/messages_pkg__cpp: rosidl_generator_cpp/messages_pkg/msg/detail/energy__struct.hpp
 CMakeFiles/messages_pkg__cpp: rosidl_generator_cpp/messages_pkg/msg/detail/energy__traits.hpp
+CMakeFiles/messages_pkg__cpp: rosidl_generator_cpp/messages_pkg/msg/distance.hpp
+CMakeFiles/messages_pkg__cpp: rosidl_generator_cpp/messages_pkg/msg/detail/distance__builder.hpp
+CMakeFiles/messages_pkg__cpp: rosidl_generator_cpp/messages_pkg/msg/detail/distance__struct.hpp
+CMakeFiles/messages_pkg__cpp: rosidl_generator_cpp/messages_pkg/msg/detail/distance__traits.hpp
 
 rosidl_generator_cpp/messages_pkg/msg/energy.hpp: /opt/ros/iron/lib/rosidl_generator_cpp/rosidl_generator_cpp
 rosidl_generator_cpp/messages_pkg/msg/energy.hpp: /opt/ros/iron/lib/python3.10/site-packages/rosidl_generator_cpp/__init__.py
@@ -87,6 +91,7 @@ rosidl_generator_cpp/messages_pkg/msg/energy.hpp: /opt/ros/iron/share/rosidl_gen
 rosidl_generator_cpp/messages_pkg/msg/energy.hpp: /opt/ros/iron/share/rosidl_generator_cpp/resource/srv__struct.hpp.em
 rosidl_generator_cpp/messages_pkg/msg/energy.hpp: /opt/ros/iron/share/rosidl_generator_cpp/resource/srv__traits.hpp.em
 rosidl_generator_cpp/messages_pkg/msg/energy.hpp: rosidl_adapter/messages_pkg/msg/Energy.idl
+rosidl_generator_cpp/messages_pkg/msg/energy.hpp: rosidl_adapter/messages_pkg/msg/Distance.idl
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --blue --bold --progress-dir=/home/lab/robocar/src/build/messages_pkg/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Generating C++ code for ROS interfaces"
 	/home/lab/robocar/.venv/bin/python3.10 /opt/ros/iron/share/rosidl_generator_cpp/cmake/../../../lib/rosidl_generator_cpp/rosidl_generator_cpp --generator-arguments-file /home/lab/robocar/src/build/messages_pkg/rosidl_generator_cpp__arguments.json
 
@@ -99,10 +104,26 @@ rosidl_generator_cpp/messages_pkg/msg/detail/energy__struct.hpp: rosidl_generato
 rosidl_generator_cpp/messages_pkg/msg/detail/energy__traits.hpp: rosidl_generator_cpp/messages_pkg/msg/energy.hpp
 	@$(CMAKE_COMMAND) -E touch_nocreate rosidl_generator_cpp/messages_pkg/msg/detail/energy__traits.hpp
 
+rosidl_generator_cpp/messages_pkg/msg/distance.hpp: rosidl_generator_cpp/messages_pkg/msg/energy.hpp
+	@$(CMAKE_COMMAND) -E touch_nocreate rosidl_generator_cpp/messages_pkg/msg/distance.hpp
+
+rosidl_generator_cpp/messages_pkg/msg/detail/distance__builder.hpp: rosidl_generator_cpp/messages_pkg/msg/energy.hpp
+	@$(CMAKE_COMMAND) -E touch_nocreate rosidl_generator_cpp/messages_pkg/msg/detail/distance__builder.hpp
+
+rosidl_generator_cpp/messages_pkg/msg/detail/distance__struct.hpp: rosidl_generator_cpp/messages_pkg/msg/energy.hpp
+	@$(CMAKE_COMMAND) -E touch_nocreate rosidl_generator_cpp/messages_pkg/msg/detail/distance__struct.hpp
+
+rosidl_generator_cpp/messages_pkg/msg/detail/distance__traits.hpp: rosidl_generator_cpp/messages_pkg/msg/energy.hpp
+	@$(CMAKE_COMMAND) -E touch_nocreate rosidl_generator_cpp/messages_pkg/msg/detail/distance__traits.hpp
+
 messages_pkg__cpp: CMakeFiles/messages_pkg__cpp
+messages_pkg__cpp: rosidl_generator_cpp/messages_pkg/msg/detail/distance__builder.hpp
+messages_pkg__cpp: rosidl_generator_cpp/messages_pkg/msg/detail/distance__struct.hpp
+messages_pkg__cpp: rosidl_generator_cpp/messages_pkg/msg/detail/distance__traits.hpp
 messages_pkg__cpp: rosidl_generator_cpp/messages_pkg/msg/detail/energy__builder.hpp
 messages_pkg__cpp: rosidl_generator_cpp/messages_pkg/msg/detail/energy__struct.hpp
 messages_pkg__cpp: rosidl_generator_cpp/messages_pkg/msg/detail/energy__traits.hpp
+messages_pkg__cpp: rosidl_generator_cpp/messages_pkg/msg/distance.hpp
 messages_pkg__cpp: rosidl_generator_cpp/messages_pkg/msg/energy.hpp
 messages_pkg__cpp: CMakeFiles/messages_pkg__cpp.dir/build.make
 .PHONY : messages_pkg__cpp

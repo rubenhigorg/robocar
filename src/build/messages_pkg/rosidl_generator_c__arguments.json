@@ -3,10 +3,12 @@
   "output_dir": "/home/lab/robocar/src/build/messages_pkg/rosidl_generator_c/messages_pkg",
   "template_dir": "/opt/ros/iron/share/rosidl_generator_c/cmake/../resource",
   "idl_tuples": [
-    "/home/lab/robocar/src/build/messages_pkg/rosidl_adapter/messages_pkg:msg/Energy.idl"
+    "/home/lab/robocar/src/build/messages_pkg/rosidl_adapter/messages_pkg:msg/Energy.idl",
+    "/home/lab/robocar/src/build/messages_pkg/rosidl_adapter/messages_pkg:msg/Distance.idl"
   ],
   "ros_interface_files": [
-    "/home/lab/robocar/src/messages_pkg/msg/Energy.msg"
+    "/home/lab/robocar/src/messages_pkg/msg/Energy.msg",
+    "/home/lab/robocar/src/messages_pkg/msg/Distance.msg"
   ],
   "target_dependencies": [
     "/opt/ros/iron/share/rosidl_generator_c/cmake/../../../lib/rosidl_generator_c/rosidl_generator_c",
@@ -28,9 +30,11 @@
     "/opt/ros/iron/share/rosidl_generator_c/cmake/../resource/msg__type_support.h.em",
     "/opt/ros/iron/share/rosidl_generator_c/cmake/../resource/srv__type_support.c.em",
     "/opt/ros/iron/share/rosidl_generator_c/cmake/../resource/srv__type_support.h.em",
-    "/home/lab/robocar/src/build/messages_pkg/rosidl_adapter/messages_pkg/msg/Energy.idl"
+    "/home/lab/robocar/src/build/messages_pkg/rosidl_adapter/messages_pkg/msg/Energy.idl",
+    "/home/lab/robocar/src/build/messages_pkg/rosidl_adapter/messages_pkg/msg/Distance.idl"
   ],
   "type_description_tuples": [
-    "msg/Energy.idl:/home/lab/robocar/src/build/messages_pkg/rosidl_generator_type_description/messages_pkg/msg/Energy.json"
+    "msg/Energy.idl:/home/lab/robocar/src/build/messages_pkg/rosidl_generator_type_description/messages_pkg/msg/Energy.json",
+    "msg/Distance.idl:/home/lab/robocar/src/build/messages_pkg/rosidl_generator_type_description/messages_pkg/msg/Distance.json"
   ]
 }

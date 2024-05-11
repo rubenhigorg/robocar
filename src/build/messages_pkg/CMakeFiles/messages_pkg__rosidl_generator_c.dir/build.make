@@ -89,6 +89,7 @@ rosidl_generator_c/messages_pkg/msg/energy.h: /opt/ros/iron/share/rosidl_generat
 rosidl_generator_c/messages_pkg/msg/energy.h: /opt/ros/iron/share/rosidl_generator_c/resource/srv__type_support.c.em
 rosidl_generator_c/messages_pkg/msg/energy.h: /opt/ros/iron/share/rosidl_generator_c/resource/srv__type_support.h.em
 rosidl_generator_c/messages_pkg/msg/energy.h: rosidl_adapter/messages_pkg/msg/Energy.idl
+rosidl_generator_c/messages_pkg/msg/energy.h: rosidl_adapter/messages_pkg/msg/Distance.idl
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --blue --bold --progress-dir=/home/lab/robocar/src/build/messages_pkg/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Generating C code for ROS interfaces"
 	/home/lab/robocar/.venv/bin/python3.10 /opt/ros/iron/share/rosidl_generator_c/cmake/../../../lib/rosidl_generator_c/rosidl_generator_c --generator-arguments-file /home/lab/robocar/src/build/messages_pkg/rosidl_generator_c__arguments.json
 
@@ -101,6 +102,18 @@ rosidl_generator_c/messages_pkg/msg/detail/energy__struct.h: rosidl_generator_c/
 rosidl_generator_c/messages_pkg/msg/detail/energy__type_support.h: rosidl_generator_c/messages_pkg/msg/energy.h
 	@$(CMAKE_COMMAND) -E touch_nocreate rosidl_generator_c/messages_pkg/msg/detail/energy__type_support.h
 
+rosidl_generator_c/messages_pkg/msg/distance.h: rosidl_generator_c/messages_pkg/msg/energy.h
+	@$(CMAKE_COMMAND) -E touch_nocreate rosidl_generator_c/messages_pkg/msg/distance.h
+
+rosidl_generator_c/messages_pkg/msg/detail/distance__functions.h: rosidl_generator_c/messages_pkg/msg/energy.h
+	@$(CMAKE_COMMAND) -E touch_nocreate rosidl_generator_c/messages_pkg/msg/detail/distance__functions.h
+
+rosidl_generator_c/messages_pkg/msg/detail/distance__struct.h: rosidl_generator_c/messages_pkg/msg/energy.h
+	@$(CMAKE_COMMAND) -E touch_nocreate rosidl_generator_c/messages_pkg/msg/detail/distance__struct.h
+
+rosidl_generator_c/messages_pkg/msg/detail/distance__type_support.h: rosidl_generator_c/messages_pkg/msg/energy.h
+	@$(CMAKE_COMMAND) -E touch_nocreate rosidl_generator_c/messages_pkg/msg/detail/distance__type_support.h
+
 rosidl_generator_c/messages_pkg/msg/detail/energy__description.c: rosidl_generator_c/messages_pkg/msg/energy.h
 	@$(CMAKE_COMMAND) -E touch_nocreate rosidl_generator_c/messages_pkg/msg/detail/energy__description.c
 
@@ -109,6 +122,15 @@ rosidl_generator_c/messages_pkg/msg/detail/energy__functions.c: rosidl_generator
 
 rosidl_generator_c/messages_pkg/msg/detail/energy__type_support.c: rosidl_generator_c/messages_pkg/msg/energy.h
 	@$(CMAKE_COMMAND) -E touch_nocreate rosidl_generator_c/messages_pkg/msg/detail/energy__type_support.c
+
+rosidl_generator_c/messages_pkg/msg/detail/distance__description.c: rosidl_generator_c/messages_pkg/msg/energy.h
+	@$(CMAKE_COMMAND) -E touch_nocreate rosidl_generator_c/messages_pkg/msg/detail/distance__description.c
+
+rosidl_generator_c/messages_pkg/msg/detail/distance__functions.c: rosidl_generator_c/messages_pkg/msg/energy.h
+	@$(CMAKE_COMMAND) -E touch_nocreate rosidl_generator_c/messages_pkg/msg/detail/distance__functions.c
+
+rosidl_generator_c/messages_pkg/msg/detail/distance__type_support.c: rosidl_generator_c/messages_pkg/msg/energy.h
+	@$(CMAKE_COMMAND) -E touch_nocreate rosidl_generator_c/messages_pkg/msg/detail/distance__type_support.c
 
 CMakeFiles/messages_pkg__rosidl_generator_c.dir/rosidl_generator_c/messages_pkg/msg/detail/energy__description.c.o: CMakeFiles/messages_pkg__rosidl_generator_c.dir/flags.make
 CMakeFiles/messages_pkg__rosidl_generator_c.dir/rosidl_generator_c/messages_pkg/msg/detail/energy__description.c.o: rosidl_generator_c/messages_pkg/msg/detail/energy__description.c
@@ -152,11 +174,56 @@ CMakeFiles/messages_pkg__rosidl_generator_c.dir/rosidl_generator_c/messages_pkg/
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling C source to assembly CMakeFiles/messages_pkg__rosidl_generator_c.dir/rosidl_generator_c/messages_pkg/msg/detail/energy__type_support.c.s"
 	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/lab/robocar/src/build/messages_pkg/rosidl_generator_c/messages_pkg/msg/detail/energy__type_support.c -o CMakeFiles/messages_pkg__rosidl_generator_c.dir/rosidl_generator_c/messages_pkg/msg/detail/energy__type_support.c.s
 
+CMakeFiles/messages_pkg__rosidl_generator_c.dir/rosidl_generator_c/messages_pkg/msg/detail/distance__description.c.o: CMakeFiles/messages_pkg__rosidl_generator_c.dir/flags.make
+CMakeFiles/messages_pkg__rosidl_generator_c.dir/rosidl_generator_c/messages_pkg/msg/detail/distance__description.c.o: rosidl_generator_c/messages_pkg/msg/detail/distance__description.c
+CMakeFiles/messages_pkg__rosidl_generator_c.dir/rosidl_generator_c/messages_pkg/msg/detail/distance__description.c.o: CMakeFiles/messages_pkg__rosidl_generator_c.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/lab/robocar/src/build/messages_pkg/CMakeFiles --progress-num=$(CMAKE_PROGRESS_5) "Building C object CMakeFiles/messages_pkg__rosidl_generator_c.dir/rosidl_generator_c/messages_pkg/msg/detail/distance__description.c.o"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/messages_pkg__rosidl_generator_c.dir/rosidl_generator_c/messages_pkg/msg/detail/distance__description.c.o -MF CMakeFiles/messages_pkg__rosidl_generator_c.dir/rosidl_generator_c/messages_pkg/msg/detail/distance__description.c.o.d -o CMakeFiles/messages_pkg__rosidl_generator_c.dir/rosidl_generator_c/messages_pkg/msg/detail/distance__description.c.o -c /home/lab/robocar/src/build/messages_pkg/rosidl_generator_c/messages_pkg/msg/detail/distance__description.c
+
+CMakeFiles/messages_pkg__rosidl_generator_c.dir/rosidl_generator_c/messages_pkg/msg/detail/distance__description.c.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing C source to CMakeFiles/messages_pkg__rosidl_generator_c.dir/rosidl_generator_c/messages_pkg/msg/detail/distance__description.c.i"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/lab/robocar/src/build/messages_pkg/rosidl_generator_c/messages_pkg/msg/detail/distance__description.c > CMakeFiles/messages_pkg__rosidl_generator_c.dir/rosidl_generator_c/messages_pkg/msg/detail/distance__description.c.i
+
+CMakeFiles/messages_pkg__rosidl_generator_c.dir/rosidl_generator_c/messages_pkg/msg/detail/distance__description.c.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling C source to assembly CMakeFiles/messages_pkg__rosidl_generator_c.dir/rosidl_generator_c/messages_pkg/msg/detail/distance__description.c.s"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/lab/robocar/src/build/messages_pkg/rosidl_generator_c/messages_pkg/msg/detail/distance__description.c -o CMakeFiles/messages_pkg__rosidl_generator_c.dir/rosidl_generator_c/messages_pkg/msg/detail/distance__description.c.s
+
+CMakeFiles/messages_pkg__rosidl_generator_c.dir/rosidl_generator_c/messages_pkg/msg/detail/distance__functions.c.o: CMakeFiles/messages_pkg__rosidl_generator_c.dir/flags.make
+CMakeFiles/messages_pkg__rosidl_generator_c.dir/rosidl_generator_c/messages_pkg/msg/detail/distance__functions.c.o: rosidl_generator_c/messages_pkg/msg/detail/distance__functions.c
+CMakeFiles/messages_pkg__rosidl_generator_c.dir/rosidl_generator_c/messages_pkg/msg/detail/distance__functions.c.o: CMakeFiles/messages_pkg__rosidl_generator_c.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/lab/robocar/src/build/messages_pkg/CMakeFiles --progress-num=$(CMAKE_PROGRESS_6) "Building C object CMakeFiles/messages_pkg__rosidl_generator_c.dir/rosidl_generator_c/messages_pkg/msg/detail/distance__functions.c.o"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/messages_pkg__rosidl_generator_c.dir/rosidl_generator_c/messages_pkg/msg/detail/distance__functions.c.o -MF CMakeFiles/messages_pkg__rosidl_generator_c.dir/rosidl_generator_c/messages_pkg/msg/detail/distance__functions.c.o.d -o CMakeFiles/messages_pkg__rosidl_generator_c.dir/rosidl_generator_c/messages_pkg/msg/detail/distance__functions.c.o -c /home/lab/robocar/src/build/messages_pkg/rosidl_generator_c/messages_pkg/msg/detail/distance__functions.c
+
+CMakeFiles/messages_pkg__rosidl_generator_c.dir/rosidl_generator_c/messages_pkg/msg/detail/distance__functions.c.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing C source to CMakeFiles/messages_pkg__rosidl_generator_c.dir/rosidl_generator_c/messages_pkg/msg/detail/distance__functions.c.i"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/lab/robocar/src/build/messages_pkg/rosidl_generator_c/messages_pkg/msg/detail/distance__functions.c > CMakeFiles/messages_pkg__rosidl_generator_c.dir/rosidl_generator_c/messages_pkg/msg/detail/distance__functions.c.i
+
+CMakeFiles/messages_pkg__rosidl_generator_c.dir/rosidl_generator_c/messages_pkg/msg/detail/distance__functions.c.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling C source to assembly CMakeFiles/messages_pkg__rosidl_generator_c.dir/rosidl_generator_c/messages_pkg/msg/detail/distance__functions.c.s"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/lab/robocar/src/build/messages_pkg/rosidl_generator_c/messages_pkg/msg/detail/distance__functions.c -o CMakeFiles/messages_pkg__rosidl_generator_c.dir/rosidl_generator_c/messages_pkg/msg/detail/distance__functions.c.s
+
+CMakeFiles/messages_pkg__rosidl_generator_c.dir/rosidl_generator_c/messages_pkg/msg/detail/distance__type_support.c.o: CMakeFiles/messages_pkg__rosidl_generator_c.dir/flags.make
+CMakeFiles/messages_pkg__rosidl_generator_c.dir/rosidl_generator_c/messages_pkg/msg/detail/distance__type_support.c.o: rosidl_generator_c/messages_pkg/msg/detail/distance__type_support.c
+CMakeFiles/messages_pkg__rosidl_generator_c.dir/rosidl_generator_c/messages_pkg/msg/detail/distance__type_support.c.o: CMakeFiles/messages_pkg__rosidl_generator_c.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/lab/robocar/src/build/messages_pkg/CMakeFiles --progress-num=$(CMAKE_PROGRESS_7) "Building C object CMakeFiles/messages_pkg__rosidl_generator_c.dir/rosidl_generator_c/messages_pkg/msg/detail/distance__type_support.c.o"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/messages_pkg__rosidl_generator_c.dir/rosidl_generator_c/messages_pkg/msg/detail/distance__type_support.c.o -MF CMakeFiles/messages_pkg__rosidl_generator_c.dir/rosidl_generator_c/messages_pkg/msg/detail/distance__type_support.c.o.d -o CMakeFiles/messages_pkg__rosidl_generator_c.dir/rosidl_generator_c/messages_pkg/msg/detail/distance__type_support.c.o -c /home/lab/robocar/src/build/messages_pkg/rosidl_generator_c/messages_pkg/msg/detail/distance__type_support.c
+
+CMakeFiles/messages_pkg__rosidl_generator_c.dir/rosidl_generator_c/messages_pkg/msg/detail/distance__type_support.c.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing C source to CMakeFiles/messages_pkg__rosidl_generator_c.dir/rosidl_generator_c/messages_pkg/msg/detail/distance__type_support.c.i"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/lab/robocar/src/build/messages_pkg/rosidl_generator_c/messages_pkg/msg/detail/distance__type_support.c > CMakeFiles/messages_pkg__rosidl_generator_c.dir/rosidl_generator_c/messages_pkg/msg/detail/distance__type_support.c.i
+
+CMakeFiles/messages_pkg__rosidl_generator_c.dir/rosidl_generator_c/messages_pkg/msg/detail/distance__type_support.c.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling C source to assembly CMakeFiles/messages_pkg__rosidl_generator_c.dir/rosidl_generator_c/messages_pkg/msg/detail/distance__type_support.c.s"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/lab/robocar/src/build/messages_pkg/rosidl_generator_c/messages_pkg/msg/detail/distance__type_support.c -o CMakeFiles/messages_pkg__rosidl_generator_c.dir/rosidl_generator_c/messages_pkg/msg/detail/distance__type_support.c.s
+
 # Object files for target messages_pkg__rosidl_generator_c
 messages_pkg__rosidl_generator_c_OBJECTS = \
 "CMakeFiles/messages_pkg__rosidl_generator_c.dir/rosidl_generator_c/messages_pkg/msg/detail/energy__description.c.o" \
 "CMakeFiles/messages_pkg__rosidl_generator_c.dir/rosidl_generator_c/messages_pkg/msg/detail/energy__functions.c.o" \
-"CMakeFiles/messages_pkg__rosidl_generator_c.dir/rosidl_generator_c/messages_pkg/msg/detail/energy__type_support.c.o"
+"CMakeFiles/messages_pkg__rosidl_generator_c.dir/rosidl_generator_c/messages_pkg/msg/detail/energy__type_support.c.o" \
+"CMakeFiles/messages_pkg__rosidl_generator_c.dir/rosidl_generator_c/messages_pkg/msg/detail/distance__description.c.o" \
+"CMakeFiles/messages_pkg__rosidl_generator_c.dir/rosidl_generator_c/messages_pkg/msg/detail/distance__functions.c.o" \
+"CMakeFiles/messages_pkg__rosidl_generator_c.dir/rosidl_generator_c/messages_pkg/msg/detail/distance__type_support.c.o"
 
 # External object files for target messages_pkg__rosidl_generator_c
 messages_pkg__rosidl_generator_c_EXTERNAL_OBJECTS =
@@ -164,11 +231,14 @@ messages_pkg__rosidl_generator_c_EXTERNAL_OBJECTS =
 libmessages_pkg__rosidl_generator_c.so: CMakeFiles/messages_pkg__rosidl_generator_c.dir/rosidl_generator_c/messages_pkg/msg/detail/energy__description.c.o
 libmessages_pkg__rosidl_generator_c.so: CMakeFiles/messages_pkg__rosidl_generator_c.dir/rosidl_generator_c/messages_pkg/msg/detail/energy__functions.c.o
 libmessages_pkg__rosidl_generator_c.so: CMakeFiles/messages_pkg__rosidl_generator_c.dir/rosidl_generator_c/messages_pkg/msg/detail/energy__type_support.c.o
+libmessages_pkg__rosidl_generator_c.so: CMakeFiles/messages_pkg__rosidl_generator_c.dir/rosidl_generator_c/messages_pkg/msg/detail/distance__description.c.o
+libmessages_pkg__rosidl_generator_c.so: CMakeFiles/messages_pkg__rosidl_generator_c.dir/rosidl_generator_c/messages_pkg/msg/detail/distance__functions.c.o
+libmessages_pkg__rosidl_generator_c.so: CMakeFiles/messages_pkg__rosidl_generator_c.dir/rosidl_generator_c/messages_pkg/msg/detail/distance__type_support.c.o
 libmessages_pkg__rosidl_generator_c.so: CMakeFiles/messages_pkg__rosidl_generator_c.dir/build.make
 libmessages_pkg__rosidl_generator_c.so: /opt/ros/iron/lib/librosidl_runtime_c.so
 libmessages_pkg__rosidl_generator_c.so: /opt/ros/iron/lib/librcutils.so
 libmessages_pkg__rosidl_generator_c.so: CMakeFiles/messages_pkg__rosidl_generator_c.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/home/lab/robocar/src/build/messages_pkg/CMakeFiles --progress-num=$(CMAKE_PROGRESS_5) "Linking C shared library libmessages_pkg__rosidl_generator_c.so"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/home/lab/robocar/src/build/messages_pkg/CMakeFiles --progress-num=$(CMAKE_PROGRESS_8) "Linking C shared library libmessages_pkg__rosidl_generator_c.so"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/messages_pkg__rosidl_generator_c.dir/link.txt --verbose=$(VERBOSE)
 
 # Rule to build all files generated by this target.
@@ -179,12 +249,19 @@ CMakeFiles/messages_pkg__rosidl_generator_c.dir/clean:
 	$(CMAKE_COMMAND) -P CMakeFiles/messages_pkg__rosidl_generator_c.dir/cmake_clean.cmake
 .PHONY : CMakeFiles/messages_pkg__rosidl_generator_c.dir/clean
 
+CMakeFiles/messages_pkg__rosidl_generator_c.dir/depend: rosidl_generator_c/messages_pkg/msg/detail/distance__description.c
+CMakeFiles/messages_pkg__rosidl_generator_c.dir/depend: rosidl_generator_c/messages_pkg/msg/detail/distance__functions.c
+CMakeFiles/messages_pkg__rosidl_generator_c.dir/depend: rosidl_generator_c/messages_pkg/msg/detail/distance__functions.h
+CMakeFiles/messages_pkg__rosidl_generator_c.dir/depend: rosidl_generator_c/messages_pkg/msg/detail/distance__struct.h
+CMakeFiles/messages_pkg__rosidl_generator_c.dir/depend: rosidl_generator_c/messages_pkg/msg/detail/distance__type_support.c
+CMakeFiles/messages_pkg__rosidl_generator_c.dir/depend: rosidl_generator_c/messages_pkg/msg/detail/distance__type_support.h
 CMakeFiles/messages_pkg__rosidl_generator_c.dir/depend: rosidl_generator_c/messages_pkg/msg/detail/energy__description.c
 CMakeFiles/messages_pkg__rosidl_generator_c.dir/depend: rosidl_generator_c/messages_pkg/msg/detail/energy__functions.c
 CMakeFiles/messages_pkg__rosidl_generator_c.dir/depend: rosidl_generator_c/messages_pkg/msg/detail/energy__functions.h
 CMakeFiles/messages_pkg__rosidl_generator_c.dir/depend: rosidl_generator_c/messages_pkg/msg/detail/energy__struct.h
 CMakeFiles/messages_pkg__rosidl_generator_c.dir/depend: rosidl_generator_c/messages_pkg/msg/detail/energy__type_support.c
 CMakeFiles/messages_pkg__rosidl_generator_c.dir/depend: rosidl_generator_c/messages_pkg/msg/detail/energy__type_support.h
+CMakeFiles/messages_pkg__rosidl_generator_c.dir/depend: rosidl_generator_c/messages_pkg/msg/distance.h
 CMakeFiles/messages_pkg__rosidl_generator_c.dir/depend: rosidl_generator_c/messages_pkg/msg/energy.h
 	cd /home/lab/robocar/src/build/messages_pkg && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/lab/robocar/src/messages_pkg /home/lab/robocar/src/messages_pkg /home/lab/robocar/src/build/messages_pkg /home/lab/robocar/src/build/messages_pkg /home/lab/robocar/src/build/messages_pkg/CMakeFiles/messages_pkg__rosidl_generator_c.dir/DependInfo.cmake --color=$(COLOR)
 .PHONY : CMakeFiles/messages_pkg__rosidl_generator_c.dir/depend

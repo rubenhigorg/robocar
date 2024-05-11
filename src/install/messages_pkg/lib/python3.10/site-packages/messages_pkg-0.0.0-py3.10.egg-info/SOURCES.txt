@@ -5,4 +5,5 @@ messages_pkg.egg-info/SOURCES.txt
 messages_pkg.egg-info/dependency_links.txt
 messages_pkg.egg-info/top_level.txt
 messages_pkg/msg/__init__.py
+messages_pkg/msg/_distance.py
 messages_pkg/msg/_energy.py

@@ -260,4 +260,7 @@ CMakeFiles/messages_pkg__rosidl_typesupport_fastrtps_c__pyext.dir/rosidl_generat
  /home/lab/robocar/src/build/messages_pkg/rosidl_generator_c/messages_pkg/msg/rosidl_generator_c__visibility_control.h
  /home/lab/robocar/src/build/messages_pkg/rosidl_generator_c/messages_pkg/msg/detail/energy__struct.h
  /home/lab/robocar/src/build/messages_pkg/rosidl_generator_c/messages_pkg/msg/detail/energy__functions.h
+ /home/lab/robocar/src/build/messages_pkg/rosidl_generator_c/messages_pkg/msg/detail/distance__type_support.h
+ /home/lab/robocar/src/build/messages_pkg/rosidl_generator_c/messages_pkg/msg/detail/distance__struct.h
+ /home/lab/robocar/src/build/messages_pkg/rosidl_generator_c/messages_pkg/msg/detail/distance__functions.h
 
