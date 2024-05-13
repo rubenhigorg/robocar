@@ -31,9 +31,7 @@ class CameraPublisher(Node):
             # byte_image = buffer.tobytes()
             # msg_nodered = ByteMultiArray()
             # msg_nodered.data = byte_image
-            self.get_logger().info('BEFORE IMAGE')
             self.publisher_.publish(msg)
-            self.get_logger().info('AFTER IMAGE')
             # self.publisher_nodered.publish(msg_nodered)
             # self.get_logger().info('Publishing image #%d' % self.i)
             self.i += 1
