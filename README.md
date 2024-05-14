@@ -35,6 +35,13 @@ npm install -g --unsafe-perm node-red rclnodejs cron
 cd /home/lab/edu_nodered_ros2_plugin
 npm install -g .
 ```
+IMPORTANTE 3: Para generar los mensajes custom, necesitamos entrar en root (sudo su) y ejecutar los siguientes comandos desde el directorio /usr/lib/node_modules/rclnodejs/scripts:
+```
+source /opt/ros/iron/setup.sh
+source /home/ros2/robocar/src/install/setup.sh
+npm run generate-messages
+
+
 Debemos hacer source de los paquetes de ros2 que tenemos:
 ```
 source /home/lab/robocar/src/install/setup.sh
