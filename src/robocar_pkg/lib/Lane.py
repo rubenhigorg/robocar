@@ -13,13 +13,15 @@ class Lane:
   """
   Represents a lane on a road.
   """
-  def __init__(self, orig_frame):
+  def __init__(self, orig_frame, logger):
     """
       Default constructor
          
     :param orig_frame: Original camera image (i.e. frame)
     """
     self.orig_frame = orig_frame
+
+    self.logger = logger
  
     # This will hold an image with the lane lines       
     self.lane_line_markings = None
@@ -39,11 +41,12 @@ class Lane:
      
     # Four corners of the trapezoid-shaped region of interest
     # You need to find these corners manually.
+    # TENER EN CUENTA QUE LA IMAGEN ES DE 160X120
     self.roi_points = np.float32([
-      (274,184), # Top-left corner
-      (0, 337), # Bottom-left corner            
-      (575,337), # Bottom-right corner
-      (371,184) # Top-right corner
+      (70, 70), # Top-left corner
+      (60, 120), # Bottom-left corner            
+      (130, 120), # Bottom-right corner
+      (110,70) # Top-right corner
     ])
          
     # The desired corner locations  of the region of interest
@@ -99,6 +102,7 @@ class Lane:
     # Get position of car in centimeters
     car_location = self.orig_frame.shape[1] / 2
  
+    self.logger.info('Car location: ' + str(car_location))
     # Fine the x coordinate of the lane line bottom
     height = self.orig_frame.shape[0]
     bottom_left = self.left_fit[0]*height**2 + self.left_fit[
@@ -444,10 +448,8 @@ class Lane:
     blur = cv2.GaussianBlur(gray, (5, 5), 0)
 
     # Binarizar imagen utilizando umbral de color
-    test = cv2.adaptiveThreshold(blur, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 5)
-    cv2.imshow("Image", test)
-    cv2.waitKey(1)
-
+    binary = cv2.adaptiveThreshold(blur, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 5)
+    self.lane_line_markings = cv2.bitwise_not(binary)
 
     return self.lane_line_markings
          
@@ -571,14 +573,11 @@ class Lane:
       self.roi_points]), True, (147,20,255), 3)
  
     # Display the image
-    while(1):
-      cv2.imshow('ROI Image', this_image)
+    cv2.imshow('ROI Image', this_image)
              
       # Press any key to stop
-      if cv2.waitKey(0):
-        break
- 
-    cv2.destroyAllWindows()
+    cv2.waitKey(1)
+
      
 def main():
      
