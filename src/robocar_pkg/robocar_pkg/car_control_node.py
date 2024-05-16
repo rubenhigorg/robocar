@@ -14,10 +14,46 @@ class CarControlNode(Node):
             'joy',
             self.listener_callback_motor,
             10)
+        self.subscription_cmd_vel = self.create_subscription(
+            Twist,
+            'cmd_vel',
+            self.cmd_vel_callback,
+            10)
         self.kit = ServoKit(channels=16)
+        self.autonomous_mode = False
+        self.get_logger().info("CarControlNode initialized")
 
 
     def listener_callback_motor(self, msg):
+        # Comprobar si el botón X (índice 0) está pulsado para cambiar de modo
+        if msg.buttons[0] == 1:
+            self.autonomous_mode = not self.autonomous_mode
+            mode = "autonomous" if self.autonomous_mode else "manual"
+            self.get_logger().info(f"Switched to {mode} mode")
+
+        if not self.autonomous_mode:
+            self.manual_control(msg)
+
+
+    def cmd_vel_callback(self, msg):
+        # Convertir la velocidad angular en dirección del servo
+        angleDir = self.map_value_direction(msg.angular.z, 1.0, -1.0, 170.0, 40.0)
+        self.kit.servo[2].angle = angleDir
+
+        # Convertir la velocidad lineal en velocidad del motor
+        # Asumiendo que la velocidad lineal está en el rango [-0.5, 0.5]
+        # y mapeamos este rango al rango del potenciómetro del motor [51, 80]
+        if msg.linear.x >= 0:
+            angleMotor = self.map_value_motor(msg.linear.x, 0, 0.5, 51, 15) * 1.8
+        else:
+            angleMotor = self.map_value_motor(msg.linear.x, -0.5, 0, 55, 80) * 1.8
+
+        self.get_logger().info('cmd_vel - Motor 0: %s' % angleMotor)
+        self.kit.servo[0].angle = float(angleMotor)
+        self.kit.servo[1].angle = float(angleMotor)
+    
+    
+    def manual_control(self, msg):
         # Mapear la velocidad angular a la dirección
         angleDir = self.map_value_direction(msg.axes[0], 1.0, -1.0, 170.0, 40.0)
         self.get_logger().info('Dir: %s' % angleDir)
@@ -31,6 +67,8 @@ class CarControlNode(Node):
         self.get_logger().info('Motor 0: %s' % angleMotor)
         self.kit.servo[0].angle = float(angleMotor)
         self.kit.servo[1].angle = float(angleMotor)
+
+
     def map_value_direction(self, x, in_min, in_max, out_min, out_max):
         return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min
     
