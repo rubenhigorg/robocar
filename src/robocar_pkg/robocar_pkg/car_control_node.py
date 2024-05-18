@@ -1,9 +1,9 @@
-from os import wait
 import time
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Joy
 from adafruit_servokit import ServoKit
+from geometry_msgs.msg import Twist
 
 class CarControlNode(Node):
 
@@ -30,27 +30,26 @@ class CarControlNode(Node):
             self.autonomous_mode = not self.autonomous_mode
             mode = "autonomous" if self.autonomous_mode else "manual"
             self.get_logger().info(f"Switched to {mode} mode")
+            time.sleep(1)
 
+        self.get_logger().info('Autonomous mode: %s' % self.autonomous_mode)
         if not self.autonomous_mode:
             self.manual_control(msg)
 
 
     def cmd_vel_callback(self, msg):
-        # Convertir la velocidad angular en dirección del servo
-        angleDir = self.map_value_direction(msg.angular.z, 1.0, -1.0, 170.0, 40.0)
-        self.kit.servo[2].angle = angleDir
+        if self.autonomous_mode:
+            # Convertir la velocidad angular en dirección del servo
+            angleDir = self.map_value_direction(msg.angular.z, 20.0, -20.0, 170.0, 40.0)
+            self.kit.servo[2].angle = angleDir
 
-        # Convertir la velocidad lineal en velocidad del motor
-        # Asumiendo que la velocidad lineal está en el rango [-0.5, 0.5]
-        # y mapeamos este rango al rango del potenciómetro del motor [51, 80]
-        if msg.linear.x >= 0:
-            angleMotor = self.map_value_motor(msg.linear.x, 0, 0.5, 51, 15) * 1.8
-        else:
-            angleMotor = self.map_value_motor(msg.linear.x, -0.5, 0, 55, 80) * 1.8
+            # Convertir la velocidad lineal en velocidad del motor
+            #angleMotor = self.map_value_motor(msg.linear.x, 0, 1, 51, 15) * 1.8
+            angleMotor = self.map_value_motor(0.01, 0, 1, 51, 15) * 1.8
 
-        self.get_logger().info('cmd_vel - Motor 0: %s' % angleMotor)
-        self.kit.servo[0].angle = float(angleMotor)
-        self.kit.servo[1].angle = float(angleMotor)
+            self.get_logger().info('cmd_vel - Motor 0: %s' % angleMotor)
+            self.kit.servo[0].angle = float(angleMotor)
+            self.kit.servo[1].angle = float(angleMotor)
     
     
     def manual_control(self, msg):

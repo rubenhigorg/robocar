@@ -1,7 +1,7 @@
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import Float32MultiArray
-from geometry_msgs.msg.Twist
+from geometry_msgs.msg import Twist
 
 class ControllerNode(Node):
     def __init__(self):
@@ -12,7 +12,7 @@ class ControllerNode(Node):
             self.lane_info_callback,
             10)
         self.publisher = self.create_publisher(Twist, 'cmd_vel', 10)
-        self.kp = 0.1  # Proporcional constante para el controlador
+        self.kp = 1  # Proporcional constante para el controlador
 
     def lane_info_callback(self, msg):
         offset = msg.data[0]
@@ -24,7 +24,7 @@ class ControllerNode(Node):
 
         # Crear mensaje de comando
         cmd_msg = Twist()
-        cmd_msg.linear.x = 0.5  # Velocidad constante hacia adelante
+        cmd_msg.linear.x = 0.01  # Velocidad constante hacia adelante
         cmd_msg.angular.z = control_signal  # Ajuste de dirección
 
         self.publisher.publish(cmd_msg)

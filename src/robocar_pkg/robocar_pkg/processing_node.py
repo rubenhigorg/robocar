@@ -25,7 +25,7 @@ class ProcessingNode(Node):
         self.get_logger().info('Received an image, doing Lane object...')
         lane = Lane(orig_frame=cv_image, logger=self.get_logger())
         lane_line_markings = lane.get_line_markings()
-        lane.plot_roi(plot=True)
+        lane.plot_roi(plot=False)
 
         wrapped = lane.perspective_transform(plot=False)
         histogram = lane.calculate_histogram(plot=False)
@@ -43,8 +43,8 @@ class ProcessingNode(Node):
 
         
         frame_2 = lane.display_curvature_offset(frame=frame_with_lane_lines, plot=False)
-        cv2.imshow('Frame with lane lines', frame_2)
-        cv2.waitKey(1)
+        # cv2.imshow('Frame with lane lines', frame_2)
+        # cv2.waitKey(1)
 
 
 
