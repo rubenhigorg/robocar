@@ -1,7 +1,7 @@
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import Float32MultiArray
-from geometry_msgs.msg.Twist
+from geometry_msgs.msg import Twist
 
 class ControllerNode(Node):
     def __init__(self):
