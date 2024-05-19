@@ -10,7 +10,7 @@ def perspective_foto(img):
     ht = img.shape[0] #height altura de la imagen
     wd = img.shape[1] #width anchura de la imagen
 
-    pts1 = np.float32([[30, 175],[wd-50, 175],[0, ht],[wd, ht]]) #top left, top right, bottomb left, bottom right (area we want to be selected)
+    pts1 = np.float32([[0, ht//2],[wd, ht//2],[0, ht],[wd, ht]]) #top left, top right, bottom left, bottom right (area we want to be selected)
     pts2 = np.float32([[0,0],[wd,0],[0,ht],[wd,ht]]) #dimension de imagen que queremos obtener
 
     matrix=cv.getPerspectiveTransform(pts1,pts2)
@@ -19,18 +19,23 @@ def perspective_foto(img):
     return result
 
 
-def detect_edges(frame, saturacion):
+def detect_edges(frame):
     """
     En esta funcion detecta los bordes del frame, se le pasa la saturacion usada en el filtro canny
     """
-    hsv = cv.cvtColor(frame, cv.COLOR_BGR2HSV) #COLOR_BGR2HSV para detectar el azul
+    # Convert the image to grayscale
+    gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
 
-    lower_blue = np.array([90, saturacion, 0])
-    upper_blue = np.array([140, 255, 150])
+    # Invert the grayscale image to get black lines on white background
+    inverted = cv.bitwise_not(gray)
 
-    mask = cv.inRange(hsv, lower_blue, upper_blue)
+    # Apply a threshold to detect white
+    _, mask = cv.threshold(inverted, 220, 255, cv.THRESH_BINARY)
 
-    edges = cv.Canny(mask, 250, 300)
+    # Apply a blur to reduce noise
+    blur = cv.GaussianBlur(mask, (5, 5), 0)
+
+    edges = cv.Canny(blur, 50, 150)
 
     return edges
 

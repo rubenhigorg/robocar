@@ -21,15 +21,28 @@ class ProcessingNode(Node):
         self.lane_lines_anterior = []
 
     def image_callback(self, msg):
+        self.get_logger().info('Image received')
+
         cv_image = self.bridge.imgmsg_to_cv2(msg, "bgr8")
+
+        cv.imshow("Original", cv_image)
+        cv.waitKey(1)
 
         bird_sight = df.perspective_foto(cv_image)
 
-        edges = df.detect_edges(bird_sight, 70)
+        edges = df.detect_edges(bird_sight)
+
+        cv.imshow("Edges", edges)
+        cv.waitKey(1)
 
         line_segments = df.detect_line_segments(edges)
 
+        cv.imshow("Line segments", df.display_lines(bird_sight, line_segments))
+        cv.waitKey(1)
+
         lane_lines = df.average_slope_intercept(cv_image, line_segments)
+
+        self.get_logger().info('Lane lines: {}'.format(lane_lines))
 
         if len(lane_lines) != 2:
             lane_lines = self.lane_lines_anterior
