@@ -43,8 +43,8 @@ class ProcessingNode(Node):
 
         
         frame_2 = lane.display_curvature_offset(frame=frame_with_lane_lines, plot=False)
-        #cv2.imshow('Frame with lane lines', frame_2)
-        #cv2.waitKey(1)
+        cv2.imshow('Frame with lane lines', frame_2)
+        cv2.waitKey(1)
 
 
 

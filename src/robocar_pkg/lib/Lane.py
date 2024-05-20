@@ -102,7 +102,6 @@ class Lane:
     # Get position of car in centimeters
     car_location = self.orig_frame.shape[1] / 2
  
-    self.logger.info('Car location: ' + str(car_location))
     # Fine the x coordinate of the lane line bottom
     height = self.orig_frame.shape[0]
     bottom_left = self.left_fit[0]*height**2 + self.left_fit[
@@ -209,6 +208,7 @@ class Lane:
              
     if plot==True:       
       cv2.imshow("Image with Curvature and Offset", image_copy)
+      cv2.waitKey(1)
  
     return image_copy
      

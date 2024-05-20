@@ -40,6 +40,7 @@ class CarControlNode(Node):
     def cmd_vel_callback(self, msg):
         if self.autonomous_mode:
             # Convertir la velocidad angular en dirección del servo
+            self.get_logger().info('cmd_vel - Angular: %s' % msg.angular.z)
             angleDir = self.map_value_direction(msg.angular.z, 20.0, -20.0, 170.0, 40.0)
             self.kit.servo[2].angle = angleDir
 
