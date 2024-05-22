@@ -18,8 +18,8 @@ class CameraPublisher(Node):
         self.bridge = CvBridge()
         self.camera = cv2.VideoCapture('/dev/video0', cv2.CAP_V4L)
     # definimos la calidad del frame
-        self.camera.set(cv2.CAP_PROP_FRAME_WIDTH, 160)
-        self.camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 120) 
+        self.camera.set(cv2.CAP_PROP_FRAME_WIDTH, 320)
+        self.camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 240) 
        
 
     def timer_callback(self):
