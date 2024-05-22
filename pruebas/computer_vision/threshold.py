@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 
 # Ruta de la imagen
-ruta_imagen = "image.jpg"
+ruta_imagen = "coche.jpg"
 
 # Cargar la imagen en color
 imagen = cv2.imread(ruta_imagen)
@@ -10,19 +10,19 @@ imagen = cv2.imread(ruta_imagen)
 # Convertir la imagen a HSV
 imagen_hsv = cv2.cvtColor(imagen, cv2.COLOR_BGR2HSV)
 
-# Definir los valores de HSV para la detección de las líneas de los carriles
-lower_hsv = np.array([110, 38, 56])
+# Definir los valores de HSV para la detección del color rojo
+lower_hsv = np.array([160, 100, 100])
 upper_hsv = np.array([179, 255, 255])
 
-# Aplicar la máscara HSV a la imagen
+# Aplicar las máscaras HSV a la imagen
 mask = cv2.inRange(imagen_hsv, lower_hsv, upper_hsv)
 
-# Convertir la máscara a una imagen binaria
+# Convertir la máscara a una imagen binaria 
 imagen_binaria = cv2.threshold(mask, 1, 255, cv2.THRESH_BINARY)[1]
 
-# Mostrar la imagen binaria
-cv2.imshow("Imagen binariaa", imagen_binaria)
+cv2.imshow("Imagen binaria", imagen_binaria)
 cv2.waitKey(0)
+cv2.destroyAllWindows()
 
 
 # imagen_resultado = cv2.bitwise_and(imagen, imagen, mask=mask)

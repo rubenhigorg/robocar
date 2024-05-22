@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 
 # Ruta de la imagen
-ruta_imagen = "image.jpg"
+ruta_imagen = "coche.jpg"
 
 # Cargar la imagen en color
 imagen = cv2.imread(ruta_imagen)
