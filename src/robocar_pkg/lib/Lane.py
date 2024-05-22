@@ -440,7 +440,10 @@ class Lane:
     """
     if frame is None:
       frame = self.orig_frame
-             
+
+
+    cv2.imshow("Imagen original", frame)
+    cv2.waitKey(0)         
     # Convertir la imagen a HSV
     imagen_hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
@@ -456,6 +459,8 @@ class Lane:
 
     # Convertir la máscara a una imagen binaria 
     imagen_binaria = cv2.threshold(mask, 1, 255, cv2.THRESH_BINARY)[1]
+
+    cv2.imshow("Imagen binaria", imagen_binaria)
   
     self.lane_line_markings = cv2.bitwise_not(imagen_binaria)
 
