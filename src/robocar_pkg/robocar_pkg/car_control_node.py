@@ -41,7 +41,7 @@ class CarControlNode(Node):
         if self.autonomous_mode:
             # Convertir la velocidad angular en dirección del servo
             self.get_logger().info('cmd_vel - Angular: %s' % msg.angular.z)
-            angleDir = self.map_angular_z_to_steering_angle(msg.angular.z, 20.0, -20.0, 170.0, 40.0)
+            angleDir = self.map_angular_z_to_steering_angle(-msg.angular.z * 5)
             self.kit.servo[2].angle = angleDir
 
             # Convertir la velocidad lineal en velocidad del motor
