@@ -440,27 +440,22 @@ class Lane:
     """
     if frame is None:
       frame = self.orig_frame
-
-
-    cv2.imshow("Imagen original", frame)
-    cv2.waitKey(0)         
+   
     # Convertir la imagen a HSV
     imagen_hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
-    # Definir los valores de HSV para la detección de las líneas de los carriles
-    lower_hsv = np.array([110, 38, 56])
+    # Definir los valores de HSV para la detección del color rojo
+    lower_hsv = np.array([160, 100, 100])
     upper_hsv = np.array([179, 255, 255])
 
-    # Apply Gaussian blur to the image
-    # blur = cv2.GaussianBlur(gray, (5, 5), 0)
-
-    # Aplicar la máscara HSV a la imagen
+    # Aplicar las máscaras HSV a la imagen
     mask = cv2.inRange(imagen_hsv, lower_hsv, upper_hsv)
 
     # Convertir la máscara a una imagen binaria 
     imagen_binaria = cv2.threshold(mask, 1, 255, cv2.THRESH_BINARY)[1]
 
     cv2.imshow("Imagen binaria", imagen_binaria)
+    cv2.waitKey(1)
   
     self.lane_line_markings = cv2.bitwise_not(imagen_binaria)
 
