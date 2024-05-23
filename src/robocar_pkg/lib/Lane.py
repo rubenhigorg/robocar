@@ -41,12 +41,12 @@ class Lane:
      
     # Four corners of the trapezoid-shaped region of interest
     # You need to find these corners manually.
-    # TENER EN CUENTA QUE LA IMAGEN ES DE 160X120
+    # TENER EN CUENTA QUE LA IMAGEN ES DE 320x240
     self.roi_points = np.float32([
-      (70, 70), # Top-left corner
-      (60, 120), # Bottom-left corner            
-      (130, 120), # Bottom-right corner
-      (110,70) # Top-right corner
+      (20, 50), # Top-left corner
+      (40, 240), # Bottom-left corner            
+      (280, 240), # Bottom-right corner
+      (300,50) # Top-right corner
     ])
          
     # The desired corner locations  of the region of interest
@@ -445,7 +445,7 @@ class Lane:
     imagen_hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
     # Definir los valores de HSV para la detección del color rojo
-    lower_hsv = np.array([160, 100, 100])
+    lower_hsv = np.array([50, 60, 0])
     upper_hsv = np.array([179, 255, 255])
 
     # Aplicar las máscaras HSV a la imagen
@@ -457,7 +457,7 @@ class Lane:
     cv2.imshow("Imagen binaria", imagen_binaria)
     cv2.waitKey(1)
   
-    self.lane_line_markings = cv2.bitwise_not(imagen_binaria)
+    self.lane_line_markings = imagen_binaria
 
     return self.lane_line_markings
          
@@ -550,17 +550,10 @@ class Lane:
     if plot == True:
       warped_copy = self.warped_frame.copy()
       warped_plot = cv2.polylines(warped_copy, np.int32([
-                    self.desired_roi_points]), True, (147,20,255), 3)
- 
-      # Display the image
-      while(1):
-        cv2.imshow('Warped Image', warped_plot)
-             
-        # Press any key to stop
-        if cv2.waitKey(0):
-          break
- 
-      cv2.destroyAllWindows()   
+                    self.desired_roi_points]), True, (147,20,255), 3)  
+      cv2.imshow('Warped Image', warped_plot)       
+      cv2.waitKey(1)
+
              
     return self.warped_frame        
      
