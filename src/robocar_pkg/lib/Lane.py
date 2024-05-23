@@ -391,8 +391,16 @@ class Lane:
  
     # Fit a second order polynomial curve to the pixel coordinates for
     # the left and right lane lines
-    left_fit = np.polyfit(lefty, leftx, 2)
-    right_fit = np.polyfit(righty, rightx, 2) 
+    try:
+      left_fit = np.polyfit(lefty, leftx, 2)
+    except TypeError:
+      self.get_logger().error('Failed to fit polynomial for left lane line: leftx is empty')
+      left_fit = np.array([0, 0, 0])  # Use a default value
+    try:
+      right_fit = np.polyfit(righty, rightx, 2) 
+    except TypeError:
+      self.get_logger().error('Failed to fit polynomial for right lane line: rightx is empty')
+      right_fit = np.array([0, 0, 0])  # Use a default value
          
     self.left_fit = left_fit
     self.right_fit = right_fit
