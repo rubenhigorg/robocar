@@ -41,7 +41,7 @@ class CarControlNode(Node):
         if self.autonomous_mode:
             # Convertir la velocidad angular en dirección del servo
             self.get_logger().info('cmd_vel - Angular: %s' % msg.angular.z)
-            angleDir = self.map_value_direction(msg.angular.z, 20.0, -20.0, 170.0, 40.0)
+            angleDir = self.map_angular_z_to_steering_angle(msg.angular.z, 20.0, -20.0, 170.0, 40.0)
             self.kit.servo[2].angle = angleDir
 
             # Convertir la velocidad lineal en velocidad del motor
@@ -82,16 +82,19 @@ class CarControlNode(Node):
 
     def map_angular_z_to_steering_angle(self, angular_z):
         # Definir los límites de angular.z y los ángulos de dirección
-        angular_z_min = -20.0
-        angular_z_max = 20.0
+        angular_z_min = -30.0
+        angular_z_max = 30.0
         steering_angle_min = 170.0
         steering_angle_max = 40.0
 
+        # Si angular.z supera los ±30 grados, limitar a los valores máximos de dirección
+        if angular_z < angular_z_min:
+            return steering_angle_min
+        elif angular_z > angular_z_max:
+            return steering_angle_max
+
         # Calcular cómo de lejos está angular.z de angular_z_min (como porcentaje) y aplicar esto al rango de ángulos de dirección
         steering_angle = steering_angle_min + (angular_z - angular_z_min) * (steering_angle_max - steering_angle_min) / (angular_z_max - angular_z_min)
-
-        # Limitar el ángulo de dirección para que no exceda los límites del servo
-        steering_angle = max(min(steering_angle, steering_angle_max), steering_angle_min)
 
         return steering_angle
 
