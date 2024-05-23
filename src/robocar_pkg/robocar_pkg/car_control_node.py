@@ -80,6 +80,21 @@ class CarControlNode(Node):
     def map_value(self, x, in_min, in_max, out_min, out_max):
         return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min
 
+    def map_angular_z_to_steering_angle(self, angular_z):
+        # Definir los límites de angular.z y los ángulos de dirección
+        angular_z_min = -20.0
+        angular_z_max = 20.0
+        steering_angle_min = 170.0
+        steering_angle_max = 40.0
+
+        # Calcular cómo de lejos está angular.z de angular_z_min (como porcentaje) y aplicar esto al rango de ángulos de dirección
+        steering_angle = steering_angle_min + (angular_z - angular_z_min) * (steering_angle_max - steering_angle_min) / (angular_z_max - angular_z_min)
+
+        # Limitar el ángulo de dirección para que no exceda los límites del servo
+        steering_angle = max(min(steering_angle, steering_angle_max), steering_angle_min)
+
+        return steering_angle
+
 def main(args=None):
     rclpy.init(args=args)
     control_node = CarControlNode()

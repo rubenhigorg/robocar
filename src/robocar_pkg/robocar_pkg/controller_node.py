@@ -63,7 +63,7 @@ class ControllerNode(Node):
         cmd_msg.linear.x = 0.01  # Velocidad constante hacia adelante
         cmd_msg.angular.z = control_signal  # Ajuste de dirección
 
-        self.publisher.publish(cmd_msg)
+        # self.publisher.publish(cmd_msg)
 
         self.offset_window.append(offset)
         self.curvature_window.append(average_curvem)
