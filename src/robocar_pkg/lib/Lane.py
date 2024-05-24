@@ -132,11 +132,18 @@ class Lane:
     y_eval = np.max(self.ploty)    
  
     # Fit polynomial curves to the real world environment
-    left_fit_cr = np.polyfit(self.lefty * self.YM_PER_PIX, self.leftx * (
-      self.XM_PER_PIX), 2)
-    right_fit_cr = np.polyfit(self.righty * self.YM_PER_PIX, self.rightx * (
-      self.XM_PER_PIX), 2)
-             
+    try:
+      left_fit_cr = np.polyfit(self.lefty * self.YM_PER_PIX, self.leftx * (self.XM_PER_PIX), 2)
+    except TypeError:
+      # self.get_logger().error('Failed to fit polynomial for left lane line: leftx is empty')
+      left_fit_cr = np.array([0, 0, 0])
+
+    try:
+      right_fit_cr = np.polyfit(self.righty * self.YM_PER_PIX, self.rightx * (self.XM_PER_PIX), 2)
+    except TypeError:
+      # self.get_logger().error('Failed to fit polynomial for right lane line: rightx is empty')
+      right_fit_cr = np.array([0, 0, 0])
+
     # Calculate the radii of curvature
     left_curvem = ((1 + (2*left_fit_cr[0]*y_eval*self.YM_PER_PIX + left_fit_cr[
                     1])**2)**1.5) / np.absolute(2*left_fit_cr[0])
@@ -253,8 +260,16 @@ class Lane:
     self.righty = righty        
      
     # Fit a second order polynomial curve to each lane line
-    left_fit = np.polyfit(lefty, leftx, 2)
-    right_fit = np.polyfit(righty, rightx, 2)
+    try:
+      left_fit = np.polyfit(lefty, leftx, 2)
+    except TypeError:
+      # self.get_logger().error('Failed to fit polynomial for left lane line: leftx is empty')
+      left_fit = np.array([0, 0, 0])
+    try:
+      right_fit = np.polyfit(righty, rightx, 2)
+    except TypeError:
+      # self.get_logger().error('Failed to fit polynomial for right lane line: rightx is empty')
+      right_fit = np.array([0, 0, 0])
     self.left_fit = left_fit
     self.right_fit = right_fit
          
@@ -394,12 +409,12 @@ class Lane:
     try:
       left_fit = np.polyfit(lefty, leftx, 2)
     except TypeError:
-      self.get_logger().error('Failed to fit polynomial for left lane line: leftx is empty')
+      # self.get_logger().error('Failed to fit polynomial for left lane line: leftx is empty')
       left_fit = np.array([0, 0, 0])  # Use a default value
     try:
       right_fit = np.polyfit(righty, rightx, 2) 
     except TypeError:
-      self.get_logger().error('Failed to fit polynomial for right lane line: rightx is empty')
+      # self.get_logger().error('Failed to fit polynomial for right lane line: rightx is empty')
       right_fit = np.array([0, 0, 0])  # Use a default value
          
     self.left_fit = left_fit
@@ -453,7 +468,7 @@ class Lane:
     imagen_hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
     # Definir los valores de HSV para la detección del color rojo
-    lower_hsv = np.array([50, 60, 0])
+    lower_hsv = np.array([130, 55, 0])
     upper_hsv = np.array([179, 255, 255])
 
     # Aplicar las máscaras HSV a la imagen
