@@ -27,9 +27,9 @@ class ProcessingNode(Node):
         lane_line_markings = lane.get_line_markings()
         # cv2.imshow('Lane line markings', lane_line_markings)
         # cv2.waitKey(1)
-        lane.plot_roi(plot=True)
+        lane.plot_roi(plot=False)
 
-        wrapped = lane.perspective_transform(plot=True)
+        wrapped = lane.perspective_transform(plot=False)
         histogram = lane.calculate_histogram(plot=False)
         left_fit, right_fit = lane.get_lane_line_indices_sliding_windows(plot=False)
         lane.get_lane_line_previous_window(left_fit, right_fit, plot=False)
@@ -45,8 +45,8 @@ class ProcessingNode(Node):
 
         
         frame_2 = lane.display_curvature_offset(frame=frame_with_lane_lines, plot=False)
-        cv2.imshow('Frame with lane lines', frame_2)
-        cv2.waitKey(1)
+        # cv2.imshow('Frame with lane lines', frame_2)
+        # cv2.waitKey(1)
 
 
 

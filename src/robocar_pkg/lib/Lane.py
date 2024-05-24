@@ -477,8 +477,8 @@ class Lane:
     # Convertir la máscara a una imagen binaria 
     imagen_binaria = cv2.threshold(mask, 1, 255, cv2.THRESH_BINARY)[1]
 
-    cv2.imshow("Imagen binaria", imagen_binaria)
-    cv2.waitKey(1)
+    # cv2.imshow("Imagen binaria", imagen_binaria)
+    # cv2.waitKey(1)
   
     self.lane_line_markings = imagen_binaria
 
