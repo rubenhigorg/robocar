@@ -25,8 +25,8 @@ class ProcessingNode(Node):
         self.get_logger().info('Received an image, doing Lane object...')
         lane = Lane(orig_frame=cv_image, logger=self.get_logger())
         lane_line_markings = lane.get_line_markings()
-        # cv2.imshow('Lane line markings', lane_line_markings)
-        # cv2.waitKey(1)
+        cv2.imshow('Lane line markings', lane_line_markings)
+        cv2.waitKey(1)
         lane.plot_roi(plot=False)
 
         wrapped = lane.perspective_transform(plot=False)
