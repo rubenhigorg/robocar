@@ -81,22 +81,29 @@ class CarControlNode(Node):
         return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min
 
     def map_angular_z_to_steering_angle(self, angular_z):
+        '''
+        La funcion que se aplica es la siguiente:
+        f(angular_z) = -(5966/(x-105)) - 38.78
+
+        Si por ejemplo el valor angular_z = 53, sería:
+        53 = 5966/(x-105) - 38.78
+        91.78 = 5966/(x-105)
+        5966 = 91.78(x-105)
+        5966 = 91.78x - 96.69
+        6062.69 = 91.78x
+        x = 66.07
+        '''
+
         # Definir los límites de angular.z y los ángulos de dirección
-        angular_z_min = -30.0
-        angular_z_max = 30.0
-        steering_angle_min = 170.0
-        steering_angle_max = 40.0
+        left_min_steering_angle = 170.0 # max radio de curvatura = 53 cm
+        right_min_steering_angle = 40.0 # max radio de curvatura = 53 cm
+        max_angular_z = 300.0 # maximo valor. Si se supera es recto
 
-        # Si angular.z supera los ±30 grados, limitar a los valores máximos de dirección
-        if angular_z < angular_z_min:
-            return steering_angle_min
-        elif angular_z > angular_z_max:
-            return steering_angle_max
+        # Controlar si vienen valores +-53:
+        angular_z = max(min(angular_z, max_angular_z), -max_angular_z)
+        self.get_logger().info('Angular_z: %s' % angular_z)
 
-        # Calcular cómo de lejos está angular.z de angular_z_min (como porcentaje) y aplicar esto al rango de ángulos de dirección
-        steering_angle = steering_angle_min + (angular_z - angular_z_min) * (steering_angle_max - steering_angle_min) / (angular_z_max - angular_z_min)
-
-        return steering_angle
+        return 105 + (-5965.78125/(angular_z + 38.78125))
 
 def main(args=None):
     rclpy.init(args=args)

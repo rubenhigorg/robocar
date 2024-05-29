@@ -23,10 +23,10 @@ class ProcessingNode(Node):
     def image_callback(self, msg):
         cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding='bgr8')
         self.get_logger().info('Received an image, doing Lane object...')
-        lane = Lane(orig_frame=cv_image, logger=self.get_logger())
+        lane = Lane(orig_frame=cv_image)
         lane_line_markings = lane.get_line_markings()
-        cv2.imshow('Lane line markings', lane_line_markings)
-        cv2.waitKey(1)
+        # cv2.imshow('Lane line markings', lane_line_markings)
+        # cv2.waitKey(1)
         lane.plot_roi(plot=False)
 
         wrapped = lane.perspective_transform(plot=False)
@@ -44,7 +44,7 @@ class ProcessingNode(Node):
         self.get_logger().info(f'Offset: {offset}, Left curvature: {left_curvem}, Right curvature: {right_curvem}')
 
         
-        frame_2 = lane.display_curvature_offset(frame=frame_with_lane_lines, plot=False)
+        # frame_2 = lane.display_curvature_offset(frame=frame_with_lane_lines, plot=False)
         # cv2.imshow('Frame with lane lines', frame_2)
         # cv2.waitKey(1)
 

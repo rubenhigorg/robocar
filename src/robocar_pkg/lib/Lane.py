@@ -1,6 +1,6 @@
 import cv2 # Import the OpenCV library to enable computer vision
 import numpy as np # Import the NumPy scientific computing library
-import lib.edge_detection as edge # Handles the detection of lane lines
+import edge_detection as edge # Handles the detection of lane lines
 import matplotlib.pyplot as plt # Used for plotting and error checking
  
 # Author: Addison Sears-Collins
@@ -13,7 +13,7 @@ class Lane:
   """
   Represents a lane on a road.
   """
-  def __init__(self, orig_frame, logger):
+  def __init__(self, orig_frame):
     """
       Default constructor
          
@@ -21,8 +21,6 @@ class Lane:
     """
     self.orig_frame = orig_frame
 
-    self.logger = logger
- 
     # This will hold an image with the lane lines       
     self.lane_line_markings = None
  
@@ -43,10 +41,10 @@ class Lane:
     # You need to find these corners manually.
     # TENER EN CUENTA QUE LA IMAGEN ES DE 320x240
     self.roi_points = np.float32([
-      (20, 50), # Top-left corner
-      (40, 240), # Bottom-left corner            
-      (280, 240), # Bottom-right corner
-      (300,50) # Top-right corner
+      (80, 60), # Top-left corner
+      (-20, 240), # Bottom-left corner            
+      (340, 240), # Bottom-right corner
+      (240,60) # Top-right corner
     ])
          
     # The desired corner locations  of the region of interest
@@ -83,8 +81,8 @@ class Lane:
     self.righty = None
          
     # Pixel parameters for x and y dimensions
-    self.YM_PER_PIX = 10.0 / 1000 # meters per pixel in y dimension
-    self.XM_PER_PIX = 3.7 / 781 # meters per pixel in x dimension
+    self.YM_PER_PIX = 0.46 / 10 # centimeters per pixel in y dimension
+    self.XM_PER_PIX = 0.11 / 10 # centimeters per pixel in x dimension
          
     # Radii of curvature and offset
     self.left_curvem = None
@@ -153,7 +151,7 @@ class Lane:
      
     # Display on terminal window
     if print_to_terminal == True:
-      print(left_curvem, 'm', right_curvem, 'm')
+      print(left_curvem, 'cm', right_curvem, 'cm')
              
     self.left_curvem = left_curvem
     self.right_curvem = right_curvem
@@ -335,6 +333,7 @@ class Lane:
     :return: Best fit lines for the left and right lines of the current lane 
     """
     # Sliding window width is +/- margin
+
     margin = self.margin
  
     frame_sliding_window = self.warped_frame.copy()
@@ -361,8 +360,9 @@ class Lane:
     # Go through one window at a time
     no_of_windows = self.no_of_windows
          
+    left_break_loop = False
+    right_break_loop = False
     for window in range(no_of_windows):
-       
       # Identify window boundaries in x and y (and right and left)
       win_y_low = self.warped_frame.shape[0] - (window + 1) * window_height
       win_y_high = self.warped_frame.shape[0] - window * window_height
@@ -370,10 +370,6 @@ class Lane:
       win_xleft_high = leftx_current + margin
       win_xright_low = rightx_current - margin
       win_xright_high = rightx_current + margin
-      cv2.rectangle(frame_sliding_window,(win_xleft_low,win_y_low),(
-        win_xleft_high,win_y_high), (255,255,255), 2)
-      cv2.rectangle(frame_sliding_window,(win_xright_low,win_y_low),(
-        win_xright_high,win_y_high), (255,255,255), 2)
  
       # Identify the nonzero pixels in x and y within the window
       good_left_inds = ((nonzeroy >= win_y_low) & (nonzeroy < win_y_high) & 
@@ -384,9 +380,20 @@ class Lane:
                             nonzerox < win_xright_high)).nonzero()[0]
                                                          
       # Append these indices to the lists
-      left_lane_inds.append(good_left_inds)
-      right_lane_inds.append(good_right_inds)
-         
+      if ((window == 0) or (len(good_left_inds) > self.minpix and not left_break_loop)):
+        left_lane_inds.append(good_left_inds)
+        cv2.rectangle(frame_sliding_window,(win_xleft_low,win_y_low),(
+          win_xleft_high,win_y_high), (255,255,255), 2)
+      else:
+        left_break_loop = True
+ 
+      if ((window == 0) or (len(good_right_inds) > self.minpix and not right_break_loop)):
+        right_lane_inds.append(good_right_inds)
+        cv2.rectangle(frame_sliding_window,(win_xright_low,win_y_low),(
+          win_xright_high,win_y_high), (255,255,255), 2)
+      else:
+        right_break_loop = True
+      
       # If you found > minpix pixels, recenter next window on mean position
       minpix = self.minpix
       if len(good_left_inds) > minpix:
