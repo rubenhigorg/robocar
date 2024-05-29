@@ -41,7 +41,7 @@ class CarControlNode(Node):
         if self.autonomous_mode:
             # Convertir la velocidad angular en dirección del servo
             self.get_logger().info('cmd_vel - Angular: %s' % msg.angular.z)
-            angleDir = self.map_angular_z_to_steering_angle(-msg.angular.z)
+            angleDir = self.map_angular_z_to_steering_angle(msg.angular.z)
             self.kit.servo[2].angle = angleDir
 
             # Convertir la velocidad lineal en velocidad del motor
@@ -49,8 +49,8 @@ class CarControlNode(Node):
             angleMotor = self.map_value_motor(0.01, 0, 1, 51, 15) * 1.8
 
             self.get_logger().info('cmd_vel - Motor 0: %s' % angleMotor)
-            self.kit.servo[0].angle = float(angleMotor)
-            self.kit.servo[1].angle = float(angleMotor)
+            self.kit.servo[0].angle = 93.0#float(angleMotor)
+            self.kit.servo[1].angle = 93.0#float(angleMotor)
     
     
     def manual_control(self, msg):
@@ -65,8 +65,8 @@ class CarControlNode(Node):
             angleMotor = self.map_value_motor(msg.axes[5], 0.9999, -0.9999, 51, 15) * 1.8  # msg.axes[5] = R2 potenciometro
 
         self.get_logger().info('Motor 0: %s' % angleMotor)
-        self.kit.servo[0].angle = float(angleMotor)
-        self.kit.servo[1].angle = float(angleMotor)
+        self.kit.servo[0].angle = 93.0#float(angleMotor)
+        self.kit.servo[1].angle = 93.0#float(angleMotor)
 
 
     def map_value_direction(self, x, in_min, in_max, out_min, out_max):

@@ -37,25 +37,34 @@ class ControllerNode(Node):
         self.get_logger().info('Received lane info')
         objetivo_offset = -8.0
         offset = msg.data[0]
+        left_radius = msg.data[1]
+        right_radius = msg.data[2]
+
+        radius = (left_radius + right_radius) / 2
 
         # Crear mensaje de comando
         cmd_msg = Twist()
         cmd_msg.linear.x = 0.01  # Velocidad constante hacia adelante
 
-        # Ajuste de dirección
-        if(offset < objetivo_offset - 5):
-            # girar a la derecha pq estamos en la izqda
-            self.get_logger().info('Girar a la derecha')
-            cmd_msg.angular.z = -20.0
-        elif(offset > objetivo_offset + 5):
-            # girar a la izqda pq estamos en la dcha
-            self.get_logger().info('Girar a la izquierda')
-            cmd_msg.angular.z = 20.0
-        else:
-            # ir recto
-            self.get_logger().info('Ir recto')
-            cmd_msg.angular.z = 0.0
+        cmd_msg.angular.z = radius
         self.publisher.publish(cmd_msg)
+
+
+
+        # # Ajuste de dirección
+        # if(offset < objetivo_offset - 5):
+        #     # girar a la derecha pq estamos en la izqda
+        #     self.get_logger().info('Girar a la derecha')
+        #     cmd_msg.angular.z = -20.0
+        # elif(offset > objetivo_offset + 5):
+        #     # girar a la izqda pq estamos en la dcha
+        #     self.get_logger().info('Girar a la izquierda')
+        #     cmd_msg.angular.z = 20.0
+        # else:
+        #     # ir recto
+        #     self.get_logger().info('Ir recto')
+        #     cmd_msg.angular.z = 0.0
+        # self.publisher.publish(cmd_msg)
 
 
 
