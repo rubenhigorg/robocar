@@ -21,7 +21,7 @@ class CameraPublisher(Node):
         self.camera.set(cv2.CAP_PROP_FRAME_WIDTH, 320)
         self.camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 240) 
         ret, frame = self.camera.read()
-        # cv2.imwrite('/home/lab/robocar/pruebas/computer_vision/coche.jpg', frame)
+        #cv2.imwrite('/home/lab/robocar/pruebas/computer_vision/coche.jpg', frame)
        
 
     def timer_callback(self):

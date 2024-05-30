@@ -36,6 +36,13 @@ class ProcessingNode(Node):
         frame_with_lane_lines = lane.overlay_lane_lines(plot=False)
         left_curvem, right_curvem = lane.calculate_curvature(print_to_terminal=False)
         offset = lane.calculate_car_position(print_to_terminal=False)
+
+        # Linea izquierda:
+        if left_fit[0] < 0:
+            left_curvem = -left_curvem
+        # Linea derecha:
+        if right_fit[0] < 0:
+            right_curvem = -right_curvem
         
          # Publicar la información de carriles
         lane_info = Float32MultiArray()

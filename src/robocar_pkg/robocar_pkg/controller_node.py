@@ -3,6 +3,7 @@ from rclpy.node import Node
 from std_msgs.msg import Float32MultiArray
 from geometry_msgs.msg import Twist
 from collections import deque
+import numpy as np
 
 class ControllerNode(Node):
     def __init__(self):
@@ -28,19 +29,31 @@ class ControllerNode(Node):
 
         self.previous_angular_z = 0.0
         self.max_angular_change = 0.1
+        
 
         # self.timer = self.create_timer(0.1, self.publish_control)
         self.get_logger().info('Control node started')
 
 
     def lane_info_callback(self, msg):
+        radius = 100000.0
         self.get_logger().info('Received lane info')
         objetivo_offset = -8.0
         offset = msg.data[0]
         left_radius = msg.data[1]
         right_radius = msg.data[2]
 
-        radius = (left_radius + right_radius) / 2
+        if -10 < offset < 10:
+            radius = 10000.0
+        else:
+            if np.isinf(left_radius) and np.isinf(right_radius):
+                radius = 10000.0
+            elif np.isinf(left_radius):
+                left_radius = right_radius
+            elif np.isinf(right_radius):
+                right_radius = left_radius
+            else:
+                radius = (left_radius + right_radius) / 2
 
         # Crear mensaje de comando
         cmd_msg = Twist()

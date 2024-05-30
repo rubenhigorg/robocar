@@ -65,8 +65,8 @@ class CarControlNode(Node):
             angleMotor = self.map_value_motor(msg.axes[5], 0.9999, -0.9999, 51, 15) * 1.8  # msg.axes[5] = R2 potenciometro
 
         self.get_logger().info('Motor 0: %s' % angleMotor)
-        self.kit.servo[0].angle = 93.0#float(angleMotor)
-        self.kit.servo[1].angle = 93.0#float(angleMotor)
+        self.kit.servo[0].angle = float(angleMotor)
+        self.kit.servo[1].angle = float(angleMotor)
 
 
     def map_value_direction(self, x, in_min, in_max, out_min, out_max):
@@ -93,17 +93,15 @@ class CarControlNode(Node):
         6062.69 = 91.78x
         x = 66.07
         '''
-
-        # Definir los límites de angular.z y los ángulos de dirección
-        left_min_steering_angle = 170.0 # max radio de curvatura = 53 cm
-        right_min_steering_angle = 40.0 # max radio de curvatura = 53 cm
-        max_angular_z = 300.0 # maximo valor. Si se supera es recto
-
-        # Controlar si vienen valores +-53:
-        angular_z = max(min(angular_z, max_angular_z), -max_angular_z)
-        self.get_logger().info('Angular_z: %s' % angular_z)
-
-        return 105 + (-5965.78125/(angular_z + 38.78125))
+        if angular_z < -53.0:
+            return (105 * angular_z - 10011.1929)/(angular_z - 38.78125)
+        elif -53 <= angular_z < 0:
+            return 170
+        elif 0 <= angular_z <= 53:
+            return 40
+        elif angular_z > 53:
+            # Función cuadrática que tiende a 105 a medida que x aumenta
+            return (105 * angular_z - 1904.0184)/(angular_z + 38.3125)
 
 def main(args=None):
     rclpy.init(args=args)
