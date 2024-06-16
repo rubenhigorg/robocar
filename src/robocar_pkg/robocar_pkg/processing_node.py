@@ -37,12 +37,19 @@ class ProcessingNode(Node):
         left_curvem, right_curvem = lane.calculate_curvature(print_to_terminal=False)
         offset = lane.calculate_car_position(print_to_terminal=False)
 
+        '''
+        Calcular la pendiente de las lineas
+        '''
+        slope_left = (240 - left_fit[1]) / left_fit[0]
+        slope_right = (240 - right_fit[1]) / right_fit[0]
         # Linea izquierda:
-        if left_fit[0] < 0:
+        if slope_left < 0:
             left_curvem = -left_curvem
+            print("Se va a la izquierda: ", left_curvem)
         # Linea derecha:
-        if right_fit[0] < 0:
+        if slope_right < 0:
             right_curvem = -right_curvem
+            print("Se va a la izquierda: ", right_curvem)
         
          # Publicar la información de carriles
         lane_info = Float32MultiArray()
