@@ -7,7 +7,9 @@
     "python.analysis.extraPaths": [
         "/home/lab/robocar/install/wiimote_msgs/lib/python3.10/site-packages",
         "/home/lab/robocar/install/robocar_package/lib/python3.10/site-packages",
-        "/opt/ros/iron/lib/python3.10/site-packages"
+        "/opt/ros/iron/lib/python3.10/site-packages",
+        "./pruebas/computer_vision/SelfDrivingVehicle",
+        "./pruebas/computer_vision/SelfDrivingVehicle"
     ],
     "files.associations": {
         "vl53l0x_platform.h": "c",
