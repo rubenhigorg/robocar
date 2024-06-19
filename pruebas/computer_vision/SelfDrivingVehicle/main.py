@@ -10,8 +10,8 @@ import time
 import cv2
 
 # Define the average positions for the left and right lanes.
-averageLeft = np.poly1d(np.array([-3.45, 778.36]))
-averageRight = np.poly1d(np.array([3.66, -328.14]))
+averageLeft = np.poly1d(np.array([-0.3756, 292.7]))
+averageRight = np.poly1d(np.array([0.4277, 348.6]))
 
 # Initialize the communications with the car via serial.
 car = Car('/dev/ttyAMA0', 115200)
@@ -68,8 +68,8 @@ def main():
         right = rightTracker.add(processor.right.poly)
 
         # 4. Draws the unfiltered lanes.
-        # processor.drawPoly(out, processor.left.poly, (0, 100, 200))
-        # processor.drawPoly(out, processor.right.poly, (200, 100, 0))
+        processor.drawPoly(out, processor.left.poly, (0, 100, 200))
+        processor.drawPoly(out, processor.right.poly, (200, 100, 0))
 
         # 4. Draws the output of the Kalman Filter.
         processor.drawPoly(out, left, (0, 50, 255))

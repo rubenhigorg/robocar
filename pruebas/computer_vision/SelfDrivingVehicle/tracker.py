@@ -49,7 +49,7 @@ class Tracker():
         processVariance = 30
         q = Q_discrete_white_noise(dim=2, dt=self.dt, var=processVariance)
         self.kalman.Q = block_diag(q, q)
-        print(self.kalman.Q)
+        # print(self.kalman.Q)
         
         # R : ndarray (dim_z, dim_z), default eye(dim_x)
         #     measurement uncertainty/noise

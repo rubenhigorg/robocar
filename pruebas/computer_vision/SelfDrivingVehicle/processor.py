@@ -19,8 +19,8 @@ class ImageProcessor():
         self.h = self.frameDimensions[1]
 
         # ROI dimensions in percentage.
-        self.roiY = (0.57, 0.71)
-        self.roiX = (0.67, 0.95)
+        self.roiY = (1, 0.65)
+        self.roiX = (1, 0.8)
 
         # Initialize the left and right lane classes.
         self.left = Line(self.frameDimensions, (0, 0, 255))
@@ -76,7 +76,7 @@ class ImageProcessor():
         cv2.fillPoly(mask, vertices, 255)
         return cv2.bitwise_and(frame, mask)
 
-    def findLanes(self, frame, lines, minAngle=10, drawAll=False):
+    def findLanes(self, frame, lines, drawAll=False):
         """
             Iterates through the results from the Hough Transform and filters the detected lines into
             those who belong to the left and right lane. Finally fits the data to a 1st order polynomial.
@@ -84,19 +84,19 @@ class ImageProcessor():
 
         self.left.clear()
         self.right.clear()
+        frame_center = frame.shape[1] / 2
+
         if type(lines) == type(np.array([])):
             for line in lines:
                 for x1, y1, x2, y2 in line:
-                    angle = np.degrees(np.arctan2(y2 - y1, x2 - x1))
-                    if np.abs(angle) > minAngle:
-                        if angle > 0:
-                            self.right.add(x1, y1, x2, y2)
-                            if drawAll:
-                                cv2.line(frame, (x1, y1), (x2, y2), self.right.color)
-                        else:
-                            self.left.add(x1, y1, x2, y2)
-                            if drawAll:
-                                cv2.line(frame, (x1, y1), (x2, y2), self.left.color)
+                    if x1 < frame_center and x2 < frame_center:
+                        self.left.add(x1, y1, x2, y2)
+                        if drawAll:
+                            cv2.line(frame, (x1, y1), (x2, y2), self.left.color)
+                    elif x1 > frame_center and x2 > frame_center:
+                        self.right.add(x1, y1, x2, y2)
+                        if drawAll:
+                            cv2.line(frame, (x1, y1), (x2, y2), self.right.color)
         self.left.fit()
         self.right.fit()
         return frame
@@ -121,11 +121,8 @@ class ImageProcessor():
         """
             Main pipeline for detecting lanes on a frame.
         """
-
-        # undistort = cv2.remap(frame, self.rectifyMapX, self.rectifyMapY, cv2.INTER_LINEAR)
-        # gray = cv2.cvtColor(undistort, cv2.COLOR_BGR2GRAY)
-        # grayColor = cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR)
-        blured = self.doBlur(frame, iterations=3, kernelSize=7)
+        binary_frame = self.get_line_markings(frame)
+        blured = self.doBlur(binary_frame, iterations=3, kernelSize=7)
         canny = cv2.Canny(blured, threshold1=20, threshold2=40)
         roi = self.doRegionOfInterest(canny)
         houghLines = cv2.HoughLinesP(
@@ -137,8 +134,44 @@ class ImageProcessor():
             minLineLength = 5, 
             maxLineGap = 60
         )
-        lanes = self.findLanes(frame, houghLines, minAngle=10, drawAll=True)
+        lanes = self.findLanes(frame, houghLines, drawAll=True)
         # self.drawPoly(lanes, self.left.poly, self.left.color, width=3)
         # self.drawPoly(lanes, self.right.poly, self.right.color, width=3)
 
-        return frame
+        return lanes
+
+
+    
+    def get_line_markings(self, frame=None):
+        """
+        Isolates lane lines.
+    
+        :param frame: The camera frame that contains the lanes we want to detect
+        :return: Binary (i.e. black and white) image containing the lane lines.
+        """
+        if frame is None:
+            frame = self.orig_frame
+    
+        # Convertir la imagen a HSV
+        imagen_hsv = cv2.cvtColor(frame, cv2.COLOR_RGB2HSV)
+
+        # Definir los valores de HSV para la detección del color rojo
+        lower_hsv = np.array([130, 55, 0])
+        upper_hsv = np.array([179, 255, 255])
+
+        # Aplicar las máscaras HSV a la imagen
+        mask = cv2.inRange(imagen_hsv, lower_hsv, upper_hsv)
+
+        # Convertir la máscara a una imagen binaria 
+        imagen_binaria = cv2.threshold(mask, 1, 255, cv2.THRESH_BINARY)[1]
+
+        # Definir el kernel para las operaciones morfológicas
+        kernel = np.ones((5,5), np.uint8)  # Puedes ajustar el tamaño del kernel según tus necesidades
+
+        # Aplicar cierre morfológico para eliminar líneas finas
+        cierre = cv2.morphologyEx(imagen_binaria, cv2.MORPH_CLOSE, kernel)
+
+        # (Opcional) Aplicar apertura morfológica para limpiar ruido restante
+        apertura = cv2.morphologyEx(cierre, cv2.MORPH_OPEN, kernel)
+
+        return apertura
