@@ -3,7 +3,8 @@ import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Joy
 from adafruit_servokit import ServoKit
-from geometry_msgs.msg import Twist
+from std_msgs.msg import Float32MultiArray
+
 
 class CarControlNode(Node):
 
@@ -14,10 +15,10 @@ class CarControlNode(Node):
             'joy',
             self.listener_callback_motor,
             10)
-        self.subscription_cmd_vel = self.create_subscription(
-            Twist,
-            'cmd_vel',
-            self.cmd_vel_callback,
+        self.subscription_lane_info = self.create_subscription(
+            Float32MultiArray,
+            'lane_info',
+            self.lane_info_callback,
             10)
         self.kit = ServoKit(channels=16)
         self.autonomous_mode = False
@@ -37,11 +38,12 @@ class CarControlNode(Node):
             self.manual_control(msg)
 
 
-    def cmd_vel_callback(self, msg):
+    def lane_info_callback(self, msg):
         if self.autonomous_mode:
             # Convertir la velocidad angular en dirección del servo
-            self.get_logger().info('cmd_vel - Angular: %s' % msg.angular.z)
-            angleDir = self.map_angular_z_to_steering_angle(msg.angular.z)
+            self.get_logger().info('cmd_vel - Angular: %s' % msg.data[0])
+            angleDir = self.map_value_direction(msg.data[0], -60.0, 60.0, 40, 170)
+            self.get_logger().info('cmd_vel - Dir: %s' % angleDir)
             self.kit.servo[2].angle = angleDir
 
             # Convertir la velocidad lineal en velocidad del motor
@@ -69,6 +71,7 @@ class CarControlNode(Node):
         self.kit.servo[1].angle = float(angleMotor)
 
 
+
     def map_value_direction(self, x, in_min, in_max, out_min, out_max):
         return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min
     
@@ -80,28 +83,16 @@ class CarControlNode(Node):
     def map_value(self, x, in_min, in_max, out_min, out_max):
         return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min
 
-    def map_angular_z_to_steering_angle(self, angular_z):
-        '''
-        La funcion que se aplica es la siguiente:
-        f(angular_z) = -(5966/(x-105)) - 38.78
-
-        Si por ejemplo el valor angular_z = 53, sería:
-        53 = 5966/(x-105) - 38.78
-        91.78 = 5966/(x-105)
-        5966 = 91.78(x-105)
-        5966 = 91.78x - 96.69
-        6062.69 = 91.78x
-        x = 66.07
-        '''
-        if angular_z < -53.0:
-            return (105 * angular_z - 10011.1929)/(angular_z - 38.78125)
-        elif -53 <= angular_z < 0:
-            return 170
-        elif 0 <= angular_z <= 53:
-            return 40
-        elif angular_z > 53:
-            # Función cuadrática que tiende a 105 a medida que x aumenta
-            return (105 * angular_z - 1904.0184)/(angular_z + 38.3125)
+    def map_angle_to_servo_range(self, angleDir):
+        # Límites del rango original (ángulo)
+        minOriginal = -60
+        maxOriginal = 60
+        # Límites del rango destino (servo)
+        minDestino = 40
+        maxDestino = 170
+        # Aplicar la fórmula de mapeo
+        valorMapeado = (angleDir - minOriginal) * (maxDestino - minDestino) / (maxOriginal - minOriginal) + minDestino
+        return valorMapeado
 
 def main(args=None):
     rclpy.init(args=args)

@@ -83,7 +83,7 @@ def main():
         if enableControl:
 
             # Calculates the error on both lanes.
-            y0 = processor.roiY[0] * processor.h
+            y0 = processor.roiY[1] * processor.h
             leftError = averageLeft(y0) - left(y0)
             rightError = averageRight(y0) - right(y0)
             averageError = (leftError + rightError) / 2

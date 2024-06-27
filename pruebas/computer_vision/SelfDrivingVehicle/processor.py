@@ -153,7 +153,7 @@ class ImageProcessor():
             frame = self.orig_frame
     
         # Convertir la imagen a HSV
-        imagen_hsv = cv2.cvtColor(frame, cv2.COLOR_RGB2HSV)
+        imagen_hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
         # Definir los valores de HSV para la detección del color rojo
         lower_hsv = np.array([130, 55, 0])
