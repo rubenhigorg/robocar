@@ -11,6 +11,7 @@ from lib.tracker import Tracker
 
 class ProcessingNode(Node):
     def __init__(self):
+        frame = 0
         super().__init__('processing_node')
         self.subscription = self.create_subscription(
             Image,
@@ -41,9 +42,12 @@ class ProcessingNode(Node):
     
 
     def image_callback(self, msg):
-
+        global frame
         # 1. Reads image:
         cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding='bgr8')
+        filename = f'/home/lab/robocar/pruebas/computer_vision/log/frame_{frame}.jpg'
+        cv2.imwrite(filename, cv_image)
+        frame += 1
 
         self.get_logger().info('Received an image, doing Lane object...')
 
