@@ -20,7 +20,7 @@ class CameraPublisher(Node):
     # definimos la calidad del frame
         self.camera.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
         self.camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 480) 
-        self.camera.set(cv2.CAP_PROP_EXPOSURE, 0.001)
+        self.camera.set(cv2.CAP_PROP_EXPOSURE, float(1)) # en microsegundos
         ret, frame = self.camera.read()
         # cv2.imwrite('/home/lab/robocar/pruebas/computer_vision/coche.jpg', frame)
        
@@ -28,6 +28,8 @@ class CameraPublisher(Node):
     def timer_callback(self):
         ret, frame = self.camera.read()
         self.get_logger().info('Resultado:' + str(ret))
+        current_exposure = self.camera.get(cv2.CAP_PROP_EXPOSURE)
+        self.get_logger().info(f"Tiempo de exposición actual: {current_exposure}")
         if ret:
             msg = self.bridge.cv2_to_imgmsg(frame, "bgr8")
             # is_success, buffer = cv2.imencode(".jpg", frame)
