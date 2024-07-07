@@ -25,6 +25,7 @@ class ImageProcessor():
         # Initialize the left and right lane classes.
         self.left = Line(self.frameDimensions, (0, 0, 255))
         self.right = Line(self.frameDimensions, (255, 0, 0))
+        self.min_line_length = 20
         
         # Camera calibration
         # Scale the calibration matrix to the desired frame dimensions.
@@ -86,9 +87,14 @@ class ImageProcessor():
         self.right.clear()
         frame_center = frame.shape[1] / 2
 
+        lines = self.filter_lines(lines)
+
         if type(lines) == type(np.array([])):
             for line in lines:
                 for x1, y1, x2, y2 in line:
+                    slope = (y2 - y1) / (x2 - x1) if (x2 - x1) != 0 else 0  # Calcula la pendiente
+                    if abs(slope) < 0.5:  # Filtra pendientes muy planas
+                        continue
                     if x1 < frame_center and x2 < frame_center:
                         self.left.add(x1, y1, x2, y2)
                         if drawAll:
@@ -99,7 +105,59 @@ class ImageProcessor():
                             cv2.line(frame, (x1, y1), (x2, y2), self.right.color)
         self.left.fit()
         self.right.fit()
+
+        if self.left is None and self.right is not None: # Si solo ha detectado el carril derecho:
+            if self.right.poly.coefficients[0] > 0:
+                self.left = self.right
+                self.right = None
+        elif self.right is None and self.left is not None:
+            if self.left.poly.coefficients[0] < 0:
+                self.right = self.left
+                self.left = None
+
+
+        # self.verify_line_position(frame_center)
+
         return frame
+    
+    def filter_lines(self, lines):
+        """
+        Filtra las líneas cortas.
+
+        :param lines: Líneas detectadas por la transformada de Hough
+        :param min_line_length: Longitud mínima para que una línea sea considerada válida
+        :return: Lista de líneas válidas
+        """
+        if lines is None:
+            return []
+
+        valid_lines = []
+
+        for line in lines:
+            x1, y1, x2, y2 = line[0]
+            line_length = np.sqrt((x2 - x1)**2 + (y2 - y1)**2)
+            if line_length >= self.min_line_length:
+                valid_lines.append(line)
+        return np.array(valid_lines)
+    
+
+    def verify_line_position(self, frame_center):
+        """
+        Verifica la posición de las líneas ajustadas y descarta aquellas que no cumplan con los criterios.
+
+        :param lane: La línea ajustada a verificar
+        :param frame_center: El centro del frame para determinar los cuadrantes
+        :param lane_name: El nombre del carril ("left" o "right")
+        """
+        y_bottom = self.h  # Parte más baja del frame
+        if self.left.poly is not None:    
+            left_x_bottom = self.left.poly(y_bottom)  # Valor x en la parte más baja usando el polinomio
+            right_x_bottom = self.right.poly(y_bottom)  # Valor x en la parte más baja usando el polinomio
+            if left_x_bottom > frame_center:  # Verificar si el punto más bajo está en el cuadrante correcto
+                self.left.poly = None  # La línea izquierda está en el cuadrante derecho, se invalida
+            if right_x_bottom < frame_center:  # Lo mismo para la derecha
+                self.right.poly = None  
+
         
     def drawPoly(self, frame, poly, color, width=3):
         """

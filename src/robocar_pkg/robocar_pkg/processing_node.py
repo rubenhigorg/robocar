@@ -27,7 +27,7 @@ class ProcessingNode(Node):
         self.averageRight = np.poly1d(np.array([0.4277, 348.6]))
 
         # Initalize the camera processor, defines the frame rate and frame size.
-        self.processor = ImageProcessor((640, 480), 20)
+        self.processor = ImageProcessor((640, 480), 2)
 
         # Create a Kalman Filter for the left and right lanes.
         self.rightTracker = Tracker()
@@ -44,10 +44,7 @@ class ProcessingNode(Node):
     def image_callback(self, msg):
         # 1. Reads image:
         cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding='bgr8')
-        filename = f'/home/lab/robocar/pruebas/computer_vision/log/frame_{self.frame}.jpg'
-        cv2.imwrite(filename, cv_image)
-        self.frame += 1
-
+        save_img = cv_image.copy()
         self.get_logger().info('Received an image, doing Lane object...')
 
         # 2. Processes frame to extract lanes:
@@ -60,15 +57,19 @@ class ProcessingNode(Node):
         self.get_logger().info(f'Coeficientes de right: {right}')
         # 4. Calculates error on both lanes: 
         y0 = self.processor.roiY[1] * self.processor.h
-        if self.processor.left.poly is not None:
-            leftError = self.averageLeft(y0) - self.processor.left.poly(y0)#left(y0)
-        else: 
+
+        # Quitar cuando se ponga Kalman:
+        if self.processor.left.poly is None:
             leftError = 0.0
-        if self.processor.right.poly is not None:         
-            rightError = self.averageRight(y0) - self.processor.right.poly(y0)#right(y0)
-        else: 
+        else:
+            leftError = self.averageLeft(y0) - self.processor.left.poly(y0) #left(y0)
+        if self.processor.right.poly is None:
             rightError = 0.0
+        else:
+            rightError = self.averageRight(y0) - self.processor.right.poly(y0) #right(y0)
+        
         averageError = (leftError + rightError) / 2
+        averageError *= 0.3
         self.get_logger().info(f'Average error: {averageError}')
 
 
@@ -97,12 +98,35 @@ class ProcessingNode(Node):
         elif turn_angle < -60:
             turn_angle = -60
 
+        if averageError > 30.0: 
+            averageError = 30.0
+        elif averageError < -30.0:
+            averageError = -30.0
+
         # Create and publish the message.
         lane_info_msg = Float32MultiArray()
         # lane_info_msg.data = [turn_angle]
-        lane_info_msg.data = [self.calculate_angle(averageError)]
+        lane_info_msg.data = [averageError]
         self.publisher.publish(lane_info_msg)
-        self.get_logger().info(f'Published turn angle: {averageError * 0.2}')
+        self.get_logger().info(f'Left error: {leftError}')
+        self.get_logger().info(f'Right error: {rightError}')
+        self.get_logger().info(f'Published turn angle: {averageError}')
+
+
+
+
+        # Print info in frames
+        filename = f'/home/lab/robocar/pruebas/computer_vision/log/frame_{self.frame}.jpg'
+        # self.processor.drawPoly(cv_image, self.averageLeft, (255, 255, 255))
+        # self.processor.drawPoly(cv_image, self.averageRight, (255, 255, 255))
+        # self.processor.drawPoly(cv_image, self.processor.left.poly, (0, 255, 0))
+        # self.processor.drawPoly(cv_image, self.processor.right.poly, (0, 0, 255))
+        # # Displays the error on the frame.
+        # cv2.putText(cv_image, '%.2f' % (leftError), (int(self.averageLeft(y0)), int(y0) + 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 0), 1)
+        # cv2.putText(cv_image, '%.2f' % (rightError), (int(self.averageRight(y0)), int(y0) + 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 0), 1)
+        # self.print_offset(cv_image, averageError)
+        cv2.imwrite(filename, save_img)
+        self.frame += 1
 
 
     def calculate_angle(self, offset):
@@ -122,6 +146,33 @@ class ProcessingNode(Node):
             angulo_giro = -60
 
         return angulo_giro
+    
+    def print_offset(self, cv_image, offset): 
+        # Asumiendo que cv_image es tu imagen/frame
+        alto, ancho = cv_image.shape[:2]
+
+        # Calcular el centro de la imagen
+        centro_x = ancho // 2
+        centro_y = alto // 2
+
+        # Punto central (necesitarás ajustar la posición para que el texto quede centrado según su tamaño)
+        punto_central = (centro_x, centro_y)
+
+        # Parámetros para cv2.putText
+        texto = str(offset)
+        fuente = cv2.FONT_HERSHEY_SIMPLEX
+        escala_fuente = 1  # Tamaño de la fuente
+        color = (255, 255, 255)  # Color del texto en BGR
+        grosor = 2  # Grosor de la línea del texto
+
+        # Calcular el tamaño del texto para ajustar el punto central
+        (tamano_texto_ancho, tamano_texto_alto), _ = cv2.getTextSize(texto, fuente, escala_fuente, grosor)
+        punto_inicio_texto = (centro_x - tamano_texto_ancho // 2, centro_y + tamano_texto_alto // 2)
+
+        # Poner el texto en el frame
+        cv2.putText(cv_image, texto, punto_inicio_texto, fuente, escala_fuente, color, grosor)
+
+
 
 
 
