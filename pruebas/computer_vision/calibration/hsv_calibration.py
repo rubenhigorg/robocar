@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 
 # Ruta de la imagen
-ruta_imagen = "coche.jpg"
+ruta_imagen = "/home/rhiguera/robocar/pruebas/computer_vision/calibration/frame_150.jpg"
 
 # Cargar la imagen en color
 imagen = cv2.imread(ruta_imagen)
