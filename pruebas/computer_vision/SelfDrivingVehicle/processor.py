@@ -156,7 +156,7 @@ class ImageProcessor():
         imagen_hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
         # Definir los valores de HSV para la detección del color rojo
-        lower_hsv = np.array([130, 55, 0])
+        lower_hsv = np.array([0, 152, 130])
         upper_hsv = np.array([179, 255, 255])
 
         # Aplicar las máscaras HSV a la imagen
