@@ -23,8 +23,8 @@ class ProcessingNode(Node):
         self.bridge = CvBridge()
 
         # Define the average positions for the left and right lanes.
-        self.averageLeft = np.poly1d(np.array([-0.3756, 292.7]))
-        self.averageRight = np.poly1d(np.array([0.4277, 348.6]))
+        self.averageLeft = np.poly1d(np.array([-0.2674, 179.6]))
+        self.averageRight = np.poly1d(np.array([0.2345, 480.0]))
 
         # Initalize the camera processor, defines the frame rate and frame size.
         self.processor = ImageProcessor((640, 480), 2)
@@ -58,18 +58,22 @@ class ProcessingNode(Node):
         # 4. Calculates error on both lanes: 
         y0 = self.processor.roiY[1] * self.processor.h
 
-        # Quitar cuando se ponga Kalman:
-        if self.processor.left.poly is None:
-            leftError = 0.0
-        else:
-            leftError = self.averageLeft(y0) - self.processor.left.poly(y0) #left(y0)
-        if self.processor.right.poly is None:
-            rightError = 0.0
-        else:
-            rightError = self.averageRight(y0) - self.processor.right.poly(y0) #right(y0)
+
+        # Obtener lineas definitivas:
+        final_left = self.processor.left.poly if self.processor.left.poly is not None else left
+        final_right = self.processor.right.poly if self.processor.right.poly is not None else right
+
+        leftError = self.averageLeft(y0) - final_left(y0)
+        rightError = self.averageRight(y0) - final_right(y0)
         
         averageError = (leftError + rightError) / 2
         averageError *= 0.3
+
+        if averageError > 30.0: 
+            averageError = 30.0
+        elif averageError < -30.0:
+            averageError = -30.0
+    
         self.get_logger().info(f'Average error: {averageError}')
 
 
@@ -98,11 +102,6 @@ class ProcessingNode(Node):
         elif turn_angle < -60:
             turn_angle = -60
 
-        if averageError > 30.0: 
-            averageError = 30.0
-        elif averageError < -30.0:
-            averageError = -30.0
-
         # Create and publish the message.
         lane_info_msg = Float32MultiArray()
         # lane_info_msg.data = [turn_angle]
@@ -116,16 +115,16 @@ class ProcessingNode(Node):
 
 
         # Print info in frames
-        filename = f'/home/lab/robocar/pruebas/computer_vision/log/frame_{self.frame}.jpg'
-        # self.processor.drawPoly(cv_image, self.averageLeft, (255, 255, 255))
-        # self.processor.drawPoly(cv_image, self.averageRight, (255, 255, 255))
-        # self.processor.drawPoly(cv_image, self.processor.left.poly, (0, 255, 0))
-        # self.processor.drawPoly(cv_image, self.processor.right.poly, (0, 0, 255))
-        # # Displays the error on the frame.
-        # cv2.putText(cv_image, '%.2f' % (leftError), (int(self.averageLeft(y0)), int(y0) + 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 0), 1)
-        # cv2.putText(cv_image, '%.2f' % (rightError), (int(self.averageRight(y0)), int(y0) + 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 0), 1)
-        # self.print_offset(cv_image, averageError)
-        cv2.imwrite(filename, save_img)
+        filename = f'/home/lab/robocar/pruebas/computer_vision/log2/frame_{self.frame}.jpg'
+        self.processor.drawPoly(cv_image, self.averageLeft, (255, 255, 255))
+        self.processor.drawPoly(cv_image, self.averageRight, (255, 255, 255))
+        self.processor.drawPoly(cv_image, self.processor.left.poly, (0, 255, 0))
+        self.processor.drawPoly(cv_image, self.processor.right.poly, (0, 0, 255))
+        # Displays the error on the frame.
+        cv2.putText(cv_image, '%.2f' % (leftError), (int(self.averageLeft(y0)), int(y0) + 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 0), 1)
+        cv2.putText(cv_image, '%.2f' % (rightError), (int(self.averageRight(y0)), int(y0) + 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 0), 1)
+        self.print_offset(cv_image, averageError)
+        cv2.imwrite(filename, cv_image)
         self.frame += 1
 
 

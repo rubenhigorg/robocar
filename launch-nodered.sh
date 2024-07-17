@@ -1,5 +1,12 @@
 #!/bin/bash
 
+source /opt/ros/iron/setup.bash
+export NODE_PATH=/usr/lib/node_modules
+export RMW_IMPLEMENTATION=rmw_fastrtps_cpp
+source /home/lab/robocar/src/install/setup.sh
+source /home/lab/robocar/src/install/setup.sh
+source /home/lab/robocar/.venv/bin/activate
+
 # Change to the Node-RED installation directory
 cd /home/pi/.node-red
 

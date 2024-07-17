@@ -56,8 +56,8 @@ class CarControlNode(Node):
             angleMotor = self.map_value_motor(0.01, 0, 1, 51, 15) * 1.8
 
             self.get_logger().info('cmd_vel - Motor 0: %s' % angleMotor)
-            self.kit.servo[0].angle = float(angleMotor)#93.6
-            self.kit.servo[1].angle = float(angleMotor)#93.6
+            self.kit.servo[0].angle = 93.6# float(angleMotor)#93.6
+            self.kit.servo[1].angle = 93.6# float(angleMotor)#93.6
     
     
     def manual_control(self, msg):
@@ -67,7 +67,7 @@ class CarControlNode(Node):
         self.kit.servo[2].angle = angleDir
 
         if msg.buttons[4] == 1: # Si esta pulsado L1 ira marcha atras:
-            angleMotor = self.map_value_motor(msg.axes[5], 0.9999, -0.9999, 55, 80) * 1.8  # msg.axes[5] = R2 potenciometro    
+            angleMotor = self.map_value_motor(0.01, 0, 1, 51, 15) * 1.8  # msg.axes[5] = R2 potenciometro    
         else:
             angleMotor = self.map_value_motor(msg.axes[5], 0.9999, -0.9999, 51, 15) * 1.8  # msg.axes[5] = R2 potenciometro
 
