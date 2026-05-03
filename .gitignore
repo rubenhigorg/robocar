@@ -1,2 +1,8 @@
 # Binarios de prueba
 pruebas/VL53L0X_rasp
+pruebas/rplidar/rplidar_check
+pruebas/rplidar/rplidar_stream
+
+# Python
+__pycache__/
+*.py[cod]
