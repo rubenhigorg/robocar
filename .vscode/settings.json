@@ -16,5 +16,6 @@
         "wiringpi.h": "c",
         "vl53l0x_api.h": "c"
     },
-    "ros.distro": "iron"
+    "ros.distro": "iron",
+    "ROS2.distro": "iron"
 }
