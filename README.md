@@ -1,95 +1,165 @@
+<div align="center">
+
 # 🚗 Robocar
 
-Robot coche autónomo construido con componentes comerciales de bajo coste (~293€), capaz de seguimiento de carril mediante visión artificial. Funciona con ROS2 (Iron) sobre Raspberry Pi 4.
+**Robot coche autónomo de bajo coste con ROS2, visión artificial y LIDAR**
 
-## 📖 Documentación
+[![ROS2 Iron](https://img.shields.io/badge/ROS2-Iron-blue?logo=ros)](https://docs.ros.org/en/iron/)
+[![Python 3.10](https://img.shields.io/badge/Python-3.10-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![Raspberry Pi](https://img.shields.io/badge/Raspberry%20Pi-4-C51A4A?logo=raspberrypi&logoColor=white)](https://www.raspberrypi.com/)
+[![License](https://img.shields.io/badge/License-Apache%202.0-green.svg)](src/robocar_pkg/LICENSE)
+[![Docs](https://img.shields.io/badge/docs-GitHub%20Pages-blue?logo=github)](https://rubenhigorg.github.io/robocar)
 
-Este proyecto es el resultado de dos Trabajos de Fin de Grado y un Trabajo de Fin de Máster (en desarrollo):
+Construido con componentes comerciales (~293 €) · Raspberry Pi 4 · OpenCV · ROS2 Iron
+
+[**📖 Documentación completa**](https://rubenhigorg.github.io/robocar)
+
+</div>
+
+---
+
+## Qué es Robocar
+
+Robocar es un vehículo autónomo a escala construido con componentes comerciales de bajo coste. El proyecto nació como Trabajo de Fin de Grado en la Universidad Politécnica de Madrid y ha evolucionado a lo largo de tres trabajos académicos:
 
 | Trabajo | Descripción |
 |---|---|
-| [**TFG 1: Diseño y Construcción**](docs/tfg1-construccion/README.md) | Hardware, sensores, electrónica, software ROS2 y panel Node-RED |
-| [**TFG 2: Seguimiento de Carril**](docs/tfg2-lane-following/README.md) | Lane-following con OpenCV, Kalman y PID |
-| [**TFM** (en curso)](docs/tfm/README.md) | Extensión con LIDAR |
+| **TFG 1** — Diseño y Construcción | Hardware, sensores, electrónica, nodos ROS2 y panel Node-RED |
+| **TFG 2** — Seguimiento de Carril | Lane-following con OpenCV, Transformada de Hough, Kalman y PID |
+| **TFM** — Navegación con LIDAR y LLMs | SLAM con RPLidar C1, navegación Nav2 e interfaz natural con LLMs vía MCP |
 
-👉 [**Ver toda la documentación**](docs/README.md)
+## Características principales
+
+- 🎮 **Conducción manual** con mando PS3 y **modo autónomo** con lane-following
+- 👁️ **Visión artificial** — detección de carril con OpenCV, Kalman y control PID
+- 📡 **LIDAR** — mapeo del entorno con RPLidar C1 y SLAM (Cartographer)
+- 🧭 **Navegación autónoma** — planificación de rutas con Nav2
+- 🤖 **Interfaz natural** — control por lenguaje natural mediante LLMs y MCP
+- 📊 **Dashboard** — monitorización en tiempo real con Node-RED
+- 🔋 **Monitorización energética** — voltaje y corriente de baterías (INA3221/INA226)
+- 🛑 **Seguridad** — parada de emergencia por ultrasonidos (3× HC-SR04)
 
 ## Arquitectura
 
-### Nodos ROS2
+El sistema se compone de nodos ROS2 independientes que se comunican por topics:
 
-| Nodo | Topic | Función |
+```
+                    ┌─────────────┐
+  Mando PS3 ──────►│ car_control │──────► Motores + Dirección
+                    │    _node    │            (PCA9685)
+  /lane_info ─────►│             │
+                    └─────────────┘
+                          ▲
+  ┌──────────┐    ┌───────┴───────┐
+  │  camera  │───►│  processing   │
+  │  _node   │    │    _node      │
+  └──────────┘    └───────────────┘
+
+  ┌──────────┐  ┌──────────┐  ┌──────────────┐
+  │ distance │  │  energy  │  │ accelerometer│
+  │  _node   │  │  _node   │  │    _node     │
+  └──────────┘  └──────────┘  └──────────────┘
+```
+
+| Nodo | Topic | Descripción |
 |---|---|---|
-| `camera_node` | `/camera_image` | Captura frames 640×480 a ~3 FPS |
-| `processing_node` | `/lane_info` | Detecta carriles (OpenCV + Kalman + PID) |
-| `car_control_node` | Suscribe `/joy`, `/lane_info` | Controla motores y dirección (manual/autónomo) |
-| `distance_node` | `/ultrasound_data` | 3× HC-SR04 + KY-032 a 10 Hz |
-| `energy_node` | `/energy` | Voltajes (INA3221) y corriente (INA226) |
-| `accelerometer_node` | `/imu` | Acelerómetro + giroscopio (MPU6050) |
+| `camera_node` | `/camera_image` | Captura 640×480 @ ~3 FPS |
+| `processing_node` | `/lane_info` | Detección de carril (OpenCV + Kalman + PID) |
+| `car_control_node` | `/joy`, `/lane_info` | Control de motores y dirección |
+| `distance_node` | `/ultrasound_data` | 3× HC-SR04 ultrasonidos @ 10 Hz |
+| `energy_node` | `/energy` | Voltajes (INA3221) + corriente (INA226) |
+| `accelerometer_node` | `/imu` | IMU 6 ejes (MPU6050) |
 
-### Modos de conducción
+## Hardware
 
-- **Manual:** Joystick PS3 controla dirección y aceleración
-- **Autónomo:** Seguimiento de carril por visión artificial
-- **Cambio de modo:** Botón X del mando PS3
+| Componente | Modelo | Función |
+|---|---|---|
+| Computador | Raspberry Pi 4 (4 GB) | Procesamiento central |
+| Cámara | USB 640×480 | Visión artificial |
+| LIDAR | RPLidar C1 | Mapeo 360° del entorno |
+| Ultrasonidos | 3× HC-SR04 | Detección de obstáculos |
+| IMU | MPU6050 | Acelerómetro + giroscopio |
+| Controlador servos | PCA9685 (16 ch) | Motores y dirección |
+| Monitor energético | INA3221 + INA226 | Voltaje y corriente baterías |
+| Mando | PS3 DualShock | Control manual |
+
+> **Coste total:** ~293 € con componentes comerciales
 
 ## Quick Start
 
 ```bash
-# Configurar entorno ROS2
+# 1. Entorno ROS2
 source /opt/ros/iron/setup.bash
 
-# Instalar dependencias Python
-python3 -m venv .venv
-source .venv/bin/activate
+# 2. Dependencias Python
+python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 
-# Construir paquetes ROS2
-cd src
-colcon build
-source install/setup.sh
+# 3. Compilar paquetes ROS2
+cd src && colcon build && source install/setup.sh && cd ..
 
-# Lanzar todos los nodos
+# 4. Lanzar todos los nodos
 bash launch.sh
 
-# Lanzar Node-RED (panel de control)
+# 5. Dashboard Node-RED (opcional)
 bash nodered.sh
 ```
 
-### Nodo del joystick
+### Mando PS3
 
 ```bash
 ros2 launch teleop_twist_joy teleop-launch.py
 ```
 
-> Por defecto usa mando PS3. Ver readme del paquete `teleop_twist_joy` para otros mandos.
+Cambio manual ↔ autónomo: **botón X** del mando.
 
-### Node-RED (instalación desde cero)
+## Estructura del repositorio
 
-```bash
-npm install -g --unsafe-perm node-red rclnodejs cron
-cd /home/lab/edu_nodered_ros2_plugin
-npm install -g .
+```
+robocar/
+├── src/
+│   ├── robocar_pkg/          # Nodos ROS2 (Python)
+│   │   ├── robocar_pkg/      # camera, processing, car_control, distance, energy, accelerometer
+│   │   ├── lib/              # Drivers hardware (INA3221, INA226, MPU6050, OpenCV)
+│   │   └── test/             # Tests
+│   ├── messages_pkg/         # Mensajes custom (Distance.msg, Energy.msg)
+│   └── teleop_twist_joy/     # Paquete joystick
+├── docs/                     # Documentación MkDocs
+├── hardware/                 # Esquemático KiCad
+├── flows.json                # Flujos Node-RED
+├── launch.sh                 # Script lanzamiento producción
+└── mkdocs.yml                # Configuración documentación web
 ```
 
-Para mensajes custom (ejecutar como root desde `/usr/lib/node_modules/rclnodejs/scripts`):
+## Tests y linting
 
 ```bash
-source /opt/ros/iron/setup.sh
-source /home/ros2/robocar/src/install/setup.sh
-npm run generate-messages
-```
-
-## Tests
-
-```bash
+# Tests
 colcon test --packages-select robocar_pkg
 colcon test-result --verbose
-```
 
-## Lint
-
-```bash
+# Linting
 ament_flake8 src/robocar_pkg
 ament_pep257 src/robocar_pkg
 ```
+
+## Documentación
+
+La documentación completa está disponible en **[rubenhigorg.github.io/robocar](https://rubenhigorg.github.io/robocar)**, incluyendo:
+
+- Diseño y construcción del hardware
+- Pipeline de visión artificial y control
+- SLAM con Cartographer y RPLidar C1
+- Navegación autónoma con Nav2
+- Interfaz natural con LLMs y MCP
+
+## Autores
+
+| | Nombre | Contribución |
+|---|---|---|
+| 👤 | **Rubén Higuera Castillo** | TFG 1, TFG 2, TFM |
+| 👤 | **Kento Reinoso** | TFG 1 |
+
+## Licencia
+
+Distribuido bajo la licencia Apache 2.0. Ver [`LICENSE`](src/robocar_pkg/LICENSE) para más información.
