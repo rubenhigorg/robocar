@@ -6,3 +6,9 @@ pruebas/rplidar/rplidar_stream
 # Python
 __pycache__/
 *.py[cod]
+
+# MkDocs build
+site/
+
+# macOS
+.DS_Store

@@ -8,7 +8,7 @@ Proyecto de robot coche autónomo desarrollado como Proyecto de Fin de Grado en 
 |---|---|---|---|
 | [**TFG 1: Diseño y Construcción**](tfg1-construccion/README.md) | Construcción completa del robot: hardware, sensores, electrónica, software ROS2 y panel de control Node-RED | Kento Reinoso, Rubén Higuera | 2023/24 |
 | [**TFG 2: Seguimiento de Carril**](tfg2-lane-following/README.md) | Sistema de lane-following con OpenCV, Transformada de Hough, Filtro de Kalman y control PID | Rubén Higuera | 2023/24 |
-| [**TFM** (en desarrollo)](tfm/README.md) | Extensión con LIDAR | Rubén Higuera | — |
+| [**TFM: Integración de LLMs en Sistemas de Navegación Autónoma**](tfm/README.md) | Navegación *goal-directed* con SLAM, Nav2 y lenguaje natural mediante MCP | Rubén Higuera | — |
 
 ## Índice Detallado
 
@@ -29,6 +29,14 @@ Proyecto de robot coche autónomo desarrollado como Proyecto de Fin de Grado en 
 - [Modelo del sistema: Robot y entorno](tfg2-lane-following/modelo-sistema.md)
 - [📄 Memoria original (PDF)](tfg2-lane-following/TFG_2.pdf)
 
+### TFM — Integración de LLMs en Sistemas de Navegación Autónoma
+
+- [Resumen, objetivos y metodología](tfm/README.md)
+- [Capa de percepción: SLAM](tfm/slam.md)
+- [Capa de navegación: Nav2](tfm/navegacion.md)
+- [Capa de interfaz: LLM + MCP](tfm/llm-mcp.md)
+- [📄 Memoria original (PDF)](tfm/TFM_entrega_1.pdf)
+
 ## Estructura del Repositorio
 
 ```
@@ -48,5 +56,9 @@ docs/
 │   ├── sistema-control.md              # Kalman, PID
 │   └── modelo-sistema.md              # Modelo robot + entorno
 └── tfm/
-    └── README.md                       # Placeholder TFM
+    ├── README.md                       # Resumen TFM
+    ├── TFM_entrega_1.pdf               # Memoria original
+    ├── slam.md                         # Cartographer + RPLidar C1
+    ├── navegacion.md                   # Nav2 y objetivos semánticos
+    └── llm-mcp.md                      # Interfaz natural con MCP
 ```

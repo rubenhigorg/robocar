@@ -1,0 +1,74 @@
+site_name: Robocar
+site_description: Robot coche autónomo con ROS2, visión artificial y LIDAR
+site_author: Rubén Higuera Castillo
+site_url: https://rubenhigorg.github.io/robocar
+
+repo_name: rubenhigorg/robocar
+repo_url: https://github.com/rubenhigorg/robocar
+
+exclude_docs: |
+  /README.md
+
+theme:
+  name: material
+  language: es
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: cyan
+      toggle:
+        icon: material/brightness-7
+        name: Modo oscuro
+    - scheme: slate
+      primary: indigo
+      accent: cyan
+      toggle:
+        icon: material/brightness-4
+        name: Modo claro
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+  icon:
+    repo: fontawesome/brands/github
+
+nav:
+  - Inicio: index.md
+  - TFG 1 — Construcción:
+    - Resumen: tfg1-construccion/README.md
+    - Hardware: tfg1-construccion/hardware.md
+    - Electrónica: tfg1-construccion/electronica.md
+    - Construcción: tfg1-construccion/construccion.md
+    - Software: tfg1-construccion/software.md
+  - TFG 2 — Lane Following:
+    - Resumen: tfg2-lane-following/README.md
+    - Detección de carril: tfg2-lane-following/deteccion-carril.md
+    - Sistema de control: tfg2-lane-following/sistema-control.md
+    - Modelo del sistema: tfg2-lane-following/modelo-sistema.md
+  - TFM — LIDAR:
+    - Resumen: tfm/README.md
+    - "Capa de percepción: SLAM": tfm/slam.md
+    - Capa de navegación: tfm/navegacion.md
+    - "Capa de interfaz natural: LLM + MCP": tfm/llm-mcp.md
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.tabbed:
+      alternate_style: true
+  - tables
+  - attr_list
+  - md_in_html
+  - toc:
+      permalink: true
+
+plugins:
+  - search
