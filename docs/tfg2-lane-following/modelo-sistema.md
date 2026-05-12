@@ -6,6 +6,8 @@
 
 Este modelo adapta las tecnologías de detección y seguimiento de carril a la realidad física del robot y su entorno. Define los parámetros del carril, la cámara, la cinemática del robot y las condiciones operativas para que el bucle de control funcione eficientemente.
 
+![Modelo general del sistema](../assets/images/tfg2/modelo-geometria/tfg2_p30_00.png)
+
 ## Modelo del Carril
 
 ### Características
@@ -55,6 +57,8 @@ El control de dirección se realiza **una vez por frame**. Entre frames no hay c
 | Longitud ROI | 25 cm |
 | Tiempo para dejar atrás la ROI | 1.4 s |
 
+![Región de Interés del Robot](../assets/images/tfg2/modelo-geometria/tfg2_p32_00.png)
+
 La ROI corta implica que los bordes del carril dentro de ella pueden modelarse como rectas, lo que simplifica enormemente el procesamiento.
 
 ## Modelo Geométrico del Robot
@@ -83,6 +87,8 @@ Donde:
 |---|---|---|
 | R mínimo | L / tan(θ_max) | 17.5 cm |
 | R máximo | | ∞ (recto) |
+
+![Esquema del modelo geométrico](../assets/images/tfg2/modelo-geometria/tfg2_p35_00.png)
 
 ## La Cámara y Medición de Distancias
 
@@ -123,6 +129,8 @@ Para este proyecto, se simplifica el cálculo aprovechando la baja velocidad y e
 
 Esta simplificación evita cálculos complejos de puntos de fuga y es suficiente para el escenario operativo del robot.
 
+![Cálculo de posición respecto al carril](../assets/images/tfg2/modelo-geometria/tfg2_p35_01.png)
+
 ## Análisis de Trayectoria
 
 ### Correcciones entre frames
@@ -136,6 +144,8 @@ Aplicando el modelo geométrico, se calculan las correcciones máximas entre dos
 | Corrección angular en 1s | α × FPS | ~**45°/s** |
 | Desplazamiento lateral (d) | R(1 - cos(l/R)) | **0.37 cm** por frame |
 | Desplazamiento en 1s | d × FPS | ~**1.8 cm/s** |
+
+![Esquema de la trayectoria entre frames](../assets/images/tfg2/modelo-geometria/tfg2_p37_01.png)
 
 ### Interpretación
 

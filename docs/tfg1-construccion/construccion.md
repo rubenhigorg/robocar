@@ -21,6 +21,8 @@ Basándose en los resultados del [benchmarking](hardware.md#benchmarking-de-sens
 
 > La detección del KY-032 debe tratarse con máxima prioridad por la proximidad que supone.
 
+![Distribución final de sensores](../assets/images/tfg1/hardware-sensores/tfg1_p32_00.png)
+
 ## Conectividad Física
 
 ### Asignación de pines (GPIO)
@@ -104,6 +106,8 @@ Se utiliza **modelado paramétrico** con **Fusion 360** (licencia académica UPM
 - **Pieza inferior:** Soporte para KY-032 y faros, actúa como parachoques
 - **Pieza superior:** Soporta los 3× HC-SR04 en la posición adecuada
 
+![Render de la pieza de sensores](../assets/images/tfg1/montaje-componentes/tfg1_p49_01.png)
+
 ### Herramientas
 
 | Herramienta | Uso |
@@ -111,6 +115,8 @@ Se utiliza **modelado paramétrico** con **Fusion 360** (licencia académica UPM
 | **Fusion 360** | Modelado 3D paramétrico (archivos .f3d → exportación .stl) |
 | **Cura** (Slicer) | Preparación para impresión (densidad relleno, temperaturas, grosor capas) |
 | **Impresora 3D Anet A8** | Impresión con filamento PLA |
+
+![Render de la pieza del chasis](../assets/images/tfg1/montaje-componentes/tfg1_p50_01.jpg)
 
 ### Proceso de fabricación
 
@@ -124,6 +130,10 @@ Se utiliza **modelado paramétrico** con **Fusion 360** (licencia académica UPM
 - *Pieza sensor superior:* Instalar HC-SR04 antes de incorporar al chasis
 - *Pieza sensor inferior:* Instalar KY-032, faros y espuma amortiguadora
 - *Pieza chasis:* Montaje directo sobre chasis (reordenar componentes previamente)
+
+![Integración de la pieza de sensores en el robot](../assets/images/tfg1/montaje-componentes/tfg1_p52_00.jpg)
+
+![Pieza de chasis instalada](../assets/images/tfg1/montaje-componentes/tfg1_p53_00.jpg)
 
 ### Problemáticas Encontradas
 
@@ -145,3 +155,5 @@ Conexión del mando DualShock 3 por Bluetooth a la Raspberry Pi 4.
 ### Display de Batería 3S
 
 Display conectado directamente a la salida del BMS que permite ver a simple vista el nivel de carga de la batería. Lectura rápida pero imprecisa.
+
+![Robocar: resultado final](../assets/images/tfg1/montaje-componentes/tfg1_p74_00.jpg)

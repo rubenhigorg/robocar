@@ -59,12 +59,16 @@ Batería 2p3s ──► BMS ──┬──► 12.6V ──► Motores ESC
                        └──► INA226 (corriente, I2C 0x44)
 ```
 
+![Esquema lógico general de alimentación](../assets/images/tfg1/electronica-bateria/tfg1_p37_00.png)
+
 ### Configuración I2C de los sensores
 
 | Sensor | Dirección | Configuración necesaria |
 |---|---|---|
 | **INA3221** | 0x41 | Conectar pin A0 a Vs (sin soldar) |
 | **INA226** | 0x44 | Eliminar punto soldadura en pin A1 + agregar punto entre pin U y Vcc |
+
+![Esquemático definitivo de sensorización](../assets/images/tfg1/electronica-bateria/tfg1_p39_00.png)
 
 ## Construcción
 
@@ -75,6 +79,10 @@ Batería 2p3s ──► BMS ──┬──► 12.6V ──► Motores ESC
 3. Conexión del BMS entre cada par de celdas
 4. Acabado con malla cubre cables, bridas y pegamento termofusible
 5. **Ubicación:** Centrada en el piso inferior del chasis (mayor estabilidad por distribución de peso)
+
+![Componentes de la batería](../assets/images/tfg1/electronica-bateria/tfg1_p41_00.jpg)
+
+![Batería construida: Celdas + BMS + conexiones](../assets/images/tfg1/electronica-bateria/tfg1_p41_01.jpg)
 
 ### Pruebas
 
@@ -103,8 +111,12 @@ Se conectaron 4 resistencias de 50W en paralelo directamente a la batería, veri
 | 7 | Placa distribuidora 12.6V |
 | 8 | Clema de carga |
 
+![Componente batería y conexionado completo](../assets/images/tfg1/electronica-bateria/tfg1_p44_00.png)
+
 ### Distribución de alimentación
 
 - **Piso inferior:** Batería centrada, INA's, BMS, BUCK, placa 12.6V
 - **Piso superior:** Placa de distribución de 5V para todos los componentes excepto la RPi
 - **RPi:** Alimentación directa desde BUCK vía USB-C
+
+![Batería instalada en el piso inferior del chasis](../assets/images/tfg1/electronica-bateria/tfg1_p45_00.jpg)

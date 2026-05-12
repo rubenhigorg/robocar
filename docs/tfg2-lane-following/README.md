@@ -26,6 +26,8 @@ Los enfoques para detección de carriles se clasifican en:
 - **Basado en modelos:** Modelos globales de carretera. Robusto ante iluminación pero sensible a formas.
 - **Basado en aprendizaje:** Redes neuronales y reinforcement learning. Requiere entrenamiento extenso.
 
+![Proceso de seguimiento de carril](../assets/images/tfg2/contexto/tfg2_p07_00.png)
+
 ## Objetivos
 
 Implementar un sistema de seguimiento de carril para Robocar bajo las siguientes condiciones:
@@ -65,6 +67,8 @@ La cámara original (RPi Camera Rev 1.3 clónica) presentaba **baja velocidad de
 - Balance de blancos y exposición automáticos
 - Buen rendimiento en condiciones de poca retroiluminación
 
+![Cámara NexiGo](../assets/images/tfg2/integracion-hardware/tfg2_p41_00.jpg)
+
 ### Sensor de velocidad
 
 Se añadió un sensor en el eje de una rueda trasera basado en un **opto-acoplador**:
@@ -81,6 +85,8 @@ Se crean/modifican los siguientes nodos:
   - **Manual:** Control vía joystick (`/joy`)
   - **Autónomo:** Sigue las correcciones de `/lane_info` a velocidad constante (18 cm/s)
   - **Cambio de modo:** Botón X del mando PS3
+
+![Diagrama de nodos ROS2](../assets/images/tfg2/integracion-hardware/tfg2_p53_00.png)
 
 ## Resultados
 
@@ -107,6 +113,8 @@ El filtro de Kalman demostró ser crucial como **red de seguridad**: cuando el s
 - **Nvidia Jetson Nano:** Procesamiento más potente para algoritmos avanzados (redes neuronales profundas)
 - **Integración de sensores adicionales:** Usar los ultrasonidos y el sensor de emergencia para mejorar la percepción
 - **Técnicas avanzadas de procesamiento de imagen** adaptables a variaciones de iluminación
+
+![Fotografía del robot](../assets/images/tfg2/integracion-hardware/tfg2_p68_01.jpg)
 
 ## Bibliografía
 

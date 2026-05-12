@@ -68,10 +68,14 @@ Frame (640×480 BGR)
 
 **Umbralización:** Se descarta todo lo que no sea del color rojo filtrado, obteniendo un frame binario (blanco = carril, negro = fondo).
 
+![Frame binario tras filtro de color rojo](../assets/images/tfg2/pipeline-vision/tfg2_p45_01.png)
+
 ### 2. Detección de Bordes (Canny)
 
 1. **Gaussian Blur:** Se suaviza la imagen binaria para reducir ruido
 2. **Algoritmo Canny:** Detecta bordes calculando el gradiente de intensidad. Produce una imagen donde los bordes del carril son claramente visibles
+
+![Detección de bordes con filtro de Canny](../assets/images/tfg2/pipeline-vision/tfg2_p46_00.png)
 
 ### 3. Región de Interés (ROI)
 
@@ -80,6 +84,8 @@ Se aplica una máscara que limita el análisis a la zona inferior-central del fr
 - Se estrecha hacia arriba (perspectiva de la carretera)
 
 Los parámetros `self.roiX` y `self.roiY` definen el tamaño como porcentaje del frame.
+
+![Región de Interés aplicada](../assets/images/tfg2/pipeline-vision/tfg2_p47_00.jpg)
 
 ### 4. Transformada de Hough
 
@@ -105,6 +111,8 @@ Se obtiene un frame donde el robot está perfectamente centrado y los carriles s
 
 Estos valores de referencia son fundamentales para el cálculo del error.
 
+![Carriles centrados de referencia](../assets/images/tfg2/pipeline-vision/tfg2_p48_00.jpg)
+
 ### 7. Cálculo del Error (Offset)
 
 El error se calcula como la diferencia entre los carriles de referencia (centrado perfecto) y los carriles detectados en el frame actual, medida en el punto más alto de la ROI:
@@ -117,6 +125,8 @@ right_error = averageRight(y0) - right(y0)
 Donde `y0` es la coordenada Y del tope de la ROI.
 
 El error promedio `(left_error + right_error) / 2` indica cuánto se ha desviado el robot del centro del carril.
+
+![Frame con offset y cálculo del error](../assets/images/tfg2/pipeline-vision/tfg2_p49_00.jpg)
 
 ## Resumen del Algoritmo (Pseudocódigo)
 
@@ -153,3 +163,5 @@ right_error = average_right(y0) - right(y0)
 La implementación se desarrolló y probó inicialmente en un **Jupyter Notebook** (`pruebas/computer_vision/video.ipynb`), que permite visualizar cada etapa del pipeline de forma interactiva antes de integrar el código en los nodos de ROS2.
 
 Las pruebas se realizan grabando frames de ejemplo mientras se conduce manualmente por el circuito (`pruebas/computer_vision/log/frame_x.jpg`).
+
+![Trazada del circuito de pruebas](../assets/images/tfg2/resultados-validacion/tfg2_p54_00.png)

@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RoboCar — Diagrama de Conexiones Hardware</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Inter', system-ui, sans-serif; background: transparent; color: #e1e4e8; overflow: hidden; }
+  #diagram-container { display: flex; justify-content: center; }
+  .tooltip { position: fixed; background: #1c2028; border: 1px solid #30363d; border-radius: 8px; padding: 12px 16px; font-size: 13px; color: #e1e4e8; pointer-events: none; opacity: 0; transition: opacity 0.15s; max-width: 320px; z-index: 100; box-shadow: 0 8px 32px rgba(0,0,0,0.5); }
+  .tooltip h4 { font-size: 14px; font-weight: 600; margin-bottom: 6px; }
+  .tooltip .r { display: flex; justify-content: space-between; gap: 16px; padding: 2px 0; font-size: 12px; }
+  .tooltip .k { color: var(--tip-key, #8b949e); }
+  .tooltip .v { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--tip-val, #58a6ff); }
+</style>
+</head>
+<body>
+<div id="diagram-container"></div>
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+const ns = 'http://www.w3.org/2000/svg';
+const el = (tag, attrs, parent) => {
+  const e = document.createElementNS(ns, tag);
+  for (const [k,v] of Object.entries(attrs||{})) e.setAttribute(k, v);
+  if (parent) parent.appendChild(e);
+  return e;
+};
+const txt = (str, attrs, parent) => { const t = el('text', attrs, parent); t.textContent = str; return t; };
+
+// ── Theme detection (sync with MkDocs Material) ──
+const themes = {
+  slate:   { bg:'#161b22', bgStroke:'#30363d', tipBg:'#1c2028', tipBorder:'#30363d', tipColor:'#e1e4e8', tipKey:'#8b949e', tipVal:'#58a6ff' },
+  default: { bg:'#ffffff', bgStroke:'#d0d7de', tipBg:'#ffffff', tipBorder:'#d0d7de', tipColor:'#1f2328', tipKey:'#656d76', tipVal:'#0969da' }
+};
+function getScheme() { try { return parent.document.body.dataset.mdColorScheme || 'slate'; } catch(e) { return 'slate'; } }
+let scheme = getScheme();
+let theme = themes[scheme] || themes.slate;
+
+const C = { i2c:'#58a6ff', gpio:'#3fb950', pwm:'#d2a8ff', usb:'#f0883e', pwr:'#f85149', bg:theme.bg, rpi:'#2ea043' };
+const W = 1340, H = 1020;
+const wireLabelBgs = [];
+
+const container = document.getElementById('diagram-container');
+const svg = el('svg', { viewBox:`0 0 ${W} ${H}`, width:'100%', style:`max-width:${W}px` });
+container.appendChild(svg);
+
+// ── Defs ──
+const defs = el('defs', {}, svg);
+const gRpi = el('linearGradient', {id:'gRpi', x1:'0', y1:'0', x2:'0', y2:'1'}, defs);
+el('stop', {offset:'0%', 'stop-color':'#2d6a30'}, gRpi);
+el('stop', {offset:'100%', 'stop-color':'#1a4a1d'}, gRpi);
+const gBlue = el('linearGradient', {id:'gBlue', x1:'0', y1:'0', x2:'0', y2:'1'}, defs);
+el('stop', {offset:'0%', 'stop-color':'#1a3a6a'}, gBlue);
+el('stop', {offset:'100%', 'stop-color':'#0f2440'}, gBlue);
+const gRed = el('linearGradient', {id:'gRed', x1:'0', y1:'0', x2:'0', y2:'1'}, defs);
+el('stop', {offset:'0%', 'stop-color':'#7a2020'}, gRed);
+el('stop', {offset:'100%', 'stop-color':'#4a1212'}, gRed);
+const gMetal = el('radialGradient', {id:'gMetal', cx:'40%', cy:'35%', r:'60%'}, defs);
+el('stop', {offset:'0%', 'stop-color':'#e8e8e8'}, gMetal);
+el('stop', {offset:'100%', 'stop-color':'#888'}, gMetal);
+const fShadow = el('filter', {id:'shadow', x:'-5%', y:'-5%', width:'115%', height:'120%'}, defs);
+el('feDropShadow', {dx:'2', dy:'3', 'stdDeviation':'3', 'flood-color':'#000', 'flood-opacity':'0.4'}, fShadow);
+const fGlow = el('filter', {id:'glow'}, defs);
+el('feGaussianBlur', {'stdDeviation':'3', result:'blur'}, fGlow);
+const fM = el('feMerge', {}, fGlow);
+el('feMergeNode', {'in':'blur'}, fM);
+el('feMergeNode', {'in':'SourceGraphic'}, fM);
+
+// Background
+const bgRect = el('rect', {x:0, y:0, width:W, height:H, rx:14, fill:C.bg, stroke:theme.bgStroke, 'stroke-width':1}, svg);
+
+// ── Tooltip ──
+const tip = document.getElementById('tooltip');
+function showTip(data, color) {
+  return () => {
+    let h = '<h4 style="color:'+color+'">'+data.title+'</h4>';
+    data.rows.forEach(([k,v]) => h += '<div class="r"><span class="k">'+k+'</span><span class="v">'+v+'</span></div>');
+    tip.innerHTML = h; tip.style.opacity = 1;
+  };
+}
+function moveTip(e) {
+  let l = e.clientX+16, t = e.clientY+16;
+  if (l+300 > innerWidth) l = e.clientX-316;
+  if (t+200 > innerHeight) t = e.clientY-200;
+  tip.style.left = l+'px'; tip.style.top = t+'px';
+}
+function hideTip() { tip.style.opacity = 0; }
+function interactive(g, data, color) {
+  g.style.cursor = 'pointer';
+  g.addEventListener('mouseenter', showTip(data, color));
+  g.addEventListener('mousemove', moveTip);
+  g.addEventListener('mouseleave', hideTip);
+}
+
+// ── Helpers ──
+function drawPinHeader(parent, x, y, rows, cols, pitch, color) {
+  for (let r = 0; r < rows; r++)
+    for (let c = 0; c < cols; c++)
+      el('rect', {x:x+c*pitch, y:y+r*pitch, width:pitch*0.6, height:pitch*0.6, rx:0.5, fill:color||'#c8a832'}, parent);
+}
+function drawIC(parent, x, y, w, h) {
+  el('rect', {x, y, width:w, height:h, rx:1, fill:'#1a1a1a', stroke:'#333', 'stroke-width':0.5}, parent);
+  el('circle', {cx:x+3, cy:y+3, r:1.2, fill:'#444'}, parent);
+}
+function drawTerminals(parent, x, y, count, pitch) {
+  for (let i = 0; i < count; i++) {
+    el('rect', {x:x+i*pitch, y, width:pitch*0.75, height:6, rx:1, fill:'#2a6abf', stroke:'#1a4a8f', 'stroke-width':0.5}, parent);
+    el('circle', {cx:x+i*pitch+pitch*0.375, cy:y+3, r:1.5, fill:'none', stroke:'#8bb8e8', 'stroke-width':0.5}, parent);
+  }
+}
+
+// ══════════════════════════════════════
+// LAYOUT COORDINATES
+// ══════════════════════════════════════
+
+// Raspberry Pi (center)
+const RPI = { x: 490, y: 400, w: 230, h: 150 };
+
+// I2C bus backbone
+const I2C_X = 390;
+
+// GPIO bus backbone
+const GPIO_X = 830;
+
+// Power distribution buses
+const VCC_X = 20;
+const PWR5V_X = 1095;
+
+// ══════════════════════════════════════
+// WIRE LAYER (drawn first, behind everything)
+// ══════════════════════════════════════
+const wireLayer = el('g', {}, svg);
+
+function wire(pts, color, opts={}) {
+  const d = pts.map((p,i) => (i===0?'M':'L')+p[0]+','+p[1]).join(' ');
+  if (!opts.noGlow) el('path', {d, fill:'none', stroke:color, 'stroke-width':6, 'stroke-linecap':'round', opacity:0.06}, wireLayer);
+  el('path', {d, fill:'none', stroke:color, 'stroke-width':opts.w||2, 'stroke-linecap':'round', 'stroke-linejoin':'round',
+    'stroke-dasharray':opts.dash||'none', opacity:opts.op||0.7}, wireLayer);
+}
+function dot(x, y, color, r) { el('circle', {cx:x, cy:y, r:r||4, fill:color}, wireLayer); }
+function wireLabel(text, x, y, color) {
+  const len = text.length * 6.5 + 10;
+  const r = el('rect', {x:x-len/2, y:y-9, width:len, height:18, rx:4, fill:C.bg, stroke:color, 'stroke-width':0.6}, wireLayer);
+  wireLabelBgs.push(r);
+  txt(text, {x, y:y+4, fill:color, 'text-anchor':'middle', 'font-family':'JetBrains Mono,monospace', 'font-size':'9.5', 'font-weight':'500'}, wireLayer);
+}
+
+// ── I2C bus backbone ──
+el('line', {x1:I2C_X, y1:225, x2:I2C_X, y2:760, stroke:C.i2c, 'stroke-width':2.5, 'stroke-dasharray':'6,4', opacity:0.25}, wireLayer);
+wireLabel('I²C Bus 1', I2C_X, 218, C.i2c);
+
+// I2C: RPi → bus
+wire([[RPI.x, RPI.y+75],[I2C_X, RPI.y+75]], C.i2c, {w:2});
+dot(I2C_X, RPI.y+75, C.i2c);
+
+// I2C: bus → devices (y-centers of each device)
+const i2cY = [275, 430, 570, 720];
+i2cY.forEach(y => { wire([[I2C_X, y],[290, y]], C.i2c, {w:1.8}); dot(I2C_X, y, C.i2c); });
+
+// ── PCA9685 → Actuators (PWM wires) ──
+// Motor #1 center: x=80, bottom of motor at y=170, PCA top at y=240
+wire([[80, 170],[80, 240]], C.pwm, {w:1.8});
+// Motor #2 center: x=210
+wire([[210, 170],[210, 240]], C.pwm, {w:1.8});
+// Servo center: x=350, connect via PCA right side
+wire([[350, 170],[350, 210],[290, 210],[290, 260]], C.pwm, {w:1.8});
+
+// ── GPIO bus backbone ──
+el('line', {x1:GPIO_X, y1:280, x2:GPIO_X, y2:730, stroke:C.gpio, 'stroke-width':2.5, 'stroke-dasharray':'6,4', opacity:0.25}, wireLayer);
+wireLabel('GPIO', GPIO_X, 273, C.gpio);
+
+// GPIO: RPi → bus
+wire([[RPI.x+RPI.w, RPI.y+75],[GPIO_X, RPI.y+75]], C.gpio, {w:2});
+dot(GPIO_X, RPI.y+75, C.gpio);
+
+// GPIO: bus → sensors
+const gpioY = [330, 465, 600, 720];
+gpioY.forEach(y => { wire([[GPIO_X, y],[890, y]], C.gpio, {w:1.8}); dot(GPIO_X, y, C.gpio); });
+
+// ── USB wires ──
+// Camera: RPi top-center → up to camera
+wire([[RPI.x+80, RPI.y],[RPI.x+80, 260],[560, 260],[560, 220]], C.usb, {w:2});
+// PS3: RPi top-right → up to PS3
+wire([[RPI.x+150, RPI.y],[RPI.x+150, 240],[790, 240],[790, 210]], C.usb, {w:2});
+
+// ── Power chain ──
+wire([[470, 900],[550, 900]], C.pwr, {w:2.5});
+wire([[670, 900],[760, 900]], C.pwr, {w:2.5});
+// Buck → RPi (5V)
+wire([[880, 885],[920, 885],[920, 780],[RPI.x+115, 780],[RPI.x+115, RPI.y+RPI.h]], C.pwr, {w:2.5});
+wireLabel('5V', 920, 810, C.pwr);
+
+// ── Battery monitor wires (dashed) ──
+// Battery → INA3221 (voltage monitoring, 3 channels via left edge)
+wire([[370, 875],[370, 835],[35, 835],[35, 430],[55, 430]], C.pwr, {w:1.5, dash:'5,3', op:0.5});
+wireLabel('V×3', 200, 835, C.pwr);
+dot(55, 430, C.pwr, 3);
+// Battery → INA226 (current monitoring, in-series shunt via left edge)
+wire([[430, 875],[430, 808],[45, 808],[45, 567],[65, 567]], C.pwr, {w:1.5, dash:'5,3', op:0.5});
+wireLabel('I_tot', 240, 808, C.pwr);
+dot(65, 567, C.pwr, 3);
+
+// ── Power distribution (VCC from RPi to sensors/devices) ──
+
+// VCC Bus backbone (left — I2C devices)
+el('line', {x1:VCC_X, y1:235, x2:VCC_X, y2:730, stroke:C.pwr, 'stroke-width':2.5, 'stroke-dasharray':'6,4', opacity:0.25}, wireLayer);
+wireLabel('VCC', VCC_X, 228, C.pwr);
+
+// RPi → VCC bus
+wire([[RPI.x, 515],[VCC_X, 515]], C.pwr, {w:1.5, op:0.5});
+dot(VCC_X, 515, C.pwr);
+
+// VCC stubs to I2C devices
+[[265, 40, '5V'],[410, 55, '5V'],[545, 65, '5V'],[700, 80, '3.3V']].forEach(([y, dx, v]) => {
+  wire([[VCC_X, y],[dx, y]], C.pwr, {w:1.5});
+  dot(VCC_X, y, C.pwr);
+  dot(dx, y, C.pwr, 3);
+  txt(v, {x:(VCC_X+dx)/2, y:y-5, fill:C.pwr, 'font-size':'7.5', 'text-anchor':'middle', 'font-family':'JetBrains Mono,monospace', 'font-weight':'600', opacity:0.8}, wireLayer);
+});
+
+// 5V Bus backbone (right — HC-SR04 sensors)
+el('line', {x1:PWR5V_X, y1:290, x2:PWR5V_X, y2:640, stroke:C.pwr, 'stroke-width':2.5, 'stroke-dasharray':'6,4', opacity:0.25}, wireLayer);
+wireLabel('5V', PWR5V_X, 283, C.pwr);
+
+// RPi → 5V bus
+wire([[RPI.x+RPI.w, 545],[PWR5V_X, 545]], C.pwr, {w:1.5, op:0.5});
+dot(PWR5V_X, 545, C.pwr);
+
+// 5V stubs to HC-SR04 sensors
+[331, 466, 601].forEach(y => {
+  wire([[PWR5V_X, y],[1075, y]], C.pwr, {w:1.5});
+  dot(PWR5V_X, y, C.pwr);
+  dot(1075, y, C.pwr, 3);
+});
+
+// ══════════════════════════════════════
+// SECTION LABELS
+// ══════════════════════════════════════
+function sectionLabel(text, x, y, color) {
+  txt(text, {x, y, fill:color, opacity:0.4, 'font-family':'Inter,sans-serif', 'font-weight':'600', 'font-size':'11', 'letter-spacing':'1.5'}, svg);
+}
+sectionLabel('I²C BUS 1', 40, 215, C.i2c);
+sectionLabel('SENSORES GPIO', 895, 278, C.gpio);
+sectionLabel('USB', 530, 80, C.usb);
+sectionLabel('ACTUADORES (PWM)', 30, 60, C.pwm);
+sectionLabel('ALIMENTACIÓN', 430, 855, C.pwr);
+
+// ══════════════════════════════════════
+// RASPBERRY PI 4
+// ══════════════════════════════════════
+const gRpiG = el('g', {filter:'url(#shadow)'}, svg);
+interactive(gRpiG, {
+  title:'Raspberry Pi 4 Model B',
+  rows:[['SoC','BCM2711 (ARM Cortex-A72)'],['I²C Bus','Bus 1 — SDA(GPIO2) SCL(GPIO3)'],['GPIO','BCM numbering'],['USB','/dev/video0 + PS3 ctrl'],['OS','Ubuntu 22.04 + ROS2 Iron']]
+}, C.rpi);
+
+el('rect', {x:RPI.x, y:RPI.y, width:RPI.w, height:RPI.h, rx:5, fill:'url(#gRpi)', stroke:'#3a8a3e', 'stroke-width':1.5}, gRpiG);
+[[12,12],[12,138],[218,12],[218,138]].forEach(([dx,dy]) =>
+  el('circle', {cx:RPI.x+dx, cy:RPI.y+dy, r:4, fill:'none', stroke:'#5a5a5a', 'stroke-width':1}, gRpiG));
+drawPinHeader(gRpiG, RPI.x+8, RPI.y+25, 20, 2, 4.5, '#d4a017');
+for (let i = 0; i < 2; i++) {
+  el('rect', {x:RPI.x+RPI.w-6, y:RPI.y+28+i*35, width:12, height:28, rx:2, fill:'#2a2a2a', stroke:'#555', 'stroke-width':1}, gRpiG);
+  el('rect', {x:RPI.x+RPI.w-4, y:RPI.y+32+i*35, width:8, height:8, rx:1, fill:'#1565C0'}, gRpiG);
+  el('rect', {x:RPI.x+RPI.w-4, y:RPI.y+44+i*35, width:8, height:8, rx:1, fill:'#1565C0'}, gRpiG);
+}
+el('rect', {x:RPI.x+RPI.w-6, y:RPI.y+105, width:12, height:22, rx:2, fill:'#2a2a2a', stroke:'#555', 'stroke-width':1}, gRpiG);
+el('rect', {x:RPI.x+100, y:RPI.y+RPI.h-4, width:18, height:8, rx:3, fill:'#333', stroke:'#666', 'stroke-width':0.8}, gRpiG);
+el('rect', {x:RPI.x+85, y:RPI.y+50, width:44, height:44, rx:3, fill:'#1a1a1a', stroke:'#444', 'stroke-width':0.8}, gRpiG);
+txt('BCM', {x:RPI.x+107, y:RPI.y+72, fill:'#666', 'font-size':'8', 'text-anchor':'middle', 'font-family':'JetBrains Mono,monospace'}, gRpiG);
+txt('2711', {x:RPI.x+107, y:RPI.y+83, fill:'#666', 'font-size':'8', 'text-anchor':'middle', 'font-family':'JetBrains Mono,monospace'}, gRpiG);
+el('rect', {x:RPI.x+145, y:RPI.y+38, width:30, height:6, rx:1, fill:'#222', stroke:'#555', 'stroke-width':0.5}, gRpiG);
+txt('Raspberry Pi 4', {x:RPI.x+RPI.w/2, y:RPI.y+RPI.h-18, fill:'#8fc98f', 'font-size':'14', 'font-weight':'600', 'text-anchor':'middle', 'font-family':'Inter,sans-serif'}, gRpiG);
+
+// RPi pin annotations (outside the board, no overlap)
+txt('SDA/SCL', {x:RPI.x-8, y:RPI.y+78, fill:C.i2c, 'font-size':'9', 'text-anchor':'end', 'font-family':'JetBrains Mono,monospace','font-weight':'500'}, svg);
+txt('(GPIO 2,3)', {x:RPI.x-8, y:RPI.y+90, fill:'#555', 'font-size':'7.5', 'text-anchor':'end', 'font-family':'JetBrains Mono,monospace'}, svg);
+txt('5V / 3.3V', {x:RPI.x-8, y:509, fill:C.pwr, 'font-size':'8.5', 'text-anchor':'end', 'font-family':'JetBrains Mono,monospace','font-weight':'500'}, svg);
+txt('5V →', {x:RPI.x+RPI.w+8, y:539, fill:C.pwr, 'font-size':'8.5', 'text-anchor':'start', 'font-family':'JetBrains Mono,monospace','font-weight':'500'}, svg);
+
+// ══════════════════════════════════════
+// PCA9685 SERVO DRIVER
+// ══════════════════════════════════════
+const gPCA = el('g', {filter:'url(#shadow)'}, svg);
+interactive(gPCA, {
+  title:'PCA9685 — Servo Driver 16ch', rows:[
+    ['I²C addr','0x40 (default ServoKit)'],['Bus','I²C Bus 1'],
+    ['Canal 0','Motor ESC #1'],['Canal 1','Motor ESC #2'],['Canal 2','Servo dirección'],
+    ['Librería','adafruit-circuitpython-servokit']]
+}, C.i2c);
+
+el('rect', {x:40, y:240, width:250, height:80, rx:4, fill:'url(#gRed)', stroke:'#aa3333', 'stroke-width':1.2}, gPCA);
+for (let i = 0; i < 16; i++) {
+  const px = 48 + i * 14;
+  for (let r = 0; r < 3; r++)
+    el('rect', {x:px, y:244+r*5, width:4, height:3.5, rx:0.5, fill: i<3 ? '#d4a017' : '#886a10'}, gPCA);
+}
+drawIC(gPCA, 120, 268, 40, 22);
+txt('PCA9685', {x:140, y:283, fill:'#aaa', 'font-size':'7.5', 'text-anchor':'middle', 'font-family':'JetBrains Mono,monospace'}, gPCA);
+drawTerminals(gPCA, 48, 298, 4, 12);
+txt('PCA9685', {x:165, y:332, fill:'#e8a0a0', 'font-size':'12', 'font-weight':'600', 'text-anchor':'middle', 'font-family':'Inter,sans-serif'}, svg);
+txt('Servo Driver · 0x40', {x:165, y:345, fill:'#c08080', 'font-size':'9', 'text-anchor':'middle', 'font-family':'JetBrains Mono,monospace'}, svg);
+
+// ══════════════════════════════════════
+// INA3221
+// ══════════════════════════════════════
+const gINA3 = el('g', {filter:'url(#shadow)'}, svg);
+interactive(gINA3, {
+  title:'INA3221 — Monitor de voltaje', rows:[
+    ['I²C addr','0x40'],['Bus','I²C Bus 1'],
+    ['Canal 1','Batería 1'],['Canal 2','Batería 2'],['Canal 3','Batería 3'],['Shunt','0.1 Ω']]
+}, C.i2c);
+
+el('rect', {x:55, y:395, width:230, height:75, rx:4, fill:'url(#gBlue)', stroke:'#2a5a9a', 'stroke-width':1.2}, gINA3);
+drawIC(gINA3, 130, 410, 32, 20);
+txt('INA', {x:146, y:423, fill:'#aaa', 'font-size':'7', 'text-anchor':'middle', 'font-family':'JetBrains Mono,monospace'}, gINA3);
+txt('3221', {x:146, y:432, fill:'#888', 'font-size':'6', 'text-anchor':'middle', 'font-family':'JetBrains Mono,monospace'}, gINA3);
+drawTerminals(gINA3, 62, 440, 6, 11);
+drawPinHeader(gINA3, 240, 408, 4, 2, 5.5, '#c8a832');
+txt('INA3221', {x:170, y:482, fill:'#8bb8e8', 'font-size':'12', 'font-weight':'600', 'text-anchor':'middle', 'font-family':'Inter,sans-serif'}, svg);
+txt('Voltaje baterías · 0x40', {x:170, y:495, fill:'#6a9ac8', 'font-size':'9', 'text-anchor':'middle', 'font-family':'JetBrains Mono,monospace'}, svg);
+
+// ══════════════════════════════════════
+// INA226
+// ══════════════════════════════════════
+const gINA2 = el('g', {filter:'url(#shadow)'}, svg);
+interactive(gINA2, {
+  title:'INA226 — Monitor de corriente', rows:[
+    ['I²C addr','0x44'],['Bus','I²C Bus 1'],['Medida','Corriente total (mA)'],['Shunt','0.002 Ω'],['Max esperado','25 A']]
+}, C.i2c);
+
+el('rect', {x:65, y:530, width:210, height:75, rx:4, fill:'url(#gBlue)', stroke:'#2a5a9a', 'stroke-width':1.2}, gINA2);
+drawIC(gINA2, 135, 545, 28, 18);
+txt('INA226', {x:149, y:558, fill:'#aaa', 'font-size':'7', 'text-anchor':'middle', 'font-family':'JetBrains Mono,monospace'}, gINA2);
+drawTerminals(gINA2, 72, 575, 4, 11);
+drawPinHeader(gINA2, 235, 540, 4, 2, 5.5, '#c8a832');
+txt('INA226', {x:170, y:618, fill:'#8bb8e8', 'font-size':'12', 'font-weight':'600', 'text-anchor':'middle', 'font-family':'Inter,sans-serif'}, svg);
+txt('Corriente total · 0x44', {x:170, y:631, fill:'#6a9ac8', 'font-size':'9', 'text-anchor':'middle', 'font-family':'JetBrains Mono,monospace'}, svg);
+
+// ══════════════════════════════════════
+// MPU6050
+// ══════════════════════════════════════
+const gMPU = el('g', {filter:'url(#shadow)'}, svg);
+interactive(gMPU, {
+  title:'MPU6050 — IMU 6 ejes', rows:[
+    ['I²C addr','0x68'],['Bus','I²C Bus 1'],
+    ['Acelerómetro','X, Y, Z (2/4/8/16G)'],['Giroscopio','X, Y, Z (250–2000°/s)'],['Librería','smbus2 (custom driver)']]
+}, C.i2c);
+
+el('rect', {x:80, y:680, width:190, height:75, rx:4, fill:'#2a1a4a', stroke:'#6a4a9a', 'stroke-width':1.2}, gMPU);
+drawIC(gMPU, 145, 695, 28, 28);
+txt('MPU', {x:159, y:712, fill:'#aaa', 'font-size':'7', 'text-anchor':'middle', 'font-family':'JetBrains Mono,monospace'}, gMPU);
+txt('6050', {x:159, y:722, fill:'#888', 'font-size':'6', 'text-anchor':'middle', 'font-family':'JetBrains Mono,monospace'}, gMPU);
+drawPinHeader(gMPU, 88, 735, 1, 8, 8, '#c8a832');
+txt('MPU6050', {x:175, y:768, fill:'#c8a0e8', 'font-size':'12', 'font-weight':'600', 'text-anchor':'middle', 'font-family':'Inter,sans-serif'}, svg);
+txt('IMU 6 ejes · 0x68', {x:175, y:781, fill:'#a080c8', 'font-size':'9', 'text-anchor':'middle', 'font-family':'JetBrains Mono,monospace'}, svg);
+
+// ══════════════════════════════════════
+// MOTORS & SERVO (top section)
+// ══════════════════════════════════════
+function drawMotor(parent, x, y, label, ch, tipData) {
+  const g = el('g', {filter:'url(#shadow)'}, parent);
+  interactive(g, tipData, C.pwm);
+  el('rect', {x:x-25, y, width:50, height:60, rx:6, fill:'#3a3a3a', stroke:'#555', 'stroke-width':1}, g);
+  el('rect', {x:x-25, y, width:50, height:10, rx:4, fill:'#4a4a4a', stroke:'#666', 'stroke-width':0.5}, g);
+  el('rect', {x:x-4, y:y-8, width:8, height:10, rx:1, fill:'#aaa', stroke:'#888', 'stroke-width':0.5}, g);
+  [[x-15,'#cc3333'],[x,'#333'],[x+15,'#3333cc']].forEach(([wx,wc]) =>
+    el('line', {x1:wx, y1:y+60, x2:wx, y2:y+72, stroke:wc, 'stroke-width':2, 'stroke-linecap':'round'}, g));
+  txt(label, {x, y:y+88, fill:'#d2a8ff', 'font-size':'11', 'font-weight':'600', 'text-anchor':'middle', 'font-family':'Inter,sans-serif'}, g);
+  txt('CH'+ch+' · 15°–93°', {x, y:y+100, fill:'#a080c8', 'font-size':'8', 'text-anchor':'middle', 'font-family':'JetBrains Mono,monospace'}, g);
+}
+
+drawMotor(svg, 80, 80, 'Motor #1', 0, {
+  title:'Motor ESC #1', rows:[['PCA9685 Canal','0'],['Rango','15° – 93° (×1.8)'],['Neutro','~93° (autónomo)'],['Control','Eje 5 joystick / auto']]
+});
+drawMotor(svg, 210, 80, 'Motor #2', 1, {
+  title:'Motor ESC #2', rows:[['PCA9685 Canal','1'],['Rango','15° – 93° (×1.8)'],['Neutro','~93° (autónomo)'],['Control','Eje 5 joystick / auto']]
+});
+
+// Steering Servo
+const gServo = el('g', {filter:'url(#shadow)'}, svg);
+interactive(gServo, {
+  title:'Servo de Dirección', rows:[['PCA9685 Canal','2'],['Rango','40° – 170°'],['Centro','~105°'],['Manual','Eje 0 joystick'],['Autónomo','lane_info (-30..30)']]
+}, C.pwm);
+el('rect', {x:320, y:90, width:68, height:42, rx:3, fill:'#1a1a3a', stroke:'#4a4a8a', 'stroke-width':1}, gServo);
+el('rect', {x:310, y:106, width:10, height:10, rx:1, fill:'#1a1a3a', stroke:'#4a4a8a', 'stroke-width':0.8}, gServo);
+el('rect', {x:388, y:106, width:10, height:10, rx:1, fill:'#1a1a3a', stroke:'#4a4a8a', 'stroke-width':0.8}, gServo);
+el('circle', {cx:365, cy:102, r:8, fill:'#333', stroke:'#555', 'stroke-width':1}, gServo);
+el('circle', {cx:365, cy:102, r:3, fill:'#555'}, gServo);
+el('rect', {x:359, y:90, width:12, height:3, rx:1, fill:'#ddd', stroke:'#aaa', 'stroke-width':0.5}, gServo);
+el('rect', {x:363, y:86, width:4, height:14, rx:1, fill:'#ddd', stroke:'#aaa', 'stroke-width':0.5}, gServo);
+[[335,'#f0883e'],[343,'#cc3333'],[351,'#333']].forEach(([wx,wc]) =>
+  el('line', {x1:wx, y1:132, x2:wx, y2:145, stroke:wc, 'stroke-width':2, 'stroke-linecap':'round'}, gServo));
+txt('Servo Dir.', {x:354, y:158, fill:'#d2a8ff', 'font-size':'11', 'font-weight':'600', 'text-anchor':'middle', 'font-family':'Inter,sans-serif'}, gServo);
+txt('CH2 · 40°–170°', {x:354, y:170, fill:'#a080c8', 'font-size':'8', 'text-anchor':'middle', 'font-family':'JetBrains Mono,monospace'}, gServo);
+
+// ══════════════════════════════════════
+// HC-SR04 ULTRASONIC SENSORS (×3)
+// ══════════════════════════════════════
+function drawHCSR04(parent, x, y, label, trigPin, echoPin, tipData) {
+  const g = el('g', {filter:'url(#shadow)'}, parent);
+  interactive(g, tipData, C.gpio);
+  el('rect', {x, y, width:180, height:72, rx:4, fill:'#0a3060', stroke:'#1a5a9a', 'stroke-width':1.2}, g);
+  const cy = y + 28;
+  [x+48, x+120].forEach(cx => {
+    el('circle', {cx, cy, r:18, fill:'url(#gMetal)', stroke:'#999', 'stroke-width':1}, g);
+    el('circle', {cx, cy, r:14, fill:'none', stroke:'#bbb', 'stroke-width':0.5}, g);
+    el('circle', {cx, cy, r:8, fill:'none', stroke:'#aaa', 'stroke-width':0.3}, g);
+    el('circle', {cx, cy, r:2, fill:'#999'}, g);
+  });
+  el('rect', {x:x+75, y:y+19, width:12, height:8, rx:1, fill:'#c0c0c0', stroke:'#888', 'stroke-width':0.5}, g);
+  drawPinHeader(g, x+65, y+57, 1, 4, 8, '#c8a832');
+  // Label and pin info BELOW the component
+  txt(label, {x:x+90, y:y+85, fill:'#8bb8e8', 'font-size':'11', 'font-weight':'600', 'text-anchor':'middle', 'font-family':'Inter,sans-serif'}, parent);
+  txt('TRIG:'+trigPin+' ECHO:'+echoPin, {x:x+90, y:y+97, fill:C.gpio, 'font-size':'9', 'text-anchor':'middle', 'font-family':'JetBrains Mono,monospace', 'font-weight':'500'}, parent);
+}
+
+drawHCSR04(svg, 895, 295, 'HC-SR04 Izq.', 19, 16, {
+  title:'HC-SR04 — Sensor Izquierdo', rows:[['TRIG','GPIO 19 (BCM)'],['ECHO','GPIO 16 (BCM)'],['Frecuencia','10 Hz'],['Topic','/ultrasound_data']]
+});
+drawHCSR04(svg, 895, 430, 'HC-SR04 Centro', 12, 13, {
+  title:'HC-SR04 — Sensor Centro', rows:[['TRIG','GPIO 12 (BCM)'],['ECHO','GPIO 13 (BCM)'],['Frecuencia','10 Hz'],['Topic','/ultrasound_data']]
+});
+drawHCSR04(svg, 895, 565, 'HC-SR04 Der.', 26, 20, {
+  title:'HC-SR04 — Sensor Derecho', rows:[['TRIG','GPIO 26 (BCM)'],['ECHO','GPIO 20 (BCM)'],['Frecuencia','10 Hz'],['Topic','/ultrasound_data']]
+});
+
+// ══════════════════════════════════════
+// EMERGENCY STOP SWITCH
+// ══════════════════════════════════════
+const gEmg = el('g', {filter:'url(#shadow)'}, svg);
+interactive(gEmg, {
+  title:'Switch de Emergencia', rows:[['GPIO','6 (BCM) — Input digital'],['Lectura','Cada ciclo a 10 Hz'],['Campo','Distance.emergency_stop']]
+}, C.gpio);
+
+el('rect', {x:920, y:695, width:120, height:60, rx:6, fill:'#2a1616', stroke:'#8a3030', 'stroke-width':1.2}, gEmg);
+el('ellipse', {cx:980, cy:720, rx:22, ry:9, fill:'#6a1010', stroke:'#8a2020', 'stroke-width':0.8}, gEmg);
+el('ellipse', {cx:980, cy:716, rx:18, ry:14, fill:'#cc2020', stroke:'#aa1818', 'stroke-width':1}, gEmg);
+el('ellipse', {cx:980, cy:713, rx:12, ry:9, fill:'#ee3333'}, gEmg);
+el('ellipse', {cx:978, cy:710, rx:5, ry:3.5, fill:'rgba(255,255,255,0.15)'}, gEmg);
+txt('STOP', {x:980, y:719, fill:'#fff', 'font-size':'7', 'font-weight':'700', 'text-anchor':'middle', 'font-family':'Inter,sans-serif'}, gEmg);
+txt('Parada Emergencia', {x:980, y:768, fill:'#e88080', 'font-size':'10', 'font-weight':'600', 'text-anchor':'middle', 'font-family':'Inter,sans-serif'}, svg);
+txt('GPIO 6', {x:980, y:780, fill:'#c06060', 'font-size':'9', 'text-anchor':'middle', 'font-family':'JetBrains Mono,monospace'}, svg);
+
+// ══════════════════════════════════════
+// CAMERA
+// ══════════════════════════════════════
+const gCam = el('g', {filter:'url(#shadow)'}, svg);
+interactive(gCam, {
+  title:'Cámara USB (V4L)', rows:[['Dispositivo','/dev/video0'],['Resolución','640 × 480 (BGR)'],['FPS','~3 (timer 0.33s)'],['Backend','Video4Linux'],['Topic','/camera_image']]
+}, C.usb);
+
+el('rect', {x:515, y:100, width:90, height:55, rx:6, fill:'#2a2a2a', stroke:'#555', 'stroke-width':1}, gCam);
+el('circle', {cx:560, cy:125, r:18, fill:'#1a1a1a', stroke:'#444', 'stroke-width':1.5}, gCam);
+el('circle', {cx:560, cy:125, r:13, fill:'#0a0a2a', stroke:'#333', 'stroke-width':1}, gCam);
+el('circle', {cx:560, cy:125, r:8, fill:'#1a1a4a'}, gCam);
+el('circle', {cx:560, cy:125, r:4, fill:'#2a2a6a'}, gCam);
+el('circle', {cx:557, cy:122, r:2, fill:'rgba(255,255,255,0.12)'}, gCam);
+el('circle', {cx:585, cy:110, r:2.5, fill:'#3fb950', filter:'url(#glow)'}, gCam);
+txt('Cámara USB', {x:560, y:172, fill:C.usb, 'font-size':'11', 'font-weight':'600', 'text-anchor':'middle', 'font-family':'Inter,sans-serif'}, svg);
+txt('640×480 · 3fps', {x:560, y:184, fill:'#a87030', 'font-size':'8', 'text-anchor':'middle', 'font-family':'JetBrains Mono,monospace'}, svg);
+
+// ══════════════════════════════════════
+// PS3 CONTROLLER
+// ══════════════════════════════════════
+const gPS3 = el('g', {filter:'url(#shadow)'}, svg);
+interactive(gPS3, {
+  title:'Mando PS3 (DualShock 3)', rows:[['Conexión','USB'],['Eje 0','Dirección (manual)'],['Eje 5','Acelerador (manual)'],['Botón X','Toggle auto/manual'],['Botón L1','Forzar marcha atrás'],['Topic','/joy']]
+}, C.usb);
+
+el('path', {
+  d:'M745,120 C745,110 755,105 770,105 L810,105 C825,105 835,110 835,120 L835,140 C835,155 825,165 815,168 L805,170 C795,172 785,172 775,170 L765,168 C755,165 745,155 745,140 Z',
+  fill:'#2a2a2a', stroke:'#555', 'stroke-width':1
+}, gPS3);
+el('path', {d:'M745,135 C735,145 730,158 733,165 C737,172 743,168 745,160', fill:'#333', stroke:'#555', 'stroke-width':0.8}, gPS3);
+el('path', {d:'M835,135 C845,145 850,158 847,165 C843,172 837,168 835,160', fill:'#333', stroke:'#555', 'stroke-width':0.8}, gPS3);
+el('rect', {x:757, y:122, width:12, height:4, rx:1, fill:'#444'}, gPS3);
+el('rect', {x:760, y:119, width:6, height:12, rx:1, fill:'#444'}, gPS3);
+el('circle', {cx:815, cy:118, r:3, fill:'none', stroke:'#6a8a6a', 'stroke-width':0.8}, gPS3);
+el('circle', {cx:822, cy:125, r:3, fill:'none', stroke:'#8a4444', 'stroke-width':0.8}, gPS3);
+el('circle', {cx:815, cy:132, r:3, fill:'none', stroke:'#5a5aaa', 'stroke-width':0.8}, gPS3);
+el('circle', {cx:808, cy:125, r:3, fill:'none', stroke:'#8a5a8a', 'stroke-width':0.8}, gPS3);
+el('circle', {cx:773, cy:142, r:6, fill:'#222', stroke:'#555', 'stroke-width':0.8}, gPS3);
+el('circle', {cx:807, cy:142, r:6, fill:'#222', stroke:'#555', 'stroke-width':0.8}, gPS3);
+el('line', {x1:790, y1:105, x2:790, y2:92, stroke:'#666', 'stroke-width':2.5, 'stroke-linecap':'round'}, gPS3);
+
+txt('Mando PS3', {x:790, y:188, fill:C.usb, 'font-size':'11', 'font-weight':'600', 'text-anchor':'middle', 'font-family':'Inter,sans-serif'}, svg);
+txt('DualShock 3 · USB', {x:790, y:200, fill:'#a87030', 'font-size':'8', 'text-anchor':'middle', 'font-family':'JetBrains Mono,monospace'}, svg);
+
+// ══════════════════════════════════════
+// BATTERY PACK
+// ══════════════════════════════════════
+const gBat = el('g', {filter:'url(#shadow)'}, svg);
+interactive(gBat, {
+  title:'Pack de Baterías Li-ion', rows:[['Config','2P3S (6 celdas)'],['Voltaje','~11.1V nominal'],['Protección','BMS integrado'],['Monitorización','INA3221 (3ch) + INA226']]
+}, C.pwr);
+
+el('rect', {x:340, y:875, width:130, height:55, rx:5, fill:'#2a2016', stroke:'#8a6a30', 'stroke-width':1.2}, gBat);
+for (let i = 1; i < 3; i++)
+  el('line', {x1:340+i*43, y1:878, x2:340+i*43, y2:927, stroke:'#5a4a20', 'stroke-width':0.8, 'stroke-dasharray':'3,2'}, gBat);
+el('rect', {x:345, y:878, width:16, height:8, rx:2, fill:'#cc3333'}, gBat);
+txt('+', {x:353, y:886, fill:'#fff', 'font-size':'8', 'font-weight':'700', 'text-anchor':'middle'}, gBat);
+el('rect', {x:450, y:878, width:16, height:8, rx:2, fill:'#333'}, gBat);
+txt('−', {x:458, y:886, fill:'#aaa', 'font-size':'9', 'font-weight':'700', 'text-anchor':'middle'}, gBat);
+for (let i = 0; i < 3; i++)
+  txt('3.7V', {x:362+i*43, y:913, fill:'#8a7a40', 'font-size':'8', 'text-anchor':'middle', 'font-family':'JetBrains Mono,monospace'}, gBat);
+txt('Batería 2P3S', {x:405, y:942, fill:'#e8a840', 'font-size':'11', 'font-weight':'600', 'text-anchor':'middle', 'font-family':'Inter,sans-serif'}, svg);
+txt('Li-ion · 11.1V', {x:405, y:954, fill:'#a88030', 'font-size':'8', 'text-anchor':'middle', 'font-family':'JetBrains Mono,monospace'}, svg);
+
+// ══════════════════════════════════════
+// BMS
+// ══════════════════════════════════════
+const gBMS = el('g', {filter:'url(#shadow)'}, svg);
+interactive(gBMS, {
+  title:'Battery Management System', rows:[['Función','Protección sobre-descarga'],['Función','Balanceo de celdas']]
+}, C.pwr);
+
+el('rect', {x:555, y:878, width:110, height:50, rx:4, fill:'url(#gBlue)', stroke:'#2a5a9a', 'stroke-width':1}, gBMS);
+drawIC(gBMS, 580, 888, 24, 14);
+el('rect', {x:565, y:908, width:8, height:4, rx:1, fill:'#5a4a20'}, gBMS);
+el('rect', {x:578, y:908, width:8, height:4, rx:1, fill:'#5a4a20'}, gBMS);
+el('rect', {x:598, y:908, width:6, height:4, rx:1, fill:'#3a3a3a'}, gBMS);
+drawPinHeader(gBMS, 620, 890, 4, 1, 6, '#c8a832');
+txt('BMS', {x:610, y:942, fill:'#e88080', 'font-size':'11', 'font-weight':'600', 'text-anchor':'middle', 'font-family':'Inter,sans-serif'}, svg);
+txt('Protección', {x:610, y:954, fill:'#c06060', 'font-size':'8', 'text-anchor':'middle', 'font-family':'JetBrains Mono,monospace'}, svg);
+
+// ══════════════════════════════════════
+// BUCK CONVERTER
+// ══════════════════════════════════════
+const gBuck = el('g', {filter:'url(#shadow)'}, svg);
+interactive(gBuck, {
+  title:'Regulador Buck DC-DC', rows:[['Entrada','~11.1V (batería)'],['Salida','5V'],['Alimenta','Raspberry Pi + sensores']]
+}, C.pwr);
+
+el('rect', {x:765, y:875, width:120, height:55, rx:4, fill:'#1a2a1a', stroke:'#3a6a3a', 'stroke-width':1}, gBuck);
+el('circle', {cx:800, cy:898, r:10, fill:'#3a3a20', stroke:'#6a6a30', 'stroke-width':1}, gBuck);
+el('circle', {cx:800, cy:898, r:5, fill:'#1a2a1a'}, gBuck);
+el('rect', {x:822, y:888, width:8, height:16, rx:2, fill:'#1a1a1a', stroke:'#555', 'stroke-width':0.5}, gBuck);
+el('rect', {x:838, y:890, width:6, height:12, rx:1, fill:'#1a1a1a', stroke:'#555', 'stroke-width':0.5}, gBuck);
+el('circle', {cx:858, cy:898, r:5, fill:'#2a4a8a', stroke:'#4a6aaa', 'stroke-width':0.8}, gBuck);
+el('line', {x1:858, y1:894, x2:858, y2:902, stroke:'#888', 'stroke-width':1}, gBuck);
+drawTerminals(gBuck, 773, 918, 2, 14);
+drawTerminals(gBuck, 850, 918, 2, 14);
+txt('Buck Converter', {x:825, y:942, fill:'#80c880', 'font-size':'11', 'font-weight':'600', 'text-anchor':'middle', 'font-family':'Inter,sans-serif'}, svg);
+txt('11.1V → 5V', {x:825, y:954, fill:'#60a060', 'font-size':'8', 'text-anchor':'middle', 'font-family':'JetBrains Mono,monospace'}, svg);
+
+// ── Theme sync (watch for MkDocs Material toggle) ──
+function applyTheme(s) {
+  const t = themes[s] || themes.slate;
+  bgRect.setAttribute('fill', t.bg);
+  bgRect.setAttribute('stroke', t.bgStroke);
+  wireLabelBgs.forEach(r => r.setAttribute('fill', t.bg));
+  const tipEl = document.getElementById('tooltip');
+  tipEl.style.background = t.tipBg;
+  tipEl.style.borderColor = t.tipBorder;
+  tipEl.style.color = t.tipColor;
+  document.documentElement.style.setProperty('--tip-key', t.tipKey);
+  document.documentElement.style.setProperty('--tip-val', t.tipVal);
+}
+try {
+  new MutationObserver(() => {
+    const s = getScheme();
+    if (s !== scheme) { scheme = s; applyTheme(s); }
+  }).observe(parent.document.body, { attributes: true, attributeFilter: ['data-md-color-scheme'] });
+} catch(e) {}
+</script>
+</body>
+</html>

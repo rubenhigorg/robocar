@@ -121,6 +121,8 @@ RPLidar C1 → /scan (sensor_msgs/LaserScan)
            → Nav2 (costmaps, localización y planificación)
 ```
 
+![SLAM y Nav2: flujo de percepción](../assets/images/tfm/slam/tfm_p13_00.png)
+
 ### Parámetros de configuración relevantes
 
 En una Raspberry Pi no interesa usar una configuración agresiva. Los parámetros más sensibles son:

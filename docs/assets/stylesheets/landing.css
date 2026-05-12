@@ -1,0 +1,167 @@
+/* ── Hero split layout ──────────────────────────────────── */
+.hero-split {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3rem;
+    padding: 2rem 1rem 1rem;
+    max-width: 960px;
+    margin: 0 auto;
+}
+
+.hero-text {
+    flex: 1;
+    min-width: 0;
+}
+
+.hero-kicker {
+    margin-bottom: 0.6rem;
+    color: var(--md-primary-fg-color);
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+}
+
+.hero-text h1 {
+    font-size: 3.2rem !important;
+    font-weight: 800 !important;
+    margin-bottom: 0.35rem !important;
+    letter-spacing: -0.06em;
+    line-height: 0.96;
+    text-wrap: balance;
+}
+
+.hero-deck {
+    max-width: 34rem;
+    margin: 0 0 0.8rem !important;
+    color: var(--md-default-fg-color--light);
+    font-size: 1.12rem;
+    line-height: 1.45;
+}
+
+.hero-text p {
+    margin: 0.4rem 0 !important;
+    font-size: 0.95rem;
+}
+
+.hero-text .md-button {
+    margin: 0.3rem 0.4rem 0.3rem 0;
+}
+
+/* ── Hero image ─────────────────────────────────────────── */
+.hero-image-wrapper {
+    flex-shrink: 0;
+}
+
+.hero-image-wrapper img.hero-image,
+.md-typeset img.hero-image {
+    display: block;
+    width: 360px;
+    max-width: 360px;
+    border-radius: 18px;
+    border: 1px solid rgba(88, 166, 255, 0.16);
+    box-shadow: 0 18px 42px rgba(15, 23, 42, 0.22);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.hero-image-wrapper img.hero-image:hover,
+.md-typeset img.hero-image:hover {
+    transform: translateY(-4px) scale(1.02);
+    box-shadow: 0 24px 48px rgba(15, 23, 42, 0.28);
+}
+
+/* ── Card images inside grid cards ──────────────────────── */
+.card-image {
+    width: 100%;
+    max-height: 220px;
+    object-fit: cover;
+    border-radius: 8px;
+    margin-bottom: 0.6rem;
+}
+
+/* ── Architecture diagram ───────────────────────────────── */
+.arch-image {
+    display: block;
+    margin: 1rem auto 1.5rem;
+    max-width: 1080px;
+    width: 100%;
+    border-radius: 18px;
+    border: 1px solid rgba(88, 166, 255, 0.12);
+    box-shadow: 0 20px 44px rgba(15, 23, 42, 0.18);
+}
+
+.md-header__button.md-logo img,
+.md-header__button.md-logo svg {
+    width: 2rem !important;
+    height: 2rem !important;
+    object-fit: cover;
+    border-radius: 0.45rem;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.22);
+}
+
+/* ── Hardware diagram embed ─────────────────────────────── */
+.diagram-legend {
+    display: flex;
+    justify-content: center;
+    gap: 0.4rem;
+    font-size: 0.78rem;
+    color: var(--md-default-fg-color--light);
+    margin-bottom: 0.8rem;
+    flex-wrap: wrap;
+}
+
+.legend-i2c { color: #58a6ff !important; }
+.legend-gpio { color: #3fb950 !important; }
+.legend-pwm { color: #d2a8ff !important; }
+.legend-usb { color: #f0883e !important; }
+.legend-pwr { color: #f85149 !important; }
+
+.diagram-wrapper {
+    max-width: 1080px;
+    margin: 0 auto 1.5rem;
+    border-radius: 14px;
+    overflow: hidden;
+    border: 1px solid rgba(88, 166, 255, 0.12);
+    box-shadow: 0 16px 40px rgba(15, 23, 42, 0.22);
+}
+
+.hw-diagram {
+    display: block;
+    width: 100%;
+    aspect-ratio: 1340 / 1020;
+    border: none;
+    background: transparent;
+}
+
+@media (max-width: 768px) {
+    .diagram-wrapper {
+        border-radius: 10px;
+    }
+}
+
+/* ── Footer links ───────────────────────────────────────── */
+.footer-links {
+    text-align: center;
+    padding: 1.5rem 0 0.5rem;
+    opacity: 0.65;
+    font-size: 0.92rem;
+}
+
+/* ── Responsive tweaks ──────────────────────────────────── */
+@media (max-width: 768px) {
+    .hero-split {
+        flex-direction: column;
+        text-align: center;
+        gap: 1.5rem;
+        padding: 1rem;
+    }
+    .hero-text h1 {
+        font-size: 2.35rem !important;
+    }
+    .hero-image-wrapper img.hero-image,
+    .md-typeset img.hero-image {
+        width: 260px;
+        max-width: 260px;
+    }
+}

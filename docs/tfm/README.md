@@ -11,6 +11,8 @@
 
 Este TFM amplía la evolución de **Robocar** iniciada en el [TFG 1](../tfg1-construccion/README.md) y continuada en el [TFG 2](../tfg2-lane-following/README.md). Mientras que el trabajo anterior permitió al robot seguir carriles de forma reactiva mediante visión artificial, el sistema seguía teniendo una limitación estructural: **carece de consciencia espacial global**, no puede planificar rutas hacia destinos semánticos y requiere conocimientos de ROS2 para interactuar con él.
 
+![Punto de partida de Robocar](../assets/images/tfm/contexto-arquitectura/tfm_p02_00.png)
+
 La propuesta de este TFM transforma Robocar en una plataforma de **navegación autónoma orientada a objetivos**, capaz de recibir instrucciones en lenguaje natural y convertirlas en acciones de navegación sobre un mapa del entorno.
 
 ### Arquitectura propuesta
@@ -22,6 +24,8 @@ La solución se articula en tres capas software claramente desacopladas:
 | **Percepción** | Cartographer + RPLidar C1 | Construcción del mapa 2D, localización del robot y representación espacial del entorno |
 | **Navegación** | Nav2 | Planificación de rutas, seguimiento de trayectorias y evitación de obstáculos |
 | **Interfaz natural** | LLM + MCP | Traducción de instrucciones en lenguaje natural a acciones robóticas seguras y observables |
+
+![Arquitectura por capas del sistema propuesto](../assets/images/tfm/contexto-arquitectura/tfm_p11_00.png)
 
 Este enfoque permite pasar de un comportamiento puramente reactivo a un sistema capaz de responder a órdenes del tipo *"ve al laboratorio"*, *"detén la navegación"* o *"qué lugares conoces"* sin exponer al usuario final a la complejidad interna de ROS2.
 

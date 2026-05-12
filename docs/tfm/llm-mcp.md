@@ -167,6 +167,8 @@ LLM
 Usuario
 ```
 
+![Procesamiento del comando "Ve a la cocina"](../assets/images/tfm/llm-mcp/tfm_p22_00.png)
+
 ### Secuencia funcional
 
 1. **El usuario** envía una orden en lenguaje natural, por ejemplo: *"Ve a la cocina"*.

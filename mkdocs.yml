@@ -12,6 +12,7 @@ exclude_docs: |
 theme:
   name: material
   language: es
+  logo: assets/images/tfm/contexto-arquitectura/tfm_p02_00.png
   palette:
     - scheme: default
       primary: indigo
@@ -67,8 +68,14 @@ markdown_extensions:
   - tables
   - attr_list
   - md_in_html
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
   - toc:
       permalink: true
+
+extra_css:
+  - assets/stylesheets/landing.css
 
 plugins:
   - search

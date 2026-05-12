@@ -31,6 +31,8 @@ Donde:
 1. **Predicción:** Estima la posición del carril basándose en el modelo dinámico
 2. **Corrección:** Ajusta la estimación con las mediciones reales del frame
 
+![Filtro de Kalman aplicado a carriles](../assets/images/tfg2/control-kalman-pid/tfg2_p24_00.png)
+
 ### Implementación: Clase `Tracker`
 
 Implementada en `src/robocar_pkg/lib/tracker.py`. Utiliza la librería `filterpy` para el filtro de Kalman y `numpy` para operaciones matemáticas.
@@ -60,6 +62,8 @@ El filtro de Kalman cumple dos funciones críticas:
 - **Estimación ante detección ausente:** Cuando no se detecta un carril (ej. en curvas o cambios de luz), Kalman proporciona una estimación basada en los frames anteriores
 - **Suavizado:** Elimina las fluctuaciones en las detecciones, proporcionando un seguimiento más estable y un control de dirección más suave
 
+![Frames procesados con filtro de Kalman](../assets/images/tfg2/pipeline-vision/tfg2_p51_00.jpg)
+
 ---
 
 ## Control PID
@@ -72,6 +76,8 @@ PID (Proporcional-Integral-Derivativo) es un controlador en bucle cerrado que co
 salida = P + I + D
 ```
 
+![Ejemplo de control PID](../assets/images/tfg2/control-kalman-pid/tfg2_p26_00.jpg)
+
 Cada componente analiza el error desde una perspectiva temporal diferente:
 
 | Componente | Perspectiva | Función |
@@ -79,6 +85,8 @@ Cada componente analiza el error desde una perspectiva temporal diferente:
 | **P** (Proporcional) | Presente | Corrección proporcional al error actual |
 | **I** (Integral) | Pasado | Acumula errores pasados para eliminar error constante |
 | **D** (Derivativo) | Futuro | Anticipa cambios basándose en la tasa de variación del error |
+
+![Bucle cerrado PID](../assets/images/tfg2/control-kalman-pid/tfg2_p27_00.jpg)
 
 ### Respuesta Proporcional (P)
 
@@ -112,6 +120,8 @@ D = kd × (error - error_anterior) / dt
 - **Función principal:** Reducir el sobre-impulso
 - No afecta al error en estado estacionario
 - Si `kd` es demasiado grande, el sistema se vuelve inestable por amplificar fluctuaciones normales
+
+![Respuesta derivativa del PID](../assets/images/tfg2/control-kalman-pid/tfg2_p29_00.jpg)
 
 ### Implementación
 

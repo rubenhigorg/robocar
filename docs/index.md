@@ -1,14 +1,34 @@
-# 🚗 Robocar
+---
+hide:
+  - navigation
+  - toc
+---
 
-**Robot coche autónomo construido con componentes comerciales de bajo coste (~293€), capaz de seguimiento de carril mediante visión artificial.**
+<div class="hero-split" markdown>
+<div class="hero-text" markdown>
 
-Funciona con **ROS2 Iron** sobre **Raspberry Pi 4**, integrando sensores ultrasónicos, IMU, monitorización energética y cámara con procesamiento OpenCV.
+
+# Robocar
+
+<p class="hero-deck">Un coche RC autónomo construido desde cero, desde las baterías y el chasis hasta algoritmos de visión artificial, SLAM y navegación inteligente.</p>
+
+Diseñado, construido y programado como resultado de **dos Trabajos de Fin de Grado**
+en la Universidad Politécnica de Madrid y un **Trabajo de Fin de Máster** en la UNIR.
+
+[Explorar documentación](#evolucion-del-proyecto){ .md-button .md-button--primary }
+[Ver en GitHub](https://github.com/rubenhigorg/robocar){ .md-button }
+
+</div>
+<div class="hero-image-wrapper" markdown>
+
+![Robocar](assets/images/tfm/contexto-arquitectura/tfm_p02_00.png){ .hero-image }
+
+</div>
+</div>
 
 ---
 
-## 🎯 Qué es este proyecto
-
-Robocar es el resultado de **dos Trabajos de Fin de Grado** y un **Trabajo de Fin de Máster** en la Universidad Politécnica de Madrid. Cubre desde la construcción mecánica y electrónica del robot hasta la implementación de algoritmos de visión artificial y control autónomo.
+## Evolución del proyecto { #evolucion-del-proyecto }
 
 <div class="grid cards" markdown>
 
@@ -16,7 +36,11 @@ Robocar es el resultado de **dos Trabajos de Fin de Grado** y un **Trabajo de Fi
 
     ---
 
-    Hardware, sensores, electrónica, software ROS2 y panel de control Node-RED
+    ![Construcción del robot](assets/images/tfg1/montaje-componentes/tfg1_p52_00.jpg){ .card-image }
+
+    Chasis, electrónica, sensores, baterías, piezas 3D impresas, software ROS2 y panel de control Node-RED.
+
+    **Coste total: ~293€**
 
     [:octicons-arrow-right-24: Ver documentación](tfg1-construccion/README.md)
 
@@ -24,50 +48,106 @@ Robocar es el resultado de **dos Trabajos de Fin de Grado** y un **Trabajo de Fi
 
     ---
 
-    Lane-following con OpenCV, Transformada de Hough, Filtro de Kalman y control PID
+    ![Seguimiento de carril con Kalman](assets/images/tfg2/pipeline-vision/tfg2_p51_00.jpg){ .card-image }
+
+    Lane-following con OpenCV: filtro de color, Canny, Hough, Filtro de Kalman y control PID.
+
+    **Velocidad autónoma: 18 cm/s**
 
     [:octicons-arrow-right-24: Ver documentación](tfg2-lane-following/README.md)
 
--   :material-radar:{ .lg .middle } **TFM — Extensión con LIDAR**
+-   :material-radar:{ .lg .middle } **TFM — Navegación Inteligente**
 
     ---
 
-    Ampliación del sistema con RPLidar C1 para percepción del entorno
+    ![Arquitectura del TFM](assets/images/tfm/contexto-arquitectura/tfm_p11_00.png){ .card-image }
+
+    SLAM con RPLidar C1 + Cartographer, Nav2 para planificación de rutas, y control por lenguaje natural con LLM + MCP.
+
+    **Estado: En desarrollo 🚧**
 
     [:octicons-arrow-right-24: Ver documentación](tfm/README.md)
 
 </div>
 
-## 🏗️ Arquitectura del Sistema
+---
 
-| Nodo | Topic | Función |
-|---|---|---|
-| `camera_node` | `/camera_image` | Captura frames 640×480 a ~3 FPS |
-| `processing_node` | `/lane_info` | Detecta carriles (OpenCV + Kalman + PID) |
-| `car_control_node` | `/joy`, `/lane_info` | Controla motores y dirección |
-| `distance_node` | `/ultrasound_data` | 3× HC-SR04 a 10 Hz |
-| `energy_node` | `/energy` | Voltajes (INA3221) y corriente (INA226) |
-| `accelerometer_node` | `/imu` | Acelerómetro + giroscopio (MPU6050) |
+## Arquitectura del Sistema
 
-## 🎮 Modos de conducción
+![Esquema general del proyecto](assets/images/Gemini_Generated_Image_9ct2959ct2959ct2.png){ .arch-image }
 
-- **Manual:** Control directo con joystick PS3
-- **Autónomo:** Seguimiento de carril por visión artificial
-- **Cambio de modo:** Botón X del mando PS3
+### Diagrama de Conexiones Hardware
 
-## 📊 Datos del proyecto
+<div class="diagram-legend" markdown>
+:material-circle:{ .legend-i2c } I²C Bus 1 · :material-circle:{ .legend-gpio } GPIO · :material-circle:{ .legend-pwm } PWM / Servo · :material-circle:{ .legend-usb } USB · :material-circle:{ .legend-pwr } Alimentación
+</div>
 
-| | |
-|---|---|
-| **Coste total** | ~293€ |
-| **Plataforma** | Raspberry Pi 4 (4GB) |
-| **Framework** | ROS2 Iron |
-| **Sensores** | Cámara, 3× ultrasonidos, IMU, monitorización energética |
-| **Control** | PCA9685 (servos) + Filtro de Kalman + PID |
+<div class="diagram-wrapper">
+  <iframe src="robocar_diagram.html" class="hw-diagram" loading="lazy"></iframe>
+</div>
 
-## 👤 Autores
+---
+
+## El robot en cifras
+
+<div class="grid cards" markdown>
+
+-   :material-currency-eur:{ .lg .middle } **~293€**
+
+    ---
+
+    Coste total con componentes comerciales de bajo coste y celdas de batería recicladas
+
+-   :material-chip:{ .lg .middle } **Raspberry Pi 4**
+
+    ---
+
+    Ubuntu 22.04 LTS, ROS2 Iron, 4 GB RAM
+
+-   :material-video:{ .lg .middle } **6 sensores**
+
+    ---
+
+    Cámara, 3× ultrasonidos HC-SR04, IMU MPU6050 y monitorización energética
+
+-   :material-gamepad-variant:{ .lg .middle } **2 modos**
+
+    ---
+
+    Manual (joystick PS3) y autónomo (seguimiento de carril por visión artificial)
+
+</div>
+
+---
+
+## Modos de conducción
+
+=== "Manual"
+
+    Control directo con mando **DualShock 3** (PS3) por Bluetooth.
+    Los ejes del joystick controlan dirección y velocidad de forma independiente.
+
+=== "Autónomo"
+
+    El `processing_node` detecta los carriles de la pista mediante visión artificial
+    y publica correcciones de dirección que el `car_control_node` aplica automáticamente
+    a velocidad constante (18 cm/s).
+
+> **Cambio de modo:** Botón **X** del mando PS3
+
+---
+
+## Autores
 
 | Nombre | Contribución |
 |---|---|
 | **Rubén Higuera Castillo** | TFG 1, TFG 2, TFM |
 | **Kento Reinoso** | TFG 1 |
+
+---
+
+<div class="footer-links" markdown>
+
+[:material-file-document: Recursos visuales](recursos-visuales.md) · [:material-github: Repositorio](https://github.com/rubenhigorg/robocar) · [:material-school: UPM](https://www.upm.es)
+
+</div>

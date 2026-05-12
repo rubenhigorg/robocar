@@ -78,6 +78,8 @@ Los nodos gestionados típicamente incluyen:
 | **Recovery Server** | Ejecuta maniobras de recuperación cuando la navegación falla |
 | **AMCL** | Estima la pose del robot sobre el mapa |
 
+![Arquitectura interna del stack Nav2](../assets/images/tfm/navegacion/tfm_p17_00.png)
+
 ## 3. Planificación global y control local
 
 ### Global Planner

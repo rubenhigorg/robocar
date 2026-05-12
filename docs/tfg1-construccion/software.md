@@ -28,6 +28,8 @@ Conceptos aplicados:
 | **distance_node** | `/ultrasound_data` | `Distance` (custom) | — |
 | **car_control_node** | — | — | `/joy` |
 
+![Diagrama de nodos ROS2](../assets/images/tfg1/software-dashboard/tfg1_p59_00.png)
+
 ### Descripción de nodos
 
 - **camera_node:** Captura imágenes con OpenCV y las publica a 5 Hz (0.2s). Usa `CvBridge` para convertir a formato ROS2 (`Image`).
@@ -77,6 +79,8 @@ float32 current
    - `setup.py` — Entry points de los nodos ejecutables
 3. **teleop_twist_joy** — Submodule Git del paquete estándar de ROS2
 
+![Estructura del paquete robocar_pkg](../assets/images/tfg1/software-dashboard/tfg1_p62_01.png)
+
 ### Construcción y ejecución
 
 ```bash
@@ -90,6 +94,8 @@ ros2 run robocar_pkg camera_node
 # Lanzar todos los nodos
 bash launch.sh
 ```
+
+![Ejecución de colcon build](../assets/images/tfg1/software-dashboard/tfg1_p63_00.png)
 
 ### Servicio del sistema
 
@@ -125,6 +131,8 @@ ROS2 se comunica con Node-RED mediante **rclNodejs**, la implementación JavaScr
 
 **Solución adoptada:** Plugin **EduArt-Robotik/edu_nodered_ros2_plugin**, más ligero y compatible con la Raspberry Pi. Se ejecutan los comandos del Dockerfile directamente en la RPi (sin Docker).
 
+![Nodos ROS2 en Node-RED](../assets/images/tfg1/software-dashboard/tfg1_p67_00.jpg)
+
 ### Instalación
 
 ```bash
@@ -154,6 +162,8 @@ Suscripción al topic `/energy` para mostrar:
 
 > Nota: Si se alimenta con fuente externa, la potencia aparece negativa (no circula corriente desde las baterías).
 
+![Panel de Control: Energía](../assets/images/tfg1/software-dashboard/tfg1_p70_00.png)
+
 #### Diagrama de Cámara
 
 Visualización en tiempo real de los frames de la cámara (con retardo de algunos segundos).
@@ -161,3 +171,5 @@ Visualización en tiempo real de los frames de la cámara (con retardo de alguno
 #### Diagrama de Monitoreo Raspberry
 
 Monitoreo en tiempo real del estado de la Raspberry Pi (CPU, temperatura, memoria, etc.).
+
+![Panel de Control: Monitoreo Raspberry Pi](../assets/images/tfg1/software-dashboard/tfg1_p71_00.png)

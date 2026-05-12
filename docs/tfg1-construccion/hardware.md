@@ -20,6 +20,8 @@ El controlador requiere una secuencia de inicialización específica y emite son
 
 Servomotor robusto utilizado para el control de la dirección angular del robot. Se controla mediante señal PWM a través del PCA9685. Es el encargado de manejar el ángulo de giro de las ruedas delanteras (dirección tipo Ackermann, máximo ±30°).
 
+![Servomotor MG996R](../assets/images/tfg1/hardware-sensores/tfg1_p17_00.jpg)
+
 ### PCA9685
 
 Controlador PWM de 16 canales con interfaz I2C. En este proyecto conecta:
@@ -53,6 +55,8 @@ Permite controlar los tres actuadores desde la Raspberry Pi a través de un úni
 | **HC-SR04** | 5V | Analógico | 2–400cm | Muy económico, fácil de usar, amplio rango | Precisión limitada por ecos, no apto para superficies irregulares |
 | **GP2Y0E03** | 4.5–5.5V | Analógico | 4–50cm | Buen rendimiento en objetos cercanos | Limitado a 50cm, sensible a reflectancia |
 | **KY-032** | 3.3–5V | Digital | 2–450cm | Muy económico, fácil de usar | Solo salida booleana, baja precisión |
+
+![Descripción funcional del VL53L0X](../assets/images/tfg1/hardware-sensores/tfg1_p25_00.png)
 
 ### Cámara
 
@@ -105,6 +109,8 @@ De los 6 sensores iniciales, se descartaron durante la implementación:
 | **VL6180X** | I2C | Librería `adafruit_vl6180x`. |
 | **HC-SR04** | GPIO (digital) | Requiere **divisor de tensión** (R1=1kΩ, R2=2kΩ) entre Echo y GPIO de la RPi para reducir 5V a 3.3V. |
 
+![Divisor de tensión y conexionado del HC-SR04](../assets/images/tfg1/hardware-sensores/tfg1_p26_03.jpg)
+
 ### Resultados
 
 #### Pruebas de distancia (valores en cm)
@@ -120,6 +126,8 @@ De los 6 sensores iniciales, se descartaron durante la implementación:
 
 > *VL6180X satura a ~25.5cm (fuera de su rango especificado de 200mm)
 
+![Prueba de distancia con el HC-SR04](../assets/images/tfg1/hardware-sensores/tfg1_p28_00.jpg)
+
 #### Pruebas de ángulo (a 30cm, condiciones óptimas de luz)
 
 | Sensor | 0° | 15° | 20° | 30° | 45° |
@@ -129,6 +137,8 @@ De los 6 sensores iniciales, se descartaron durante la implementación:
 | **VL53L0X** | ✅ (43.4) | ❌ (72.6) | ❌ (73.1) | ❌ (73.7) | ❌ (72.4) |
 
 > ✅ = detección correcta (consistente con la distancia real), ❌ = detección errónea
+
+![Setup de pruebas para medida de ángulos](../assets/images/tfg1/hardware-sensores/tfg1_p29_02.png)
 
 ### Conclusiones del Benchmarking
 
