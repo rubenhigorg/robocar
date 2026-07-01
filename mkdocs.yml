@@ -52,14 +52,20 @@ nav:
     - Modelo del sistema: tfg2-lane-following/modelo-sistema.md
   - TFM — LIDAR:
     - Resumen: tfm/README.md
+    - "Fundamentos ROS2 (Capa 0)": tfm/fundamentos.md
     - "Capa de percepción: SLAM": tfm/slam.md
     - Capa de navegación: tfm/navegacion.md
     - "Capa de interfaz natural: LLM + MCP": tfm/llm-mcp.md
+    - Roadmap de implementación: tfm/roadmap.md
 
 markdown_extensions:
   - admonition
   - pymdownx.details
-  - pymdownx.superfences
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
   - pymdownx.highlight:
       anchor_linenums: true
   - pymdownx.inlinehilite
