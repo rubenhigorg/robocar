@@ -1,6 +1,7 @@
 #!/bin/bash
 
 
+source /opt/ros/humble/setup.bash
 source /home/lab/robocar/src/install/setup.sh
 source /home/lab/robocar/.venv/bin/activate
 
