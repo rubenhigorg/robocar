@@ -82,16 +82,36 @@ Antes de SLAM hay que resolver lo que la metodología da por hecho. La explicaci
 detallada (Ackermann, URDF/TF, odometría y por qué es el riesgo principal) está en
 [Fundamentos ROS2](fundamentos.md).
 
-- [ ] ⬜ **Fijar la distro ROS2** (ver [Decisión D1](#3-decisiones-de-diseno-abiertas)).
-- [ ] ⬜ **URDF + árbol TF**: `base_link`, frame `laser` y transform estático del montaje del LIDAR.
-- [ ] ⬜ **Odometría** `odom → base_link` (ver [Decisión D2](#3-decisiones-de-diseno-abiertas), el riesgo mayor).
-- [ ] ⬜ **Puente de actuación** `/cmd_vel` (`geometry_msgs/Twist`) → ángulo de servo + throttle ESC vía PCA9685.
+!!! abstract "Estado de la plataforma (Raspberry Pi `robocar.local`, user `lab`) — jul 2026"
+    - **Ubuntu 22.04.4 LTS**, Python 3.10.12. ROS2 **Iron** instalado; **Humble** confirmado
+      instalable por apt (`ros-humble-navigation2` disponible).
+    - **Stack del TFM sin instalar**: no hay Nav2, Cartographer, rplidar_ros ni robot_localization
+      (solo `joy`). Partimos de cero en navegación → bajo coste de migrar a Humble.
+    - Workspace en `/home/lab/robocar`, rama **TFG_2** (por detrás de `main`).
+    - `robocar.service` (systemd, `User=lab` → `launch.sh`) existe y está **disabled**.
+    - ⚠️ **LIDAR no conectado** ahora mismo (sin `/dev/ttyUSB*`). ⚠️ Disco al **85%** (4.2 GB libres).
+
+Plan incremental de hitos (cada uno con una validación testable):
+
+| Hito | Objetivo | Cómo se valida | Decisión |
+|---|---|---|---|
+| **0.1** | **Migrar a Humble**: instalar `ros-humble-ros-base` + deps, recompilar workspace (`robocar_pkg`, `messages_pkg`, `teleop_twist_joy`), limpiar el entry point `controller_node` colgante; purgar Iron tras validar | `colcon build` limpio y nodos TFG arrancan en Humble | **D1 ✔ Humble** |
+| **0.2** | **Puente `/cmd_vel` → PCA9685** (Ackermann): `angular.z`→servo dirección (canal 2), `linear.x`→ESC (canales 0/1); calibrar velocidad máx., ángulo de dirección máx. y *wheelbase*. Refactor del modo autónomo actual de `car_control_node` | **Conducir el coche con el mando** vía `/cmd_vel` (teleop_twist_joy ya lo emite) | D4 |
+| **0.3** | **URDF + TF**: `xacro` con `base_link`, `laser` (offset del montaje), `imu_link` y ruedas; `robot_state_publisher` + transforms estáticos | Árbol TF coherente en RViz (`base_link → laser`) | — |
+| **0.4** | **Odometría**: con D2=A no se monta odom de ruedas; se deja a Cartographer estimar la pose por *scan-matching*. Reservado el nodo encoder + modelo-bicicleta para la opción B | Se valida en la Capa 1 (pose estable en Cartographer) | **D2 ✔ A** |
+| **0.5** | **Sanear `/imu`**: añadir `header` (timestamp + `frame_id`) y covarianzas a `accelerometer_node` | `/imu` válido para `robot_localization` (solo crítico si se migra a D2=B) | (D2) |
 
 !!! warning "Cinemática Ackermann"
     Robocar **no es un robot diferencial**: dirige con un servo (tipo coche). Esto afecta al
     puente de actuación y a la elección de controlador local en la Capa 2. Es la diferencia
     conceptual más importante frente a los tutoriales estándar de Nav2 (pensados para
     TurtleBot diferencial).
+
+!!! tip "Victoria temprana en 0.2"
+    El `launch.sh` ya arranca `teleop_twist_joy`, que publica `/cmd_vel` desde el mando, pero hoy
+    `car_control_node` lee `/joy` en crudo y ese `/cmd_vel` se ignora. Reaprovecharlo permite
+    **validar el puente Ackermann con el mando antes de que exista Nav2**. Con 0.1 + 0.2 + 0.3
+    hechos, la Capa 1 (SLAM) puede arrancar.
 
 ### Capa 1 — Percepción / SLAM *(Fase 1 · 3-4 semanas)*
 
@@ -107,7 +127,7 @@ detallada (Ackermann, URDF/TF, odometría y por qué es el riesgo principal) est
 ### Capa 2 — Navegación *(Fase 2 · 3-4 semanas)*
 
 - [ ] ⬜ **Nav2** configurado: BT Navigator, planner global (NavFn/Smac), costmaps (static + inflation + obstacle) y AMCL.
-- [ ] ⬜ **Controlador local Ackermann**: **TEB** (o Regulated Pure Pursuit / MPPI), **no** el DWB diferencial (ver [Decisión D3](#3-decisiones-de-diseno-abiertas)).
+- [ ] ⬜ **Controlador local Ackermann**: **TEB** (o Regulated Pure Pursuit / MPPI), **no** el DWB diferencial (ver [Decisión D3](#3-decisiones-de-diseno)).
 - [ ] ⬜ **Servicio de resolución semántica** (lee la SQLite: nombre de lugar → `PoseStamped`).
 - [ ] ⬜ **Navegación punto a punto** validada entre waypoints en entorno controlado.
 
@@ -134,16 +154,14 @@ detallada (Ackermann, URDF/TF, odometría y por qué es el riesgo principal) est
 - [ ] ⬜ **Toma de métricas** (OE1-OE4) y refinamiento de casos de fallo.
 - [ ] ⬜ **Redacción** del Cap. 4 (desarrollo) y Cap. 5 (conclusiones y líneas futuras) + Resumen/Abstract.
 
-## 3. Decisiones de diseño abiertas
+## 3. Decisiones de diseño
 
-Decisiones que condicionan el resto del trabajo y conviene cerrar cuanto antes.
-
-| ID | Decisión | Opciones | Recomendación inicial |
+| ID | Decisión | Estado | Detalle |
 |---|---|---|---|
-| **D1** | Distro ROS2 | Iron (repo/README) vs **Humble** (memoria, LTS) | **Humble**: es lo que dice la memoria, es LTS y tiene el mejor soporte para Nav2, Cartographer y `rplidar_ros` en la Pi. Alinear repo y documento. |
-| **D2** | Fuente de odometría/localización | **A)** pose por *scan-matching* de Cartographer (sin odometría de ruedas fiable). **B)** fusión encoders + IMU con `robot_localization` (EKF) + AMCL | **Empezar por A** para desbloquear mapa y navegación rápido; migrar a **B** si la deriva impide cumplir OE1 (< 10 cm). La opción B **no está en la memoria** y habría que añadirla al Cap. 4. |
-| **D3** | Controlador local Nav2 | DWB (diferencial) vs **TEB** / Regulated Pure Pursuit / MPPI (Ackermann) | **TEB** por la cinemática tipo coche (la propia memoria lo señala). |
-| **D4** | Puente de actuación | Extender `car_control_node` con un modo "autónomo Nav2" vs nodo nuevo `cmd_vel → PCA9685` | Nodo/modo que traduzca `Twist` a ángulo de dirección + throttle respetando límites Ackermann. |
+| **D1** | Distro ROS2 | ✅ **Humble** | El stack del TFM no está instalado bajo ninguna distro, así que migrar a Humble (LTS, lo que dice la memoria) tiene coste casi nulo. Instalar junto a Iron y purgar Iron tras validar. Alinear el README (dice Iron). |
+| **D2** | Odometría/localización | ✅ **Opción A ahora** | Empezar con la pose por *scan-matching* de Cartographer (sin odometría de ruedas). Migrar a **B** (encoders + IMU con `robot_localization` EKF + AMCL) **solo si** no se cumple OE1 (< 10 cm); en ese caso, documentarla en el Cap. 4 (no está en la memoria). |
+| **D3** | Controlador local Nav2 | 🟡 Previsto | **TEB** (o Regulated Pure Pursuit / MPPI) por la cinemática Ackermann; **no** el DWB diferencial. La propia memoria lo señala. Se cierra en la Capa 2. |
+| **D4** | Puente de actuación | 🟡 Previsto | Refactor del modo autónomo de `car_control_node` (o nodo nuevo) que traduzca `/cmd_vel` (`Twist`) a ángulo de servo (canal 2) + throttle ESC (canales 0/1) respetando límites Ackermann. Se implementa en el hito 0.2. |
 
 ## 4. Camino crítico y riesgos
 
