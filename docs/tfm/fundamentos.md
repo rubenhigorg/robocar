@@ -109,7 +109,79 @@ De ahí la **decisión de diseño D2** del roadmap:
 | **A** | Pose por *scan-matching* de Cartographer (sin odometría de ruedas fiable) | Rápido de desbloquear, menos preciso |
 | **B** | Fusión encoders + IMU con `robot_localization` (EKF) + AMCL | Más robusto, más trabajo; **no está en la memoria** |
 
-## 4. Por qué la Capa 0 es el riesgo principal
+## 4. El puente `/cmd_vel`: del Twist a los servos
+
+Nav2 y la teleoperación no conocen el servo ni el ESC del robot: hablan un idioma genérico y
+estándar, el topic **`/cmd_vel`**. El **puente** es el nodo que traduce ese comando genérico a los
+ángulos de servo concretos del PCA9685. En Robocar se implementa **ampliando `car_control_node`**
+(hito 0.2 del roadmap), y no como un nodo aparte, para que siga siendo el **único dueño del bus
+I2C** (dos nodos escribiendo el PCA9685 se pisarían).
+
+### El mensaje `Twist`
+
+`/cmd_vel` es de tipo `geometry_msgs/Twist`: dos vectores de velocidad (lineal y angular). Para un
+coche que se mueve en el plano solo dos componentes son útiles:
+
+| Campo | Significado | Unidad | Uso en Robocar |
+|---|---|---|---|
+| `linear.x` | Velocidad de avance/retroceso | m/s | → throttle del ESC (canales 0 y 1) |
+| `angular.z` | Velocidad de giro (yaw rate) | rad/s | → servo de dirección (canal 2) |
+| `linear.y`, `linear.z`, `angular.x`, `angular.y` | Movimientos que un coche no puede hacer | — | Ignorados |
+
+!!! warning "Son velocidades, no posiciones"
+    `linear.x` no es *"avanza 2 m"* sino *"ve a 0.3 m/s"*; y `angular.z` **no es un ángulo de
+    volante**, sino una **velocidad de giro** (rad/s).
+
+### `angular.z` y el acoplamiento Ackermann
+
+Aquí reaparece la [cinemática Ackermann](#1-cinematica-ackermann). En un robot diferencial,
+`angular.z` se traduce fácil (una rueda más rápida que la otra, incluso parado). En un coche, en
+cambio, **solo se gira si se avanza**, y el ángulo de volante necesario depende también de la
+velocidad, según el modelo de bicicleta:
+
+```text
+angular.z = linear.x · tan(δ) / L
+   (giro)    (avance)  (volante)  (batalla = distancia entre ejes)
+```
+
+Es decir: **el mismo ángulo de volante produce distinto giro real según la velocidad.** Por eso
+convertir `angular.z` en "cuánto torcer el servo" no es directo en un coche: en rigor hace falta
+`linear.x` también.
+
+### Cómo lo interpreta el código (hito 0.2)
+
+La implementación actual usa una **simplificación deliberada**: mapea `angular.z` directamente al
+ángulo de servo, de forma **lineal y proporcional**, sin usar `linear.x`.
+
+```python
+# DIRECCIÓN: angular.z -> ángulo de servo (canal 2)
+steer = steer_center + (angular_z / max_angular) * steer_span   # 105 + (ang/0.4)*65
+steer = clamp(steer, 40.0, 170.0)
+
+# TRACCIÓN: linear.x -> throttle del ESC (canales 0 y 1)
+throttle = throttle_neutral + (linear_x / max_linear) * span    # 93.6 + (lin/0.7)*span
+throttle = clamp(throttle, throttle_neutral - span, throttle_neutral + span)
+```
+
+Todos los valores (`max_angular`, `steer_center`, `steer_span`, `throttle_neutral`, `span`…) son
+**parámetros ROS**, ajustables en caliente con `ros2 param set` sin recompilar.
+
+!!! note "Por qué la simplificación es suficiente ahora"
+    Con el mando, **el humano cierra el bucle**: si el coche gira poco, mueve más el stick. La
+    imprecisión de ignorar la velocidad no molesta. Sirve para validar el puente y conducir.
+
+!!! tip "La versión correcta llega con Nav2"
+    Para navegación autónoma (Capa 2) se hará la conversión Ackermann fiel, despejando el ángulo de
+    volante de la fórmula con **ambos** valores:
+
+    ```text
+    δ = atan( L · angular.z / linear.x )
+    ```
+
+    Y se usará el controlador **TEB**, que ya respeta la cinemática de un coche (no pide giros sin
+    avance). Es la [Decisión D3](roadmap.md#3-decisiones-de-diseno) del roadmap.
+
+## 5. Por qué la Capa 0 es el riesgo principal
 
 !!! danger "Dónde se atascan los TFM de robótica"
     Las capas más vistosas del TFM —el **LLM** y el **MCP**— son en realidad **las más fáciles y
