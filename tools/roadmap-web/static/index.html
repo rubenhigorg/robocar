@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Robocar · Roadmap TFM</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚗</text></svg>">
+</head>
+<body>
+  <header>
+    <div class="head-row">
+      <h1>🚗 Robocar — Roadmap TFM</h1>
+      <div class="head-actions">
+        <span id="who" class="who" title="Clic para cambiar tu nombre"></span>
+        <button id="keyBtn" title="Introducir clave de edición">🔑</button>
+      </div>
+    </div>
+    <div class="global">
+      <div class="global-bar"><div id="globalFill" class="global-fill"></div></div>
+      <span id="globalLabel" class="global-label"></span>
+    </div>
+    <div id="pipeline" class="pipeline"></div>
+  </header>
+
+  <main>
+    <section id="layers"></section>
+
+    <section class="panel">
+      <h2>Decisiones de diseño</h2>
+      <div id="decisions" class="decisions"></div>
+    </section>
+
+    <section class="panel">
+      <h2>Historial</h2>
+      <ul id="events" class="events"></ul>
+    </section>
+  </main>
+
+  <footer>
+    Estado compartido · clic en el estado de una tarea para ciclarlo · doble clic en un texto para editarlo
+  </footer>
+  <script src="app.js"></script>
+</body>
+</html>

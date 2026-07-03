@@ -1,0 +1,12 @@
+services:
+  roadmap:
+    build: .
+    container_name: robocar-roadmap
+    ports:
+      - "8090:8090"
+    environment:
+      # CAMBIA esta clave: es la que os pediréis para editar (lectura siempre libre)
+      ROADMAP_KEY: ${ROADMAP_KEY:-robocar}
+    volumes:
+      - ./data:/data          # aquí vive el SQLite: sobrevive a rebuilds
+    restart: unless-stopped
