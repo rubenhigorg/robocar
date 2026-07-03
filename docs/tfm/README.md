@@ -78,6 +78,9 @@ Se adopta una **metodología incremental en espiral**, dividida en cinco fases s
 
 ## Estado actual
 
-**En desarrollo — Entrega 1 completada (capítulos 1-3).**
+**En desarrollo — Entrega 1 completada (capítulos 1-3); implementación en curso.**
+
+> 📊 Estado vivo de tareas e hitos: **[roadmap.iawiki.app](https://roadmap.iawiki.app)** ·
+> Plan técnico: [Roadmap de implementación](roadmap.md)
 
 La primera entrega define el problema, justifica la transición desde navegación reactiva a navegación orientada a objetivos y establece la arquitectura técnica sobre la que se implementará la integración entre **SLAM**, **Nav2** y **LLMs**.

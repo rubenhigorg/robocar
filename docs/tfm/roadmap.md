@@ -7,10 +7,17 @@ plan técnico **capa a capa**, marcando qué existe ya, qué falta y **dónde es
 que la memoria no detalla**. Es el documento de trabajo para las **Entregas 2 y 3**
 (Cap. 4 *Desarrollo específico de la contribución* y Cap. 5 *Conclusiones*).
 
-!!! info "Estado global"
+!!! tip "Estado vivo del roadmap → [roadmap.iawiki.app](https://roadmap.iawiki.app)"
+    El **estado actualizado** de cada tarea (pendiente/en curso/hecho, asignaciones e
+    historial) se mantiene en el **[tablero web compartido](https://roadmap.iawiki.app)**
+    (código en `tools/roadmap-web/`). Este documento recoge el **plan conceptual**: capas,
+    hitos, dependencias y decisiones — lo que no cambia semana a semana.
+
+!!! info "Estado global (a jul 2026)"
     **Entrega 1 completada** (Cap. 1-3: problema, estado del arte, objetivos y metodología).
-    La implementación (Cap. 4) **aún no ha comenzado en código**: lo único disponible es la
-    validación funcional del RPLidar C1 **fuera de ROS2** (`pruebas/rplidar/`).
+    Implementación **en curso**: hito **0.1 (migración a Humble) completado** ✅ y
+    **0.2 (puente `/cmd_vel`) en curso** 🔵. Antes del arranque, lo único disponible era la
+    validación funcional del RPLidar C1 fuera de ROS2 (`pruebas/rplidar/`).
 
 Leyenda de estado: ✅ hecho · 🟡 parcial · ⬜ pendiente
 
@@ -95,8 +102,8 @@ Plan incremental de hitos (cada uno con una validación testable):
 
 | Hito | Objetivo | Cómo se valida | Decisión |
 |---|---|---|---|
-| **0.1** | **Migrar a Humble**: instalar `ros-humble-ros-base` + deps, recompilar workspace (`robocar_pkg`, `messages_pkg`, `teleop_twist_joy`), limpiar el entry point `controller_node` colgante; purgar Iron tras validar | `colcon build` limpio y nodos TFG arrancan en Humble | **D1 ✔ Humble** |
-| **0.2** | **Puente `/cmd_vel` → PCA9685** (Ackermann): `angular.z`→servo dirección (canal 2), `linear.x`→ESC (canales 0/1); calibrar velocidad máx., ángulo de dirección máx. y *wheelbase*. Refactor del modo autónomo actual de `car_control_node` | **Conducir el coche con el mando** vía `/cmd_vel` (teleop_twist_joy ya lo emite) | D4 |
+| **0.1** ✅ | **Migrar a Humble**: instalar `ros-humble-ros-base` + deps, recompilar workspace (`robocar_pkg`, `messages_pkg`, `teleop_twist_joy`), limpiar el entry point `controller_node` colgante; purgar Iron tras validar | `colcon build` limpio y nodos TFG arrancan en Humble | **D1 ✔ Humble** |
+| **0.2** 🔵 | **Puente `/cmd_vel` → PCA9685** (Ackermann): `angular.z`→servo dirección (canal 2), `linear.x`→ESC (canales 0/1); calibrar velocidad máx., ángulo de dirección máx. y *wheelbase*. Refactor del modo autónomo actual de `car_control_node` | **Conducir el coche con el mando** vía `/cmd_vel` (teleop_twist_joy ya lo emite) | D4 |
 | **0.3** | **URDF + TF**: `xacro` con `base_link`, `laser` (offset del montaje), `imu_link` y ruedas; `robot_state_publisher` + transforms estáticos | Árbol TF coherente en RViz (`base_link → laser`) | — |
 | **0.4** | **Odometría**: con D2=A no se monta odom de ruedas; se deja a Cartographer estimar la pose por *scan-matching*. Reservado el nodo encoder + modelo-bicicleta para la opción B | Se valida en la Capa 1 (pose estable en Cartographer) | **D2 ✔ A** |
 | **0.5** | **Sanear `/imu`**: añadir `header` (timestamp + `frame_id`) y covarianzas a `accelerometer_node` | `/imu` válido para `robot_localization` (solo crítico si se migra a D2=B) | (D2) |
