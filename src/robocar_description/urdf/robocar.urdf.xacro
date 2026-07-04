@@ -123,10 +123,13 @@
       <material name="lidar_red"/>
     </visual>
   </link>
+  <!-- El 0 grados del RPLidar C1 apunta HACIA ATRAS con el montaje actual
+       (flecha del sensor hacia las ruedas delanteras) -> giro de 180 en yaw.
+       Verificado empiricamente contra los ultrasonidos (jul 2026). -->
   <joint name="laser_joint" type="fixed">
     <parent link="base_link"/>
     <child link="laser"/>
-    <origin xyz="${laser_x} 0 ${laser_z}" rpy="0 0 0"/>
+    <origin xyz="${laser_x} 0 ${laser_z}" rpy="0 0 ${pi}"/>
   </joint>
 
   <!-- IMU: frame "imu_link" (usarlo en accelerometer_node, hito 0.5) -->

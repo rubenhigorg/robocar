@@ -5,7 +5,7 @@
 const CAR = {
   wheelbase: 0.175, track: 0.14, wheelR: 0.0325, wheelW: 0.026,
   chasL: 0.35, chasW: 0.175, rearOverhang: 0.085,
-  laser: { x: 0.07 },
+  laser: { x: 0.07, yaw: Math.PI },  // el 0º del C1 mira hacia atrás (montaje actual)
   // izq, centro, der — los laterales miran hacia afuera (~25º, TODO confirmar)
   us: [ { x: 0.24, y: 0.0525, yaw: 0.436 }, { x: 0.25, y: 0, yaw: 0 }, { x: 0.24, y: -0.0525, yaw: -0.436 } ],
 };
@@ -89,7 +89,7 @@ function drawView() {
     for (let i = 0; i < sc.ranges.length; i++) {
       const r = sc.ranges[i];
       if (!isFinite(r) || r < sc.range_min || r > sc.range_max) continue;
-      const a = sc.angle_min + i * sc.angle_increment;
+      const a = sc.angle_min + i * sc.angle_increment + CAR.laser.yaw;
       const px = CAR.laser.x + r * Math.cos(a), py = r * Math.sin(a);
       const [sx, sy] = carToScreen(px, py);
       if (sx < 0 || sy < 0 || sx > W || sy > H) continue;
