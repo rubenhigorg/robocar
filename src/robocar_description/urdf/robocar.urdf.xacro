@@ -23,14 +23,15 @@
   <xacro:property name="track_width"    value="0.140"/>
   <!-- Ruedas de 6.5 cm de diametro — fuente: memoria TFG2 -->
   <xacro:property name="wheel_radius"   value="0.0325"/>
-  <!-- TODO(medir): anchura de la rueda -->
-  <xacro:property name="wheel_width"    value="0.025"/>
-  <!-- TODO(medir): largo x ancho x alto del chasis (caja aproximada) -->
-  <xacro:property name="chassis_length" value="0.280"/>
-  <xacro:property name="chassis_width"  value="0.150"/>
-  <xacro:property name="chassis_height" value="0.090"/>
-  <!-- TODO(medir): cuanto sobresale el chasis por detras del eje trasero -->
-  <xacro:property name="chassis_rear_overhang" value="0.050"/>
+  <!-- Ancho de rueda: 2.6 cm (medido jul 2026) -->
+  <xacro:property name="wheel_width"    value="0.026"/>
+  <!-- Chasis (medido jul 2026): 35 cm largo x 17.5 cm ancho max x 13 cm de
+       alto DESDE EL SUELO (la caja parte de la altura del eje: 13 - 3.25) -->
+  <xacro:property name="chassis_length" value="0.350"/>
+  <xacro:property name="chassis_width"  value="0.175"/>
+  <xacro:property name="chassis_height" value="0.0975"/>
+  <!-- Voladizo trasero: 8 cm (medido jul 2026) -->
+  <xacro:property name="chassis_rear_overhang" value="0.080"/>
 
   <!-- Otros datos del modelo del TFG2 (utiles para Nav2/TEB, no para el URDF):
        angulo max de direccion ~45º -> radio de giro minimo = L/tan(45º) = 0.175 m
