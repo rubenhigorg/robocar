@@ -7,7 +7,7 @@ protocolo JSON de `rosbridge` directamente por WebSocket. Se sirve desde la prop
   (`/scan`), haces de los ultrasonidos, anillos de distancia y zoom (0.6–8 m).
 - **IMU**: sparklines de aceleración y giro en vivo.
 - **Ultrasonidos**: distancias + alarma de parada de emergencia.
-- **Energía**: tensiones y corriente (telemetría pendiente de reparar).
+- **Energía**: tensiones y corriente.
 - **Topics**: frescura de cada fuente de datos.
 
 Está pensada para crecer con el TFM: aquí se añadirán el **mapa** de Cartographer,

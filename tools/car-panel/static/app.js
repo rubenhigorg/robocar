@@ -6,7 +6,8 @@ const CAR = {
   wheelbase: 0.175, track: 0.14, wheelR: 0.0325, wheelW: 0.026,
   chasL: 0.35, chasW: 0.175, rearOverhang: 0.085,
   laser: { x: 0.07 },
-  us: [ { x: 0.24, y: 0.0525 }, { x: 0.25, y: 0 }, { x: 0.24, y: -0.0525 } ], // izq, centro, der
+  // izq, centro, der — los laterales miran hacia afuera (~25º, TODO confirmar)
+  us: [ { x: 0.24, y: 0.0525, yaw: 0.436 }, { x: 0.25, y: 0, yaw: 0 }, { x: 0.24, y: -0.0525, yaw: -0.436 } ],
 };
 
 const TOPICS = [
@@ -108,8 +109,8 @@ function drawView() {
       vc.beginPath();
       const [ox, oy] = carToScreen(o.x, o.y);
       vc.moveTo(ox, oy);
-      const [e1x, e1y] = carToScreen(o.x + dist * Math.cos(spread), o.y + dist * Math.sin(spread));
-      const [e2x, e2y] = carToScreen(o.x + dist * Math.cos(-spread), o.y + dist * Math.sin(-spread));
+      const [e1x, e1y] = carToScreen(o.x + dist * Math.cos(o.yaw + spread), o.y + dist * Math.sin(o.yaw + spread));
+      const [e2x, e2y] = carToScreen(o.x + dist * Math.cos(o.yaw - spread), o.y + dist * Math.sin(o.yaw - spread));
       vc.lineTo(e1x, e1y); vc.lineTo(e2x, e2y); vc.closePath();
       vc.fill(); vc.stroke();
     }

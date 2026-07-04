@@ -157,8 +157,10 @@
     </joint>
   </xacro:if>
 
-  <!-- Ultrasonidos HC-SR04 (izq / centro / der), apuntando hacia delante -->
-  <xacro:macro name="ultrasound" params="name x y">
+  <!-- Ultrasonidos HC-SR04 (izq / centro / der). Los laterales miran hacia
+       afuera ~25 grados (TODO confirmar angulo exacto). -->
+  <xacro:property name="us_yaw" value="0.436"/>
+  <xacro:macro name="ultrasound" params="name x y yaw">
     <link name="${name}">
       <visual>
         <geometry><box size="0.015 0.045 0.02"/></geometry>
@@ -168,11 +170,11 @@
     <joint name="${name}_joint" type="fixed">
       <parent link="base_link"/>
       <child link="${name}"/>
-      <origin xyz="${x} ${y} ${us_z}"/>
+      <origin xyz="${x} ${y} ${us_z}" rpy="0 0 ${yaw}"/>
     </joint>
   </xacro:macro>
-  <xacro:ultrasound name="ultrasound_left"   x="${us_side_x}" y="${us_y}"/>
-  <xacro:ultrasound name="ultrasound_center" x="${us_x}"      y="0"/>
-  <xacro:ultrasound name="ultrasound_right"  x="${us_side_x}" y="${-us_y}"/>
+  <xacro:ultrasound name="ultrasound_left"   x="${us_side_x}" y="${us_y}"  yaw="${us_yaw}"/>
+  <xacro:ultrasound name="ultrasound_center" x="${us_x}"      y="0"        yaw="0"/>
+  <xacro:ultrasound name="ultrasound_right"  x="${us_side_x}" y="${-us_y}" yaw="${-us_yaw}"/>
 
 </robot>
