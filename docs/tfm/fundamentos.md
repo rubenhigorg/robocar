@@ -172,6 +172,19 @@ Todos los valores (`max_angular`, `steer_center`, `steer_span`, `throttle_neutra
     Con el mando, **el humano cierra el bucle**: si el coche gira poco, mueve más el stick. La
     imprecisión de ignorar la velocidad no molesta. Sirve para validar el puente y conducir.
 
+!!! danger "Armado del ESC y regla de oro operativa (aprendida por las malas)"
+    El ESC BLHeli bidireccional **solo se arma si ve señal PWM estable en su neutro real
+    (93.6° ≈ 1530 µs)** — es el valor que el mando emitía en reposo a 20 Hz. Además,
+    **inicializar el PCA9685** (arrancar un nodo o script con `ServoKit`) **resetea el chip y
+    glitchea la señal**: con un ESC armado eso puede disparar los motores. De ahí la regla:
+
+    1. Encender el coche → 2. levantar **un único** nodo de control emitiendo neutro →
+    3. el ESC se arma solo (pitidos) → 4. probar (rampa, nunca escalones) →
+    5. **apagar el coche entero antes de reiniciar software de control.**
+
+    Validado en la sesión de caracterización (jul 2026): movimiento proporcional, parada
+    desde movimiento por watchdog y cero incidencias eléctricas usando rampas de 1.5°/s.
+
 !!! tip "La versión correcta llega con Nav2"
     Para navegación autónoma (Capa 2) se hará la conversión Ackermann fiel, despejando el ángulo de
     volante de la fórmula con **ambos** valores:
