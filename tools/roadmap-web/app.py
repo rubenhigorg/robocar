@@ -20,6 +20,15 @@ AUTH_KEY = os.environ.get("ROADMAP_KEY", "robocar")
 app = FastAPI(title="Robocar TFM Roadmap", docs_url=None, redoc_url=None)
 
 
+@app.middleware("http")
+async def cache_headers(request: Request, call_next):
+    # El HTML nunca se cachea (referencia css/js con ?v=N para bustear al desplegar).
+    response = await call_next(request)
+    if response.headers.get("content-type", "").startswith("text/html"):
+        response.headers["Cache-Control"] = "no-cache"
+    return response
+
+
 @contextmanager
 def db():
     os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
