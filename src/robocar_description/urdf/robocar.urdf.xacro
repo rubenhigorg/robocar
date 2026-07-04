@@ -44,18 +44,29 @@
   <!-- TODO(medir): RPLidar C1 (donde se vaya a montar; z = altura del plano
        de barrido sobre el eje). Si el conector USB queda hacia atras, dejar
        yaw=0; si no, ajustar la rotacion. -->
-  <xacro:property name="laser_x"   value="0.090"/>
-  <xacro:property name="laser_z"   value="0.110"/>
-  <!-- TODO(medir): MPU6050 -->
-  <xacro:property name="imu_x"     value="0.070"/>
-  <xacro:property name="imu_z"     value="0.040"/>
-  <!-- TODO(medir): camara USB frontal -->
+  <!-- LIDAR (medido jul 2026): 7cm de la cinta, plano de barrido a 6cm del
+       suelo (rel. eje: 6 - 3.25). OJO: pendiente confirmar que el barrido
+       tiene 360 grados libres (el coche mide 13cm de alto). -->
+  <xacro:property name="laser_x"   value="0.070"/>
+  <xacro:property name="laser_z"   value="0.0275"/>
+  <!-- IMU (aprox jul 2026): ~21cm de la cinta (pendiente confirmar: la
+       descripcion decia "detras de las delanteras" = ~15-16), chip a 10cm
+       del suelo, centrado. -->
+  <xacro:property name="imu_x"     value="0.210"/>
+  <xacro:property name="imu_z"     value="0.0675"/>
+  <!-- Camara: DESMONTADA (jul 2026, mastil retirado). Reactivar con el flag
+       si vuelve el lane-following. -->
+  <xacro:property name="camera_mounted" value="false"/>
   <xacro:property name="camera_x"  value="0.200"/>
   <xacro:property name="camera_z"  value="0.070"/>
-  <!-- TODO(medir): ultrasonidos HC-SR04 frontales (centro y laterales) -->
-  <xacro:property name="us_x"      value="0.215"/>
-  <xacro:property name="us_y"      value="0.055"/>
-  <xacro:property name="us_z"      value="0.025"/>
+  <!-- Ultrasonidos (medidos jul 2026 DESDE LA COLA; convertidos a cinta
+       restando el voladizo de 8cm): central en el morro (27cm), laterales
+       1cm retranqueados (26cm) y a 3.5cm del borde -> y=+-5.25cm. Altura
+       7cm del suelo (rel. eje: 7 - 3.25). -->
+  <xacro:property name="us_x"      value="0.270"/>
+  <xacro:property name="us_side_x" value="0.260"/>
+  <xacro:property name="us_y"      value="0.0525"/>
+  <xacro:property name="us_z"      value="0.0375"/>
 
   <!-- ══════════════ materiales (colores en Foxglove/RViz) ══════════════ -->
   <material name="body_grey"><color rgba="0.35 0.38 0.42 1"/></material>
@@ -132,21 +143,23 @@
     <origin xyz="${imu_x} 0 ${imu_z}"/>
   </joint>
 
-  <!-- Cámara frontal -->
-  <link name="camera_link">
-    <visual>
-      <geometry><box size="0.025 0.06 0.025"/></geometry>
-      <material name="sensor_blue"/>
-    </visual>
-  </link>
-  <joint name="camera_joint" type="fixed">
-    <parent link="base_link"/>
-    <child link="camera_link"/>
-    <origin xyz="${camera_x} 0 ${camera_z}"/>
-  </joint>
+  <!-- Cámara frontal (desmontada; se incluye solo si camera_mounted=true) -->
+  <xacro:if value="${camera_mounted}">
+    <link name="camera_link">
+      <visual>
+        <geometry><box size="0.025 0.06 0.025"/></geometry>
+        <material name="sensor_blue"/>
+      </visual>
+    </link>
+    <joint name="camera_joint" type="fixed">
+      <parent link="base_link"/>
+      <child link="camera_link"/>
+      <origin xyz="${camera_x} 0 ${camera_z}"/>
+    </joint>
+  </xacro:if>
 
   <!-- Ultrasonidos HC-SR04 (izq / centro / der), apuntando hacia delante -->
-  <xacro:macro name="ultrasound" params="name y">
+  <xacro:macro name="ultrasound" params="name x y">
     <link name="${name}">
       <visual>
         <geometry><box size="0.015 0.045 0.02"/></geometry>
@@ -156,11 +169,11 @@
     <joint name="${name}_joint" type="fixed">
       <parent link="base_link"/>
       <child link="${name}"/>
-      <origin xyz="${us_x} ${y} ${us_z}"/>
+      <origin xyz="${x} ${y} ${us_z}"/>
     </joint>
   </xacro:macro>
-  <xacro:ultrasound name="ultrasound_left"   y="${us_y}"/>
-  <xacro:ultrasound name="ultrasound_center" y="0"/>
-  <xacro:ultrasound name="ultrasound_right"  y="${-us_y}"/>
+  <xacro:ultrasound name="ultrasound_left"   x="${us_side_x}" y="${us_y}"/>
+  <xacro:ultrasound name="ultrasound_center" x="${us_x}"      y="0"/>
+  <xacro:ultrasound name="ultrasound_right"  x="${us_side_x}" y="${-us_y}"/>
 
 </robot>
