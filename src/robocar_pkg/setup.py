@@ -26,6 +26,7 @@ setup(
             'accelerometer_node = robocar_pkg.accelerometer_node:main',
             'distance_node = robocar_pkg.distance_node:main',
             'processing_node = robocar_pkg.processing_node:main',
+            'encoder_node = robocar_pkg.encoder_node:main',
         ],
     },
 )
