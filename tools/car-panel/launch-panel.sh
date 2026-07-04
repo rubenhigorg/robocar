@@ -17,8 +17,8 @@ nohup ros2 run robocar_pkg accelerometer_node > ~/panel_imu.log 2>&1 &
 nohup ros2 run robocar_pkg distance_node > ~/panel_us.log 2>&1 &
 nohup ros2 run robocar_pkg energy_node > ~/panel_energy.log 2>&1 &
 
-# LIDAR si esta conectado
-if [ -e /dev/ttyUSB0 ]; then
+# LIDAR si esta conectado (saltar con NOLIDAR=1 — su motor puede hundir el 5V)
+if [ -e /dev/ttyUSB0 ] && [ -z "$NOLIDAR" ]; then
   sudo chmod 666 /dev/ttyUSB0 2>/dev/null
   nohup ros2 run rplidar_ros rplidar_node --ros-args \
     -p serial_port:=/dev/ttyUSB0 -p serial_baudrate:=460800 -p frame_id:=laser \
