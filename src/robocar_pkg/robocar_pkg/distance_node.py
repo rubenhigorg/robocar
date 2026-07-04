@@ -43,17 +43,22 @@ class UltrasoundNode(Node):
         time.sleep(0.00001)
         GPIO.output(TRIG, False)
 
+        # Timeouts: un HC-SR04 sano responde en <25ms (rango 4m). Sin esto,
+        # un sensor con cableado flojo cuelga el nodo para siempre (jul 2026).
+        t0 = time.time()
+        pulse_start = t0
         while GPIO.input(ECHO) == 0:
             pulse_start = time.time()
+            if pulse_start - t0 > 0.03:
+                return -1.0  # sin eco: sensor mudo/desconectado
 
+        pulse_end = pulse_start
         while GPIO.input(ECHO) == 1:
             pulse_end = time.time()
+            if pulse_end - pulse_start > 0.03:
+                return -1.0  # eco atascado en alto
 
-        pulse_duration = pulse_end - pulse_start
-        distance = pulse_duration * 17150
-        distance = round(distance, 2)
-
-        return distance
+        return round((pulse_end - pulse_start) * 17150, 2)
 
     def talker(self):
         left_distance = self.get_distance(TRIG1, ECHO1)

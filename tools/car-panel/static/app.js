@@ -174,9 +174,10 @@ function tick() {
     $("#gyroVals").textContent = `${fmt(g.x,2)} ${fmt(g.y,2)} ${fmt(g.z,2)}`;
   }
   if (state.us) {
-    $("#usL").textContent = fmt(state.us.left_distance, 0) + " cm";
-    $("#usC").textContent = fmt(state.us.center_distance, 0) + " cm";
-    $("#usR").textContent = fmt(state.us.right_distance, 0) + " cm";
+    const usTxt = v => (v == null) ? "—" : (v < 0 ? "✕ sin señal" : fmt(v, 0) + " cm");
+    $("#usL").textContent = usTxt(state.us.left_distance);
+    $("#usC").textContent = usTxt(state.us.center_distance);
+    $("#usR").textContent = usTxt(state.us.right_distance);
     $("#usStop").classList.toggle("hidden", !state.us.emergency_stop);
   }
   if (state.energy) {
