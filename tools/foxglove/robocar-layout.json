@@ -1,0 +1,100 @@
+{
+  "configById": {
+    "3D!robocar": {
+      "cameraState": {
+        "perspective": true,
+        "distance": 1.6,
+        "phi": 55,
+        "thetaOffset": 45,
+        "target": [0.1, 0, 0],
+        "targetOffset": [0, 0, 0],
+        "targetOrientation": [0, 0, 0, 1],
+        "fovy": 45,
+        "near": 0.01,
+        "far": 100
+      },
+      "followMode": "follow-pose",
+      "followTf": "base_footprint",
+      "scene": {
+        "transforms": {
+          "axisScale": 0.06,
+          "showLabel": false
+        }
+      },
+      "topics": {
+        "/robot_description": { "visible": true },
+        "/scan": {
+          "visible": true,
+          "colorMode": "flat",
+          "flatColor": "#ff5252",
+          "pointSize": 4
+        }
+      },
+      "layers": {},
+      "publish": { "type": "point" }
+    },
+    "Plot!imu_acc": {
+      "title": "IMU · aceleración (m/s²)",
+      "paths": [
+        { "value": "/imu.linear_acceleration.x", "enabled": true, "timestampMethod": "receiveTime" },
+        { "value": "/imu.linear_acceleration.y", "enabled": true, "timestampMethod": "receiveTime" },
+        { "value": "/imu.linear_acceleration.z", "enabled": true, "timestampMethod": "receiveTime" }
+      ],
+      "showLegend": true,
+      "legendDisplay": "floating",
+      "xAxisVal": "timestamp",
+      "followingViewWidth": 30
+    },
+    "Plot!imu_gyro": {
+      "title": "IMU · giro (rad/s)",
+      "paths": [
+        { "value": "/imu.angular_velocity.x", "enabled": true, "timestampMethod": "receiveTime" },
+        { "value": "/imu.angular_velocity.y", "enabled": true, "timestampMethod": "receiveTime" },
+        { "value": "/imu.angular_velocity.z", "enabled": true, "timestampMethod": "receiveTime" }
+      ],
+      "showLegend": true,
+      "legendDisplay": "floating",
+      "xAxisVal": "timestamp",
+      "followingViewWidth": 30
+    },
+    "Plot!ultrasound": {
+      "title": "Ultrasonidos · distancia",
+      "paths": [
+        { "value": "/ultrasound_data.left_distance", "enabled": true, "timestampMethod": "receiveTime" },
+        { "value": "/ultrasound_data.center_distance", "enabled": true, "timestampMethod": "receiveTime" },
+        { "value": "/ultrasound_data.right_distance", "enabled": true, "timestampMethod": "receiveTime" }
+      ],
+      "showLegend": true,
+      "legendDisplay": "floating",
+      "xAxisVal": "timestamp",
+      "followingViewWidth": 30
+    },
+    "RawMessages!energy": {
+      "topicPath": "/energy"
+    }
+  },
+  "globalVariables": {},
+  "userNodes": {},
+  "playbackConfig": { "speed": 1 },
+  "layout": {
+    "direction": "row",
+    "first": "3D!robocar",
+    "second": {
+      "direction": "column",
+      "first": {
+        "direction": "row",
+        "first": "Plot!imu_acc",
+        "second": "Plot!imu_gyro",
+        "splitPercentage": 50
+      },
+      "second": {
+        "direction": "row",
+        "first": "Plot!ultrasound",
+        "second": "RawMessages!energy",
+        "splitPercentage": 60
+      },
+      "splitPercentage": 50
+    },
+    "splitPercentage": 55
+  }
+}
