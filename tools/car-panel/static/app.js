@@ -158,6 +158,31 @@ function drawSpark(canvas, buf, range) {
   }
 }
 
+/* ── batería: % estimado desde la tensión del pack 3S (curva LiPo en reposo) ── */
+const SOC_CURVE = [[10.5,0],[10.8,10],[11.1,20],[11.5,40],[11.8,60],[12.0,75],[12.3,90],[12.6,100]];
+function socFromVoltage(v) {
+  if (v <= SOC_CURVE[0][0]) return 0;
+  if (v >= SOC_CURVE[SOC_CURVE.length-1][0]) return 100;
+  for (let i = 1; i < SOC_CURVE.length; i++) {
+    const [v0,p0] = SOC_CURVE[i-1], [v1,p1] = SOC_CURVE[i];
+    if (v <= v1) return Math.round(p0 + (p1-p0) * (v-v0) / (v1-v0));
+  }
+  return 100;
+}
+function updateBattery() {
+  const el = $("#batt");
+  if (!state.energy || fresh("/energy", 5000) !== "green") {
+    el.className = "batt unknown"; $("#battPct").textContent = "—";
+    $("#battFill").setAttribute("width", 0); return;
+  }
+  const v = state.energy.voltage_battery_1;
+  const pct = socFromVoltage(v);
+  $("#battFill").setAttribute("width", (22 * pct / 100).toFixed(1));
+  $("#battPct").textContent = pct + "%";
+  el.className = "batt " + (pct > 50 ? "ok" : pct > 20 ? "warn" : "bad");
+  el.title = `batería del coche: ${v.toFixed(2)} V (pack 3S)`;
+}
+
 /* ── refresco de la UI ── */
 function fresh(topic, maxMs) {
   const t = state.last[topic];
@@ -187,6 +212,7 @@ function tick() {
     $("#v3").textContent = fmt(state.energy.voltage_battery_3, 2) + " V";
     $("#cur").textContent = fmt(state.energy.current, 2) + " A";
   }
+  updateBattery();
   $("#imuDot").className = "dot " + fresh("/imu", 1500);
   $("#usDot").className = "dot " + fresh("/ultrasound_data", 1500);
   $("#energyDot").className = "dot " + fresh("/energy", 3000);

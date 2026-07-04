@@ -9,6 +9,13 @@ body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
 header { display: flex; justify-content: space-between; align-items: center; padding: 12px clamp(14px,3vw,32px); border-bottom: 1px solid var(--line); }
 h1 { font-size: 1.15rem; margin: 0; }
 .conn { display: flex; align-items: center; gap: 8px; font-size: .85rem; color: var(--muted); }
+.head-right { display: flex; align-items: center; gap: 18px; }
+.batt { display: flex; align-items: center; gap: 7px; font-size: .85rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.batt.ok { color: var(--ok); }
+.batt.warn { color: var(--warn); }
+.batt.bad { color: var(--bad); animation: batt-blink 1.2s infinite; }
+.batt.unknown { color: var(--muted); }
+@keyframes batt-blink { 50% { opacity: .35; } }
 
 .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; flex: none; }
 .dot.green { background: var(--ok); box-shadow: 0 0 6px var(--ok); }

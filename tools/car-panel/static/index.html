@@ -10,9 +10,19 @@
 <body>
   <header>
     <h1>🚗 Robocar</h1>
-    <div class="conn">
-      <span id="connDot" class="dot red"></span>
-      <span id="connText">conectando…</span>
+    <div class="head-right">
+      <div id="batt" class="batt unknown" title="batería del coche">
+        <svg width="30" height="14" viewBox="0 0 30 14">
+          <rect x="0.5" y="0.5" width="26" height="13" rx="3" fill="none" stroke="currentColor" stroke-width="1.4"/>
+          <rect x="27.5" y="4" width="2.5" height="6" rx="1" fill="currentColor"/>
+          <rect id="battFill" x="2.5" y="2.5" width="0" height="9" rx="1.5" fill="currentColor"/>
+        </svg>
+        <span id="battPct">—</span>
+      </div>
+      <div class="conn">
+        <span id="connDot" class="dot red"></span>
+        <span id="connText">conectando…</span>
+      </div>
     </div>
   </header>
 
