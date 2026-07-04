@@ -34,11 +34,13 @@ class CarControlNode(Node):
 
         # Parametros de calibracion (ajustables en caliente con `ros2 param set`).
         # Rango de entrada: coincide con las escalas de teleop (0.7 m/s, 0.4 rad/s).
-        # ESC calibrado empiricamente (jul 2026): reposo 91.8, el movimiento empieza
-        # justo por debajo (~90) y acelera al BAJAR el angulo (27 = a fondo).
+        # ESC BLHeli bidireccional: NEUTRO = 93.6 (1530us aprox). SOLO se arma si ve
+        # senal estable en su neutro al encender (el mando lo bombardeaba a 20Hz con
+        # 93.6). Adelante = BAJAR el angulo (27 = a fondo). NO cambiar throttle_stop
+        # sin recalibrar el armado.
         self.declare_parameter('max_linear', 0.7)          # m/s -> throttle_full
         self.declare_parameter('max_angular', 0.4)         # rad/s -> direccion a tope
-        self.declare_parameter('throttle_stop', 91.8)      # reposo: para y arma el ESC
+        self.declare_parameter('throttle_stop', 93.6)      # NEUTRO: para y ARMA el ESC
         self.declare_parameter('throttle_start', 90.0)     # umbral donde empieza a moverse
         self.declare_parameter('throttle_full', 78.0)      # angulo a max_linear (conservador)
         self.declare_parameter('steer_center', 105.0)      # servo direccion centrado
