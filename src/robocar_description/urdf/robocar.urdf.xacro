@@ -30,8 +30,8 @@
   <xacro:property name="chassis_length" value="0.350"/>
   <xacro:property name="chassis_width"  value="0.175"/>
   <xacro:property name="chassis_height" value="0.0975"/>
-  <!-- Voladizo trasero: 8 cm (medido jul 2026) -->
-  <xacro:property name="chassis_rear_overhang" value="0.080"/>
+  <!-- Voladizo trasero: 8.5-9 cm (medido jul 2026) -->
+  <xacro:property name="chassis_rear_overhang" value="0.085"/>
 
   <!-- Otros datos del modelo del TFG2 (utiles para Nav2/TEB, no para el URDF):
        angulo max de direccion ~45º -> radio de giro minimo = L/tan(45º) = 0.175 m
@@ -44,14 +44,14 @@
   <!-- TODO(medir): RPLidar C1 (donde se vaya a montar; z = altura del plano
        de barrido sobre el eje). Si el conector USB queda hacia atras, dejar
        yaw=0; si no, ajustar la rotacion. -->
-  <!-- LIDAR (medido jul 2026): 7cm de la cinta, plano de barrido a 6cm del
-       suelo (rel. eje: 6 - 3.25). OJO: pendiente confirmar que el barrido
-       tiene 360 grados libres (el coche mide 13cm de alto). -->
+  <!-- LIDAR (medido jul 2026): 7cm del eje trasero, plano de barrido a 6cm
+       del suelo (rel. eje: 6 - 3.25). Posible oclusion SOLO en el sector
+       trasero (radiador de la RPi sobre el eje): verificar con /scan en
+       Foxglove y filtrar sector o elevar el LIDAR si molesta. -->
   <xacro:property name="laser_x"   value="0.070"/>
   <xacro:property name="laser_z"   value="0.0275"/>
-  <!-- IMU (aprox jul 2026): ~21cm de la cinta (pendiente confirmar: la
-       descripcion decia "detras de las delanteras" = ~15-16), chip a 10cm
-       del suelo, centrado. -->
+  <!-- IMU (confirmado jul 2026): 21-22cm del eje trasero, chip a 10cm del
+       suelo, centrado. -->
   <xacro:property name="imu_x"     value="0.210"/>
   <xacro:property name="imu_z"     value="0.0675"/>
   <!-- Camara: DESMONTADA (jul 2026, mastil retirado). Reactivar con el flag
@@ -59,12 +59,11 @@
   <xacro:property name="camera_mounted" value="false"/>
   <xacro:property name="camera_x"  value="0.200"/>
   <xacro:property name="camera_z"  value="0.070"/>
-  <!-- Ultrasonidos (medidos jul 2026 DESDE LA COLA; convertidos a cinta
-       restando el voladizo de 8cm): central en el morro (27cm), laterales
-       1cm retranqueados (26cm) y a 3.5cm del borde -> y=+-5.25cm. Altura
-       7cm del suelo (rel. eje: 7 - 3.25). -->
-  <xacro:property name="us_x"      value="0.270"/>
-  <xacro:property name="us_side_x" value="0.260"/>
+  <!-- Ultrasonidos (confirmados jul 2026, medidos desde el eje trasero):
+       central a 25cm, laterales 1cm retranqueados (24cm) y a 3.5cm del
+       borde -> y=+-5.25cm. Altura 7cm del suelo (rel. eje: 7 - 3.25). -->
+  <xacro:property name="us_x"      value="0.250"/>
+  <xacro:property name="us_side_x" value="0.240"/>
   <xacro:property name="us_y"      value="0.0525"/>
   <xacro:property name="us_z"      value="0.0375"/>
 
