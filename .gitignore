@@ -1,3 +1,13 @@
+# Entornos y dependencias (NUNCA trackear)
+.venv/
+node_modules/
+
+# Builds
+site/
+src/build/
+src/install/
+src/log/
+
 # Binarios de prueba
 pruebas/VL53L0X_rasp
 pruebas/rplidar/rplidar_check
@@ -7,8 +17,11 @@ pruebas/rplidar/rplidar_stream
 __pycache__/
 *.py[cod]
 
-# MkDocs build
-site/
+# Secretos y datos locales
+.env
+tools/roadmap-web/data/
 
-# macOS
+# Backups y SO
+*.backup
+*.tgz
 .DS_Store
