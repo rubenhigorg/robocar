@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Robocar · Panel de control</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚗</text></svg>">
+</head>
+<body>
+  <header>
+    <h1>🚗 Robocar</h1>
+    <div class="conn">
+      <span id="connDot" class="dot red"></span>
+      <span id="connText">conectando…</span>
+    </div>
+  </header>
+
+  <main>
+    <section class="panel view-panel">
+      <div class="panel-head">
+        <h2>Vista cenital</h2>
+        <div class="zoom">
+          <button data-r="0.6">0.6 m</button>
+          <button data-r="1.5" class="active">1.5 m</button>
+          <button data-r="4">4 m</button>
+          <button data-r="8">8 m</button>
+        </div>
+      </div>
+      <div class="view-wrap">
+        <canvas id="view" width="640" height="640"></canvas>
+      </div>
+      <div class="legend">
+        <span><i class="sw us"></i> ultrasonidos</span>
+        <span><i class="sw scan"></i> LIDAR /scan</span>
+        <span id="scanInfo" class="muted"></span>
+      </div>
+    </section>
+
+    <section class="side">
+      <div class="panel">
+        <div class="panel-head"><h2>IMU</h2><span id="imuDot" class="dot red"></span></div>
+        <div class="spark-block">
+          <div class="spark-title">aceleración (m/s²) <span id="accVals" class="vals"></span></div>
+          <canvas id="accSpark" width="300" height="60"></canvas>
+        </div>
+        <div class="spark-block">
+          <div class="spark-title">giro (rad/s) <span id="gyroVals" class="vals"></span></div>
+          <canvas id="gyroSpark" width="300" height="60"></canvas>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><h2>Ultrasonidos</h2><span id="usDot" class="dot red"></span></div>
+        <div class="us-grid">
+          <div class="us-cell"><div class="us-label">izq</div><div id="usL" class="us-val">—</div></div>
+          <div class="us-cell"><div class="us-label">centro</div><div id="usC" class="us-val">—</div></div>
+          <div class="us-cell"><div class="us-label">der</div><div id="usR" class="us-val">—</div></div>
+        </div>
+        <div id="usStop" class="alert hidden">🛑 parada de emergencia activa</div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><h2>Energía</h2><span id="energyDot" class="dot red"></span></div>
+        <div class="energy-grid">
+          <div><span class="e-label">bat 1</span><span id="v1" class="e-val">—</span></div>
+          <div><span class="e-label">bat 2</span><span id="v2" class="e-val">—</span></div>
+          <div><span class="e-label">bat 3</span><span id="v3" class="e-val">—</span></div>
+          <div><span class="e-label">corriente</span><span id="cur" class="e-val">—</span></div>
+        </div>
+        <div class="muted small">⚠ taps del INA3221 pendientes de reparar — valores no fiables</div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><h2>Topics</h2></div>
+        <ul id="topicList" class="topics"></ul>
+      </div>
+    </section>
+  </main>
+
+  <footer>panel del Robocar · rosbridge ws://<span id="host"></span>:9090 · hecho en casa, sin dependencias</footer>
+  <script src="app.js"></script>
+</body>
+</html>
