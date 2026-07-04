@@ -7,12 +7,17 @@
 
 source /opt/ros/humble/setup.bash
 source /home/lab/robocar/src/install/setup.sh
-source /home/lab/robocar/.venv/bin/activate 2>/dev/null
 
 cd /home/lab/robocar
 
+# Con python del sistema (el venv NO tiene netifaces/tornado y mata rosbridge):
 nohup ros2 launch robocar_description description.launch.py > ~/panel_rsp.log 2>&1 &
 nohup ros2 launch rosbridge_server rosbridge_websocket_launch.xml > ~/panel_bridge.log 2>&1 &
+nohup python3 -m http.server 8080 --directory /home/lab/robocar/tools/car-panel/static \
+  > ~/panel_web.log 2>&1 &
+
+# El venv SOLO para los nodos de sensores (drivers adafruit/smbus/GPIO):
+source /home/lab/robocar/.venv/bin/activate 2>/dev/null
 nohup ros2 run robocar_pkg accelerometer_node > ~/panel_imu.log 2>&1 &
 nohup ros2 run robocar_pkg distance_node > ~/panel_us.log 2>&1 &
 nohup ros2 run robocar_pkg energy_node > ~/panel_energy.log 2>&1 &
@@ -26,11 +31,7 @@ if [ -e /dev/ttyUSB0 ] && [ -z "$NOLIDAR" ]; then
   echo "LIDAR detectado y lanzado"
 fi
 
-# web estatica
-nohup python3 -m http.server 8080 --directory /home/lab/robocar/tools/car-panel/static \
-  > ~/panel_web.log 2>&1 &
-
-sleep 4
+sleep 6
 echo "── Panel del Robocar ──"
 echo "web:       http://robocar.local:8080"
 echo "rosbridge: ws://robocar.local:9090"
