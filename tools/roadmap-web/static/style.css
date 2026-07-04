@@ -89,6 +89,28 @@ main { padding: 18px clamp(16px, 4vw, 48px) 40px; display: grid; gap: 18px; }
 .add-task { margin-top: 10px; font-size: .82rem; color: var(--muted); background: none; border: 1px dashed var(--line); width: 100%; padding: 7px; border-radius: 8px; }
 .add-task:hover { color: var(--text); }
 
+/* subtareas */
+.task.sub { margin-left: 30px; border-left: 2px solid var(--line); padding-left: 10px; }
+.task.sub .task-title { font-size: .88rem; font-weight: 500; }
+.add-sub { flex: none; font-size: .7rem; color: var(--muted); background: none; border: 1px dashed var(--line); border-radius: 6px; padding: 2px 6px; margin-top: 3px; }
+.add-sub:hover { color: var(--accent); border-color: var(--accent); }
+
+/* dependencias */
+.dep-row { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; margin-top: 5px; }
+.dep-label { font-size: .72rem; color: var(--muted); }
+.dep-chip {
+  font-size: .72rem; padding: 1px 8px; border-radius: 12px; cursor: pointer;
+  background: #33290f; color: var(--progress); border: 1px solid #4a3b14;
+}
+.dep-chip.ok { background: #12301d; color: var(--done); border-color: #1d4a2e; text-decoration: line-through; }
+.dep-chip:hover { border-color: var(--danger); }
+.dep-add { font-size: .7rem; color: var(--muted); background: none; border: 1px dashed var(--line); border-radius: 12px; padding: 1px 7px; }
+.dep-add:hover { color: var(--accent); border-color: var(--accent); }
+
+/* bloqueadas */
+.task.blocked .status.pending { opacity: .55; border-style: dashed; }
+.blocked-badge { font-size: .8rem; }
+
 .panel h2 { margin: 0 0 10px; font-size: 1.02rem; }
 .decisions { display: grid; gap: 8px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
 .decision { background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }

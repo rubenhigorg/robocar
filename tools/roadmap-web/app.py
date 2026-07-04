@@ -65,8 +65,17 @@ def init_db():
                 actor TEXT DEFAULT '',
                 action TEXT NOT NULL
             );
+            CREATE TABLE IF NOT EXISTS task_deps(
+                task_id INTEGER NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+                depends_on_id INTEGER NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+                PRIMARY KEY (task_id, depends_on_id)
+            );
             """
         )
+        # Migración no destructiva: subtareas (parent_id) sobre BDs existentes.
+        cols = [r["name"] for r in conn.execute("PRAGMA table_info(tasks)")]
+        if "parent_id" not in cols:
+            conn.execute("ALTER TABLE tasks ADD COLUMN parent_id INTEGER REFERENCES tasks(id)")
         if conn.execute("SELECT COUNT(*) c FROM layers").fetchone()["c"] == 0:
             seed(conn)
 
@@ -144,10 +153,57 @@ def get_state():
             "tasks": [dict(r) for r in conn.execute("SELECT * FROM tasks ORDER BY position, id")],
             "decisions": [dict(r) for r in conn.execute("SELECT * FROM decisions ORDER BY code")],
             "events": [dict(r) for r in conn.execute("SELECT * FROM events ORDER BY id DESC LIMIT 40")],
+            "deps": [dict(r) for r in conn.execute("SELECT * FROM task_deps")],
         }
 
 
-TASK_FIELDS = {"title", "detail", "status", "assignee", "position", "layer_id"}
+def creates_cycle(conn, task_id: int, depends_on_id: int) -> bool:
+    """¿Añadir task_id→depends_on_id crearía un ciclo? DFS sobre las deps existentes."""
+    stack, seen = [depends_on_id], set()
+    while stack:
+        cur = stack.pop()
+        if cur == task_id:
+            return True
+        if cur in seen:
+            continue
+        seen.add(cur)
+        stack.extend(r["depends_on_id"] for r in conn.execute(
+            "SELECT depends_on_id FROM task_deps WHERE task_id=?", (cur,)))
+    return False
+
+
+@app.post("/api/tasks/{task_id}/deps")
+async def add_dep(task_id: int, request: Request,
+                  authorization: Optional[str] = Header(None), x_actor: str = Header("")):
+    require_key(authorization)
+    dep_id = int((await request.json()).get("depends_on_id", 0))
+    if dep_id == task_id:
+        raise HTTPException(status_code=400, detail="Una tarea no puede depender de sí misma")
+    with db() as conn:
+        t = conn.execute("SELECT title FROM tasks WHERE id=?", (task_id,)).fetchone()
+        d = conn.execute("SELECT title FROM tasks WHERE id=?", (dep_id,)).fetchone()
+        if not t or not d:
+            raise HTTPException(status_code=404, detail="Tarea inexistente")
+        if creates_cycle(conn, task_id, dep_id):
+            raise HTTPException(status_code=409, detail="Crearía un ciclo de dependencias")
+        conn.execute("INSERT OR IGNORE INTO task_deps(task_id, depends_on_id) VALUES(?,?)",
+                     (task_id, dep_id))
+        log_event(conn, x_actor, f"Dependencia: «{t['title']}» ahora depende de «{d['title']}»")
+    return {"ok": True}
+
+
+@app.delete("/api/tasks/{task_id}/deps/{dep_id}")
+def remove_dep(task_id: int, dep_id: int,
+               authorization: Optional[str] = Header(None), x_actor: str = Header("")):
+    require_key(authorization)
+    with db() as conn:
+        conn.execute("DELETE FROM task_deps WHERE task_id=? AND depends_on_id=?", (task_id, dep_id))
+        t = conn.execute("SELECT title FROM tasks WHERE id=?", (task_id,)).fetchone()
+        log_event(conn, x_actor, f"Dependencia eliminada de «{t['title'] if t else task_id}»")
+    return {"ok": True}
+
+
+TASK_FIELDS = {"title", "detail", "status", "assignee", "position", "layer_id", "parent_id"}
 DECISION_FIELDS = {"code", "title", "status", "detail"}
 LAYER_FIELDS = {"title", "subtitle", "position"}
 
@@ -199,12 +255,15 @@ async def create_task(request: Request,
     with db() as conn:
         pos = conn.execute("SELECT COALESCE(MAX(position),0)+1 p FROM tasks WHERE layer_id=?",
                            (body["layer_id"],)).fetchone()["p"]
+        parent_id = body.get("parent_id")
         cur = conn.execute(
-            "INSERT INTO tasks(layer_id, title, detail, status, assignee, position) VALUES(?,?,?,?,?,?)",
+            "INSERT INTO tasks(layer_id, title, detail, status, assignee, position, parent_id)"
+            " VALUES(?,?,?,?,?,?,?)",
             (body["layer_id"], body["title"], body.get("detail", ""),
-             body.get("status", "pending"), body.get("assignee", ""), pos),
+             body.get("status", "pending"), body.get("assignee", ""), pos, parent_id),
         )
-        log_event(conn, x_actor, f"Tarea «{body['title']}» creada")
+        kind = "Subtarea" if parent_id else "Tarea"
+        log_event(conn, x_actor, f"{kind} «{body['title']}» creada")
         return {"ok": True, "id": cur.lastrowid}
 
 
@@ -216,6 +275,8 @@ def delete_task(task_id: int,
         row = conn.execute("SELECT title FROM tasks WHERE id=?", (task_id,)).fetchone()
         if not row:
             raise HTTPException(status_code=404, detail="No existe")
+        # Las subtareas huérfanas suben a nivel raíz (no se borran en cascada).
+        conn.execute("UPDATE tasks SET parent_id=NULL WHERE parent_id=?", (task_id,))
         conn.execute("DELETE FROM tasks WHERE id=?", (task_id,))
         log_event(conn, x_actor, f"Tarea «{row['title']}» eliminada")
     return {"ok": True}

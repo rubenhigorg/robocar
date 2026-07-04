@@ -59,6 +59,27 @@ function pct(tasks) {
   return Math.round(100 * tasks.filter(t => t.status === "done").length / tasks.length);
 }
 
+/* ---------- dependencias ---------- */
+const taskById = id => state.tasks.find(t => t.id === id);
+const depsOf = id => (state.deps || []).filter(d => d.task_id === id).map(d => d.depends_on_id);
+const isBlocked = t =>
+  t.status !== "done" &&
+  depsOf(t.id).some(id => { const d = taskById(id); return d && d.status !== "done"; });
+
+function pickTask(excludeId) {
+  // Selector simple: lista numerada por capa → el usuario teclea el id.
+  const lines = [];
+  for (const l of state.layers) {
+    const lt = state.tasks.filter(t => t.layer_id === l.id);
+    if (!lt.length) continue;
+    lines.push(`— ${l.title.split("—")[0].trim()} —`);
+    for (const t of lt) if (t.id !== excludeId) lines.push(`  ${t.id}: ${t.title.slice(0, 48)}`);
+  }
+  const v = prompt("¿De qué tarea depende? Escribe su nº:\n\n" + lines.join("\n"));
+  const id = parseInt(v, 10);
+  return Number.isFinite(id) ? id : null;
+}
+
 function render() {
   const { layers, tasks, decisions, events } = state;
 
@@ -93,7 +114,13 @@ function render() {
     sec.innerHTML = `
       <div class="layer-head"><h2>${esc(l.title)}</h2><span class="sub">${esc(l.subtitle)}</span></div>
       <div class="layer-bar"><div class="layer-fill" style="width:${pct(lt)}%"></div></div>`;
-    for (const t of lt) sec.appendChild(taskRow(t));
+    // Raíces primero; bajo cada una, sus subtareas (1 nivel).
+    const ids = new Set(lt.map(t => t.id));
+    const roots = lt.filter(t => !t.parent_id || !ids.has(t.parent_id));
+    for (const t of roots) {
+      sec.appendChild(taskRow(t, false));
+      for (const s of lt.filter(x => x.parent_id === t.id)) sec.appendChild(taskRow(s, true));
+    }
     const add = document.createElement("button");
     add.className = "add-task"; add.textContent = "+ añadir tarea";
     add.onclick = async () => {
@@ -133,28 +160,66 @@ function render() {
   }
 }
 
-function taskRow(t) {
+function taskRow(t, isSub) {
+  const blocked = isBlocked(t);
   const row = document.createElement("div");
-  row.className = "task " + t.status;
+  row.className = "task " + t.status + (isSub ? " sub" : "") + (blocked ? " blocked" : "");
 
   const st = document.createElement("span");
   st.className = "status " + t.status;
   st.textContent = STATUS_LABEL[t.status] || t.status;
-  st.title = "Clic para ciclar estado";
+  st.title = blocked ? "Bloqueada: tiene dependencias sin completar" : "Clic para ciclar estado";
   st.onclick = () => {
     const next = STATUS_CYCLE[(STATUS_CYCLE.indexOf(t.status) + 1) % STATUS_CYCLE.length];
+    if (next === "done" && blocked &&
+        !confirm("⛓ Esta tarea tiene dependencias sin completar. ¿Marcarla como hecha igualmente?")) return;
     mutate("PATCH", `api/tasks/${t.id}`, { status: next });
   };
 
   const body = document.createElement("div");
   body.className = "task-body";
   const title = document.createElement("div");
-  title.className = "task-title"; title.textContent = t.title;
-  editable(title, v => mutate("PATCH", `api/tasks/${t.id}`, { title: v }));
+  title.className = "task-title";
+  if (blocked) {
+    const lock = document.createElement("span");
+    lock.className = "blocked-badge"; lock.textContent = "🔒 ";
+    lock.title = "Bloqueada por dependencias";
+    title.appendChild(lock);
+  }
+  title.appendChild(document.createTextNode(t.title));
+  editable(title, v => mutate("PATCH", `api/tasks/${t.id}`, { title: v.replace(/^🔒\s*/, "") }));
   const detail = document.createElement("div");
   detail.className = "task-detail"; detail.textContent = t.detail;
   editable(detail, v => mutate("PATCH", `api/tasks/${t.id}`, { detail: v }));
   body.append(title, detail);
+
+  // Chips de dependencias: «depende de» + botones para quitar/añadir.
+  const depIds = depsOf(t.id);
+  const depRow = document.createElement("div");
+  depRow.className = "dep-row";
+  if (depIds.length) {
+    const lbl = document.createElement("span");
+    lbl.className = "dep-label"; lbl.textContent = "⛓ depende de:";
+    depRow.appendChild(lbl);
+    for (const id of depIds) {
+      const d = taskById(id);
+      const chip = document.createElement("span");
+      chip.className = "dep-chip" + (d && d.status === "done" ? " ok" : "");
+      chip.textContent = d ? d.title.slice(0, 32) : `#${id}`;
+      chip.title = "Clic para eliminar esta dependencia";
+      chip.onclick = () => mutate("DELETE", `api/tasks/${t.id}/deps/${id}`);
+      depRow.appendChild(chip);
+    }
+  }
+  const addDep = document.createElement("button");
+  addDep.className = "dep-add"; addDep.textContent = depIds.length ? "+" : "+ dep";
+  addDep.title = "Añadir dependencia";
+  addDep.onclick = () => {
+    const id = pickTask(t.id);
+    if (id) mutate("POST", `api/tasks/${t.id}/deps`, { depends_on_id: id });
+  };
+  depRow.appendChild(addDep);
+  body.appendChild(depRow);
 
   const asg = document.createElement("span");
   asg.className = "assignee" + (t.assignee ? "" : " empty");
@@ -171,7 +236,17 @@ function taskRow(t) {
     if (confirm(`¿Eliminar «${t.title}»?`)) mutate("DELETE", `api/tasks/${t.id}`);
   };
 
-  row.append(st, body, asg, del);
+  row.append(st, body, asg);
+  if (!isSub) {
+    const sub = document.createElement("button");
+    sub.className = "add-sub"; sub.textContent = "+sub"; sub.title = "Añadir subtarea";
+    sub.onclick = async () => {
+      const title = prompt(`Subtarea de «${t.title.slice(0, 40)}»:`);
+      if (title) await mutate("POST", "api/tasks", { layer_id: t.layer_id, title, parent_id: t.id });
+    };
+    row.append(sub);
+  }
+  row.append(del);
   return row;
 }
 
