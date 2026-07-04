@@ -17,38 +17,44 @@
        Valores actuales = típicos de un chasis RC 1/10, solo orientativos.
        ══════════════════════════════════════════════════════════════════ -->
 
-  <!-- TODO(medir): distancia entre eje trasero y delantero (batalla) -->
-  <xacro:property name="wheelbase"      value="0.260"/>
-  <!-- TODO(medir): distancia entre centros de ruedas izq/der (via) -->
-  <xacro:property name="track_width"    value="0.180"/>
-  <!-- TODO(medir): diámetro de rueda / 2 -->
+  <!-- Batalla (L): 17.5 cm — fuente: memoria TFG2, modelo del sistema -->
+  <xacro:property name="wheelbase"      value="0.175"/>
+  <!-- Via (D): 14 cm — fuente: memoria TFG2, modelo del sistema -->
+  <xacro:property name="track_width"    value="0.140"/>
+  <!-- Ruedas de 6.5 cm de diametro — fuente: memoria TFG2 -->
   <xacro:property name="wheel_radius"   value="0.0325"/>
   <!-- TODO(medir): anchura de la rueda -->
-  <xacro:property name="wheel_width"    value="0.026"/>
+  <xacro:property name="wheel_width"    value="0.025"/>
   <!-- TODO(medir): largo x ancho x alto del chasis (caja aproximada) -->
-  <xacro:property name="chassis_length" value="0.360"/>
-  <xacro:property name="chassis_width"  value="0.190"/>
-  <xacro:property name="chassis_height" value="0.100"/>
+  <xacro:property name="chassis_length" value="0.280"/>
+  <xacro:property name="chassis_width"  value="0.150"/>
+  <xacro:property name="chassis_height" value="0.090"/>
   <!-- TODO(medir): cuanto sobresale el chasis por detras del eje trasero -->
   <xacro:property name="chassis_rear_overhang" value="0.050"/>
+
+  <!-- Otros datos del modelo del TFG2 (utiles para Nav2/TEB, no para el URDF):
+       angulo max de direccion ~45º -> radio de giro minimo = L/tan(45º) = 0.175 m
+       velocidad operativa probada = 0.18 m/s -->
+
+  <!-- Placeholders de sensores reescalados al tamano real del chasis -->
 
   <!-- Sensores: posicion respecto a base_link (centro eje trasero).
        x adelante, y izquierda, z arriba desde la altura del eje. -->
   <!-- TODO(medir): RPLidar C1 (donde se vaya a montar; z = altura del plano
        de barrido sobre el eje). Si el conector USB queda hacia atras, dejar
        yaw=0; si no, ajustar la rotacion. -->
-  <xacro:property name="laser_x"   value="0.130"/>
-  <xacro:property name="laser_z"   value="0.120"/>
+  <xacro:property name="laser_x"   value="0.090"/>
+  <xacro:property name="laser_z"   value="0.110"/>
   <!-- TODO(medir): MPU6050 -->
-  <xacro:property name="imu_x"     value="0.100"/>
-  <xacro:property name="imu_z"     value="0.050"/>
+  <xacro:property name="imu_x"     value="0.070"/>
+  <xacro:property name="imu_z"     value="0.040"/>
   <!-- TODO(medir): camara USB frontal -->
-  <xacro:property name="camera_x"  value="0.300"/>
-  <xacro:property name="camera_z"  value="0.080"/>
+  <xacro:property name="camera_x"  value="0.200"/>
+  <xacro:property name="camera_z"  value="0.070"/>
   <!-- TODO(medir): ultrasonidos HC-SR04 frontales (centro y laterales) -->
-  <xacro:property name="us_x"      value="0.320"/>
-  <xacro:property name="us_y"      value="0.070"/>
-  <xacro:property name="us_z"      value="0.030"/>
+  <xacro:property name="us_x"      value="0.215"/>
+  <xacro:property name="us_y"      value="0.055"/>
+  <xacro:property name="us_z"      value="0.025"/>
 
   <!-- ══════════════ materiales (colores en Foxglove/RViz) ══════════════ -->
   <material name="body_grey"><color rgba="0.35 0.38 0.42 1"/></material>
