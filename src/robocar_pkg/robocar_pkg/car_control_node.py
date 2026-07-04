@@ -4,9 +4,14 @@ from rclpy.node import Node
 from sensor_msgs.msg import Joy
 from adafruit_servokit import ServoKit
 from std_msgs.msg import Float32MultiArray
+from geometry_msgs.msg import Twist
 
 
 class CarControlNode(Node):
+
+    # REGLA DURA (Ruben): nunca superar el 50% de gas. Rango ESC: 91.8 (reposo)
+    # -> 27 (a fondo); el 50% es 59.4. Ningun parametro puede saltarse este limite.
+    THROTTLE_HARD_FLOOR = 59.4
 
     def __init__(self):
         super().__init__('car_control_node')
@@ -20,8 +25,36 @@ class CarControlNode(Node):
             'lane_info',
             self.lane_info_callback,
             10)
+        # Nav2 / teleop hablan por /cmd_vel (Twist). Hito 0.2: puente Ackermann.
+        self.subscription_cmd_vel = self.create_subscription(
+            Twist,
+            'cmd_vel',
+            self.cmd_vel_callback,
+            10)
+
+        # Parametros de calibracion (ajustables en caliente con `ros2 param set`).
+        # Rango de entrada: coincide con las escalas de teleop (0.7 m/s, 0.4 rad/s).
+        # ESC calibrado empiricamente (jul 2026): reposo 91.8, el movimiento empieza
+        # justo por debajo (~90) y acelera al BAJAR el angulo (27 = a fondo).
+        self.declare_parameter('max_linear', 0.7)          # m/s -> throttle_full
+        self.declare_parameter('max_angular', 0.4)         # rad/s -> direccion a tope
+        self.declare_parameter('throttle_stop', 91.8)      # reposo: para y arma el ESC
+        self.declare_parameter('throttle_start', 90.0)     # umbral donde empieza a moverse
+        self.declare_parameter('throttle_full', 78.0)      # angulo a max_linear (conservador)
+        self.declare_parameter('steer_center', 105.0)      # servo direccion centrado
+        self.declare_parameter('steer_span', 65.0)         # desviacion max de direccion (grados)
+        self.declare_parameter('cmd_vel_timeout', 0.5)     # s sin /cmd_vel -> throttle a neutro
+        self.declare_parameter('max_throttle_step', 0.5)   # grados/comando al DAR gas (rampa anti-pico)
+
         self.kit = ServoKit(channels=16)
         self.autonomous_mode = False
+        self.current_throttle = None
+        # Reposo al arrancar: para los motores y arma el ESC (necesita ver
+        # senal de gas-cero un tiempo antes de aceptar comandos).
+        self.set_throttle_neutral()
+        # Watchdog: si el publicador de /cmd_vel muere, no dejar el throttle latcheado.
+        self.last_cmd_vel_time = None
+        self.watchdog_timer = self.create_timer(0.1, self.watchdog_check)
         self.get_logger().info("CarControlNode initialized")
 
 
@@ -58,8 +91,89 @@ class CarControlNode(Node):
             self.get_logger().info('cmd_vel - Motor 0: %s' % angleMotor)
             self.kit.servo[0].angle = 93.6# float(angleMotor)#93.6
             self.kit.servo[1].angle = 93.6# float(angleMotor)#93.6
-    
-    
+
+
+    def cmd_vel_callback(self, msg):
+        # Puente Ackermann: /cmd_vel (Twist) -> servo direccion + ESC.
+        # Solo actua en modo autonomo (igual que lane_info).
+        if not self.autonomous_mode:
+            return
+
+        self.last_cmd_vel_time = self.get_clock().now()
+        max_ang = self.get_parameter('max_angular').value
+        steer_center = self.get_parameter('steer_center').value
+        steer_span = self.get_parameter('steer_span').value
+        max_lin = self.get_parameter('max_linear').value
+        stop = self.get_parameter('throttle_stop').value
+        start = self.get_parameter('throttle_start').value
+        full = self.get_parameter('throttle_full').value
+
+        # Direccion: angular.z (rad/s) -> canal 2. angular.z > 0 (giro a la izq) -> servo > centro.
+        ang = msg.angular.z
+        steer = steer_center + (ang / max_ang) * steer_span if max_ang else steer_center
+        steer = self.clamp(steer, 40.0, 170.0)
+        self.kit.servo[2].angle = float(steer)
+
+        # Traccion: linear.x (m/s) -> canales 0 y 1. El ESC avanza BAJANDO el
+        # angulo desde throttle_start; lin<=0 -> reposo (sin marcha atras aun).
+        lin = msg.linear.x
+        if lin <= 0.0 or max_lin <= 0.0:
+            throttle = stop
+        else:
+            frac = min(lin / max_lin, 1.0)
+            throttle = start - frac * (start - full)
+        throttle = self.clamp(throttle, self.THROTTLE_HARD_FLOOR, stop)
+        # Rampa anti-pico (incidentes jul 2026): DAR gas (bajar angulo) se limita
+        # a max_throttle_step por comando; QUITAR gas (subir) es instantaneo.
+        step = self.get_parameter('max_throttle_step').value
+        prev = self.current_throttle if self.current_throttle is not None else stop
+        if throttle < prev - step:
+            throttle = prev - step
+        self.write_throttle(throttle)
+
+        self.get_logger().info(
+            'cmd_vel -> steer=%.1f throttle=%.1f (lin=%.2f ang=%.2f)'
+            % (steer, throttle, msg.linear.x, ang))
+
+    def clamp(self, x, lo, hi):
+        return max(lo, min(hi, x))
+
+    def write_throttle(self, angle):
+        # Escritura I2C con reintentos: el arranque del motor mete ruido en el bus
+        # y una escritura fallida NO puede quedar silenciada (incidentes jul 2026).
+        ok = True
+        for ch in (0, 1):
+            for attempt in range(3):
+                try:
+                    self.kit.servo[ch].angle = float(angle)
+                    break
+                except OSError as e:
+                    self.get_logger().error(
+                        'I2C fallo en throttle ch%d intento %d: %s' % (ch, attempt + 1, e))
+                    time.sleep(0.02)
+            else:
+                ok = False
+        if ok:
+            self.current_throttle = angle
+        return ok
+
+    def set_throttle_neutral(self):
+        stop = self.get_parameter('throttle_stop').value
+        if not self.write_throttle(stop):
+            self.get_logger().fatal('NO SE PUDO PONER EL THROTTLE A REPOSO — usar e-stop/interruptor ESC')
+
+    def watchdog_check(self):
+        # Sin /cmd_vel reciente -> neutro (una sola vez, hasta el proximo comando).
+        if self.last_cmd_vel_time is None:
+            return
+        timeout = self.get_parameter('cmd_vel_timeout').value
+        elapsed = (self.get_clock().now() - self.last_cmd_vel_time).nanoseconds / 1e9
+        if elapsed > timeout:
+            self.set_throttle_neutral()
+            self.last_cmd_vel_time = None
+            self.get_logger().warn('cmd_vel timeout (%.1fs): throttle a neutro' % timeout)
+
+
     def manual_control(self, msg):
         # Mapear la velocidad angular a la dirección
         angleDir = self.map_value_direction(msg.axes[0], 1.0, -1.0, 170.0, 40.0)
@@ -102,9 +216,18 @@ class CarControlNode(Node):
 def main(args=None):
     rclpy.init(args=args)
     control_node = CarControlNode()
-    rclpy.spin(control_node)
-    control_node.destroy_node()
-    rclpy.shutdown()
+    try:
+        rclpy.spin(control_node)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        # Nunca dejar el throttle latcheado al salir. Si falla, que se OIGA.
+        try:
+            control_node.set_throttle_neutral()
+        except Exception as e:
+            print('FATAL: fallo poniendo throttle a reposo al salir: %s' % e, flush=True)
+        control_node.destroy_node()
+        rclpy.shutdown()
 
 
 if __name__ == '__main__':

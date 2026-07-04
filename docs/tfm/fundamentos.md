@@ -159,8 +159,10 @@ steer = steer_center + (angular_z / max_angular) * steer_span   # 105 + (ang/0.4
 steer = clamp(steer, 40.0, 170.0)
 
 # TRACCIÓN: linear.x -> throttle del ESC (canales 0 y 1)
-throttle = throttle_neutral + (linear_x / max_linear) * span    # 93.6 + (lin/0.7)*span
-throttle = clamp(throttle, throttle_neutral - span, throttle_neutral + span)
+# Calibrado empírico: el ESC avanza BAJANDO el ángulo (reposo 91.8 → a fondo 27);
+# el movimiento arranca en ~90. lin<=0 → reposo (sin marcha atrás por ahora).
+throttle = throttle_start - (linear_x / max_linear) * (throttle_start - throttle_full)
+throttle = clamp(throttle, THROTTLE_HARD_FLOOR, throttle_stop)  # regla dura: ≤50% de gas (59.4°)
 ```
 
 Todos los valores (`max_angular`, `steer_center`, `steer_span`, `throttle_neutral`, `span`…) son
