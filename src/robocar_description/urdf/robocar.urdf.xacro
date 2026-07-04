@@ -1,0 +1,159 @@
+<?xml version="1.0"?>
+<!--
+  Robocar: modelo URDF (hito 0.3 del TFM).
+
+  Convenciones (REP-103/REP-105): x adelante, y izquierda, z arriba.
+  base_link en el CENTRO DEL EJE TRASERO (convención Ackermann: TEB y la
+  odometría de modelo bicicleta se referencian ahí), a la altura del eje.
+  base_footprint es su proyección en el suelo.
+
+  v1: todas las juntas son fijas (suficiente para TF + visualización 3D).
+  Las ruedas no rotan visualmente; se puede mejorar con joint_states después.
+-->
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="robocar">
+
+  <!-- ══════════════════════════════════════════════════════════════════
+       MEDIDAS DEL COCHE — ¡RELLENAR CON EL METRO! (unidades: metros)
+       Valores actuales = típicos de un chasis RC 1/10, solo orientativos.
+       ══════════════════════════════════════════════════════════════════ -->
+
+  <!-- TODO(medir): distancia entre eje trasero y delantero (batalla) -->
+  <xacro:property name="wheelbase"      value="0.260"/>
+  <!-- TODO(medir): distancia entre centros de ruedas izq/der (via) -->
+  <xacro:property name="track_width"    value="0.180"/>
+  <!-- TODO(medir): diámetro de rueda / 2 -->
+  <xacro:property name="wheel_radius"   value="0.0325"/>
+  <!-- TODO(medir): anchura de la rueda -->
+  <xacro:property name="wheel_width"    value="0.026"/>
+  <!-- TODO(medir): largo x ancho x alto del chasis (caja aproximada) -->
+  <xacro:property name="chassis_length" value="0.360"/>
+  <xacro:property name="chassis_width"  value="0.190"/>
+  <xacro:property name="chassis_height" value="0.100"/>
+  <!-- TODO(medir): cuanto sobresale el chasis por detras del eje trasero -->
+  <xacro:property name="chassis_rear_overhang" value="0.050"/>
+
+  <!-- Sensores: posicion respecto a base_link (centro eje trasero).
+       x adelante, y izquierda, z arriba desde la altura del eje. -->
+  <!-- TODO(medir): RPLidar C1 (donde se vaya a montar; z = altura del plano
+       de barrido sobre el eje). Si el conector USB queda hacia atras, dejar
+       yaw=0; si no, ajustar la rotacion. -->
+  <xacro:property name="laser_x"   value="0.130"/>
+  <xacro:property name="laser_z"   value="0.120"/>
+  <!-- TODO(medir): MPU6050 -->
+  <xacro:property name="imu_x"     value="0.100"/>
+  <xacro:property name="imu_z"     value="0.050"/>
+  <!-- TODO(medir): camara USB frontal -->
+  <xacro:property name="camera_x"  value="0.300"/>
+  <xacro:property name="camera_z"  value="0.080"/>
+  <!-- TODO(medir): ultrasonidos HC-SR04 frontales (centro y laterales) -->
+  <xacro:property name="us_x"      value="0.320"/>
+  <xacro:property name="us_y"      value="0.070"/>
+  <xacro:property name="us_z"      value="0.030"/>
+
+  <!-- ══════════════ materiales (colores en Foxglove/RViz) ══════════════ -->
+  <material name="body_grey"><color rgba="0.35 0.38 0.42 1"/></material>
+  <material name="wheel_black"><color rgba="0.10 0.10 0.10 1"/></material>
+  <material name="sensor_blue"><color rgba="0.20 0.45 0.85 1"/></material>
+  <material name="lidar_red"><color rgba="0.80 0.20 0.20 1"/></material>
+
+  <!-- ══════════════ macro de rueda ══════════════ -->
+  <xacro:macro name="wheel" params="name x y">
+    <link name="${name}">
+      <visual>
+        <geometry><cylinder radius="${wheel_radius}" length="${wheel_width}"/></geometry>
+        <origin rpy="${pi/2} 0 0"/>
+        <material name="wheel_black"/>
+      </visual>
+    </link>
+    <joint name="${name}_joint" type="fixed">
+      <parent link="base_link"/>
+      <child link="${name}"/>
+      <origin xyz="${x} ${y} 0"/>
+    </joint>
+  </xacro:macro>
+
+  <!-- ══════════════ estructura ══════════════ -->
+
+  <!-- proyección en el suelo (la usa Nav2) -->
+  <link name="base_footprint"/>
+
+  <!-- centro del eje trasero, a la altura del eje -->
+  <link name="base_link">
+    <visual>
+      <geometry><box size="${chassis_length} ${chassis_width} ${chassis_height}"/></geometry>
+      <!-- la caja del chasis se centra respecto a la batalla -->
+      <origin xyz="${chassis_length/2 - chassis_rear_overhang} 0 ${chassis_height/2}"/>
+      <material name="body_grey"/>
+    </visual>
+  </link>
+
+  <joint name="base_footprint_joint" type="fixed">
+    <parent link="base_footprint"/>
+    <child link="base_link"/>
+    <origin xyz="0 0 ${wheel_radius}"/>
+  </joint>
+
+  <!-- ruedas -->
+  <xacro:wheel name="rear_left_wheel"   x="0"            y="${track_width/2}"/>
+  <xacro:wheel name="rear_right_wheel"  x="0"            y="${-track_width/2}"/>
+  <xacro:wheel name="front_left_wheel"  x="${wheelbase}" y="${track_width/2}"/>
+  <xacro:wheel name="front_right_wheel" x="${wheelbase}" y="${-track_width/2}"/>
+
+  <!-- LIDAR: frame "laser" (el que publica rplidar_ros en /scan) -->
+  <link name="laser">
+    <visual>
+      <geometry><cylinder radius="0.035" length="0.04"/></geometry>
+      <material name="lidar_red"/>
+    </visual>
+  </link>
+  <joint name="laser_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="laser"/>
+    <origin xyz="${laser_x} 0 ${laser_z}" rpy="0 0 0"/>
+  </joint>
+
+  <!-- IMU: frame "imu_link" (usarlo en accelerometer_node, hito 0.5) -->
+  <link name="imu_link">
+    <visual>
+      <geometry><box size="0.02 0.015 0.003"/></geometry>
+      <material name="sensor_blue"/>
+    </visual>
+  </link>
+  <joint name="imu_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="imu_link"/>
+    <origin xyz="${imu_x} 0 ${imu_z}"/>
+  </joint>
+
+  <!-- Cámara frontal -->
+  <link name="camera_link">
+    <visual>
+      <geometry><box size="0.025 0.06 0.025"/></geometry>
+      <material name="sensor_blue"/>
+    </visual>
+  </link>
+  <joint name="camera_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="camera_link"/>
+    <origin xyz="${camera_x} 0 ${camera_z}"/>
+  </joint>
+
+  <!-- Ultrasonidos HC-SR04 (izq / centro / der), apuntando hacia delante -->
+  <xacro:macro name="ultrasound" params="name y">
+    <link name="${name}">
+      <visual>
+        <geometry><box size="0.015 0.045 0.02"/></geometry>
+        <material name="sensor_blue"/>
+      </visual>
+    </link>
+    <joint name="${name}_joint" type="fixed">
+      <parent link="base_link"/>
+      <child link="${name}"/>
+      <origin xyz="${us_x} ${y} ${us_z}"/>
+    </joint>
+  </xacro:macro>
+  <xacro:ultrasound name="ultrasound_left"   y="${us_y}"/>
+  <xacro:ultrasound name="ultrasound_center" y="0"/>
+  <xacro:ultrasound name="ultrasound_right"  y="${-us_y}"/>
+
+</robot>
