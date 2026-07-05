@@ -80,6 +80,72 @@ function pickTask(excludeId) {
   return Number.isFinite(id) ? id : null;
 }
 
+/* ---------- diagrama de dependencias (SVG, sin librerías) ---------- */
+function renderDepGraph() {
+  const host = $("#depGraph");
+  if (!host) return;
+  const deps = state.deps || [];
+  if (!deps.length) { host.innerHTML = '<div class="muted">sin dependencias todavía</div>'; return; }
+
+  // solo participan las tareas con alguna arista
+  const inGraph = new Set();
+  deps.forEach(d => { inGraph.add(d.task_id); inGraph.add(d.depends_on_id); });
+  const nodes = state.tasks.filter(t => inGraph.has(t.id));
+
+  // capa = camino más largo desde una raíz (orden topológico por niveles)
+  const dmap = {};
+  deps.forEach(d => (dmap[d.task_id] = dmap[d.task_id] || []).push(d.depends_on_id));
+  const layerOf = {};
+  const calc = (id, seen) => {
+    if (layerOf[id] !== undefined) return layerOf[id];
+    seen = seen || new Set();
+    if (seen.has(id)) return 0;
+    seen.add(id);
+    const ds = dmap[id] || [];
+    return (layerOf[id] = ds.length ? Math.max(...ds.map(x => calc(x, seen))) + 1 : 0);
+  };
+  nodes.forEach(n => calc(n.id));
+
+  const byLayer = [];
+  nodes.forEach(n => (byLayer[layerOf[n.id]] = byLayer[layerOf[n.id]] || []).push(n));
+
+  const NW = 150, NH = 34, GX = 14, ROW = 88, PAD = 18;
+  const maxRow = Math.max(...byLayer.map(r => (r ? r.length : 0)));
+  const W = Math.max(maxRow * (NW + GX) + PAD * 2, 420);
+  const H = byLayer.length * ROW + PAD;
+
+  const pos = {};
+  byLayer.forEach((row, l) => {
+    if (!row) return;
+    row.sort((a, b) => a.layer_id - b.layer_id || a.id - b.id);
+    const total = row.length * (NW + GX) - GX;
+    row.forEach((n, i) => { pos[n.id] = { x: (W - total) / 2 + i * (NW + GX), y: PAD + l * ROW }; });
+  });
+
+  const col = t => t.status === "done" ? "#3fb96b"
+    : t.status === "in_progress" ? "#e0a83c"
+    : isBlocked(t) ? "#e05c5c" : "#8a93a6";
+
+  let svg = "";
+  for (const d of deps) {
+    const a = pos[d.depends_on_id], b = pos[d.task_id];
+    if (!a || !b) continue;
+    const x1 = a.x + NW / 2, y1 = a.y + NH, x2 = b.x + NW / 2, y2 = b.y;
+    svg += `<path d="M${x1},${y1} C${x1},${y1 + 36} ${x2},${y2 - 36} ${x2},${y2}" fill="none" stroke="#2a3348" stroke-width="1.5" marker-end="url(#arr)"/>`;
+  }
+  for (const n of nodes) {
+    const p = pos[n.id], c = col(n);
+    const label = n.title.length > 21 ? n.title.slice(0, 20) + "…" : n.title;
+    svg += `<g><rect x="${p.x}" y="${p.y}" width="${NW}" height="${NH}" rx="8" fill="#1d2537" stroke="${c}" stroke-width="1.6"/>
+      <circle cx="${p.x + 13}" cy="${p.y + NH / 2}" r="4" fill="${c}"/>
+      <text x="${p.x + 24}" y="${p.y + NH / 2 + 4}" fill="#e8ecf4" font-size="11">${esc(label)}</text>
+      <title>${esc(n.title)} — ${n.status}${isBlocked(n) ? " (bloqueada)" : ""}</title></g>`;
+  }
+  host.innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">
+    <defs><marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2a3348"/></marker></defs>
+    ${svg}</svg>`;
+}
+
 function render() {
   const { layers, tasks, decisions, events } = state;
 
@@ -147,6 +213,8 @@ function render() {
     };
     dv.appendChild(el);
   }
+
+  renderDepGraph();
 
   // historial
   const ev = $("#events");
