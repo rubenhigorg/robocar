@@ -1,0 +1,36 @@
+# EKF de robot_localization: fusion encoder (vx) + IMU (yaw rate) -> odom->base_link
+# Plan B de odometria (D2->B). Robot planar Ackermann.
+ekf_filter_node:
+  ros__parameters:
+    frequency: 30.0
+    sensor_timeout: 0.2
+    two_d_mode: true
+    publish_tf: true
+
+    map_frame: map
+    odom_frame: odom
+    base_link_frame: base_link
+    world_frame: odom
+
+    # --- Encoder: velocidad lineal vx (del adaptador wheel_twistcov_node) ---
+    twist0: wheel_speed_cov
+    # [x, y, z, roll, pitch, yaw, vx, vy, vz, vroll, vpitch, vyaw, ax, ay, az]
+    twist0_config: [false, false, false,
+                    false, false, false,
+                    true,  false, false,
+                    false, false, false,
+                    false, false, false]
+    twist0_queue_size: 10
+    twist0_nodelay: true
+
+    # --- IMU: velocidad angular en z (yaw rate). accel NO se fusiona (bias sin calibrar) ---
+    imu0: imu
+    imu0_config: [false, false, false,
+                  false, false, false,
+                  false, false, false,
+                  false, false, true,
+                  false, false, false]
+    imu0_differential: false
+    imu0_relative: false
+    imu0_queue_size: 20
+    imu0_remove_gravitational_acceleration: true
