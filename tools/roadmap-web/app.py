@@ -81,10 +81,15 @@ def init_db():
             );
             """
         )
-        # Migración no destructiva: subtareas (parent_id) sobre BDs existentes.
+        # Migraciones no destructivas sobre BDs existentes.
         cols = [r["name"] for r in conn.execute("PRAGMA table_info(tasks)")]
         if "parent_id" not in cols:
             conn.execute("ALTER TABLE tasks ADD COLUMN parent_id INTEGER REFERENCES tasks(id)")
+        if "estimate_days" not in cols:
+            conn.execute("ALTER TABLE tasks ADD COLUMN estimate_days REAL DEFAULT 1.0")
+            conn.execute("ALTER TABLE tasks ADD COLUMN start_date TEXT")   # fija manual (opcional)
+            conn.execute("ALTER TABLE tasks ADD COLUMN due_date TEXT")     # fija manual (opcional)
+            conn.execute("ALTER TABLE tasks ADD COLUMN done_at INTEGER")   # epoch al completarse
         if conn.execute("SELECT COUNT(*) c FROM layers").fetchone()["c"] == 0:
             seed(conn)
 
@@ -212,7 +217,8 @@ def remove_dep(task_id: int, dep_id: int,
     return {"ok": True}
 
 
-TASK_FIELDS = {"title", "detail", "status", "assignee", "position", "layer_id", "parent_id"}
+TASK_FIELDS = {"title", "detail", "status", "assignee", "position", "layer_id", "parent_id",
+               "estimate_days", "start_date", "due_date", "done_at"}
 DECISION_FIELDS = {"code", "title", "status", "detail"}
 LAYER_FIELDS = {"title", "subtitle", "position"}
 
@@ -227,6 +233,9 @@ async def patch_row(request: Request, table: str, row_id: int, allowed: set,
         row = conn.execute(f"SELECT * FROM {table} WHERE id=?", (row_id,)).fetchone()
         if not row:
             raise HTTPException(status_code=404, detail="No existe")
+        # Al completar una tarea se sella done_at (y se limpia si se reabre).
+        if table == "tasks" and "status" in body:
+            body = dict(body, done_at=int(time.time()) if body["status"] == "done" else None)
         sets = ", ".join(f"{k}=?" for k in body)
         conn.execute(f"UPDATE {table} SET {sets} WHERE id=?", (*body.values(), row_id))
         if "status" in body:
