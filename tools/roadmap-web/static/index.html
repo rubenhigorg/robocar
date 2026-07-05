@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Robocar · Roadmap TFM</title>
-  <link rel="stylesheet" href="style.css?v=3">
+  <link rel="stylesheet" href="style.css?v=4">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚗</text></svg>">
 </head>
 <body>
@@ -24,7 +24,29 @@
   </header>
 
   <main>
+    <div class="filterbar">
+      <select id="fWho" onchange="setFilters({...getFilters(), who: this.value})">
+        <option value="">👥 todos</option>
+        <option value="Rubén">Rubén</option>
+        <option value="Antonio">Antonio</option>
+        <option value="Claude">Claude</option>
+        <option value="(sin)">sin asignar</option>
+      </select>
+      <select id="fSt" onchange="setFilters({...getFilters(), st: this.value})">
+        <option value="">estado: todos</option>
+        <option value="pending">pendientes</option>
+        <option value="in_progress">en curso</option>
+        <option value="done">hechas</option>
+      </select>
+      <span class="muted small">los filtros aplican a capas y Gantt · clic en el título de una capa para plegarla</span>
+    </div>
+
     <section id="layers"></section>
+
+    <section class="panel">
+      <h2>Gantt · auto-programado por dependencias</h2>
+      <div id="gantt"><div class="muted">cargando…</div></div>
+    </section>
 
     <section class="panel">
       <h2>Diagrama de dependencias</h2>
@@ -45,6 +67,6 @@
   <footer>
     Estado compartido · clic en el estado de una tarea para ciclarlo · doble clic en un texto para editarlo
   </footer>
-  <script src="app.js?v=3"></script>
+  <script src="app.js?v=4"></script>
 </body>
 </html>
