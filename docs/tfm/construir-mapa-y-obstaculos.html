@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Construir el mapa y esquivar obstáculos — Robocar</title>
+<style>
+  :root {
+    --bg:#eef1f6; --surface:#fff; --surface-2:#e7ecf3; --ink:#121a24; --muted:#56636f;
+    --line:#d3dbe5; --line-strong:#b9c4d1;
+    --slam:#0d7a8c; --slam-bg:#dcf0f3;
+    --nav:#1f8a54; --nav-bg:#dcefe4;
+    --warn:#c2560e; --warn-bg:#f7e6d7;
+    --primary:#2a56d6;
+    --free:#eef3ee; --occ:#233042; --unk:#c3cbd5;
+    --shadow:0 1px 2px rgba(18,26,36,.06),0 8px 24px rgba(18,26,36,.06);
+    --radius:14px; --measure:68ch;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --mono:ui-monospace,"SF Mono","Cascadia Code","JetBrains Mono",Menlo,Consolas,monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg:#0b0f15; --surface:#121a23; --surface-2:#18222e; --ink:#e7edf4; --muted:#9aa7b4;
+      --line:#26313f; --line-strong:#33414f;
+      --slam:#38b9d0; --slam-bg:#10262c; --nav:#4bcb8c; --nav-bg:#122a1e;
+      --warn:#f0894a; --warn-bg:#2c1a10; --primary:#7699ff;
+      --free:#1a2530; --occ:#aeb9c6; --unk:#3a4654;
+      --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="light"]{--bg:#eef1f6;--surface:#fff;--surface-2:#e7ecf3;--ink:#121a24;--muted:#56636f;--line:#d3dbe5;--line-strong:#b9c4d1;--slam:#0d7a8c;--slam-bg:#dcf0f3;--nav:#1f8a54;--nav-bg:#dcefe4;--warn:#c2560e;--warn-bg:#f7e6d7;--primary:#2a56d6;--free:#eef3ee;--occ:#233042;--unk:#c3cbd5;--shadow:0 1px 2px rgba(18,26,36,.06),0 8px 24px rgba(18,26,36,.06);}
+  :root[data-theme="dark"]{--bg:#0b0f15;--surface:#121a23;--surface-2:#18222e;--ink:#e7edf4;--muted:#9aa7b4;--line:#26313f;--line-strong:#33414f;--slam:#38b9d0;--slam-bg:#10262c;--nav:#4bcb8c;--nav-bg:#122a1e;--warn:#f0894a;--warn-bg:#2c1a10;--primary:#7699ff;--free:#1a2530;--occ:#aeb9c6;--unk:#3a4654;--shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px rgba(0,0,0,.35);}
+
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font-family:var(--sans); line-height:1.65; -webkit-font-smoothing:antialiased; }
+  .wrap { max-width:1000px; margin:0 auto; padding:clamp(1.2rem,4vw,3.5rem) clamp(1rem,4vw,2rem); }
+  .col { max-width:var(--measure); }
+  p { margin:0 0 1rem; }
+  a { color:var(--primary); text-underline-offset:3px; }
+
+  .eyebrow { font-family:var(--mono); font-size:.72rem; letter-spacing:.18em; text-transform:uppercase; color:var(--muted); margin:0 0 .9rem; display:flex; align-items:center; gap:.6rem; }
+  .eyebrow::before { content:""; width:26px; height:2px; background:var(--primary); display:inline-block; }
+  h1 { font-size:clamp(1.9rem,4.6vw,3rem); line-height:1.08; margin:0 0 1rem; letter-spacing:-.02em; text-wrap:balance; }
+  .lede { font-size:clamp(1.05rem,2.2vw,1.3rem); color:var(--muted); text-wrap:pretty; }
+
+  .chapnav { display:flex; flex-wrap:wrap; gap:.6rem; margin:1.8rem 0 0; }
+  .chapnav a { display:flex; gap:.6rem; align-items:center; text-decoration:none; padding:.6rem .9rem; border:1px solid var(--line); border-radius:10px; background:var(--surface); color:var(--ink); font-size:.9rem; box-shadow:var(--shadow); }
+  .chapnav a .num { font-family:var(--mono); font-weight:700; color:var(--c); }
+  .chapnav a.m { --c:var(--slam); } .chapnav a.o { --c:var(--warn); }
+
+  .chap { margin-top:3.5rem; padding-top:2rem; border-top:1px solid var(--line); }
+  .chap-head { display:flex; align-items:baseline; gap:.8rem; margin-bottom:.4rem; }
+  .chap-head .cnum { font-family:var(--mono); font-size:.8rem; font-weight:700; color:var(--c); padding:.2em .55em; border-radius:6px; background:var(--cbg); letter-spacing:.05em; }
+  h2 { font-size:clamp(1.5rem,3.2vw,2rem); letter-spacing:-.015em; margin:0; text-wrap:balance; }
+  h3 { font-size:1.08rem; margin:2.2rem 0 .5rem; display:flex; align-items:baseline; gap:.5rem; }
+  h3 .k { font-family:var(--mono); font-size:.75rem; color:var(--muted); }
+  .ch-map { --c:var(--slam); --cbg:var(--slam-bg); }
+  .ch-obs { --c:var(--warn); --cbg:var(--warn-bg); }
+
+  code,.mono { font-family:var(--mono); font-size:.88em; }
+  .frame { font-family:var(--mono); font-weight:600; padding:.12em .45em; border-radius:6px; background:var(--surface-2); border:1px solid var(--line); white-space:nowrap; }
+  .topic { font-family:var(--mono); color:var(--primary); font-size:.92em; }
+  b { font-weight:600; }
+
+  /* occupancy grid legend */
+  .grid-demo { display:flex; flex-wrap:wrap; gap:1.4rem; align-items:center; margin:1.2rem 0; padding:1.2rem; background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); }
+  .ogrid { display:grid; grid-template-columns:repeat(8,1fr); gap:2px; width:180px; height:180px; flex:none; padding:6px; background:var(--line); border-radius:8px; }
+  .ogrid span { border-radius:2px; }
+  .cell-f { background:var(--free); } .cell-o { background:var(--occ); } .cell-u { background:var(--unk); }
+  .leg { display:flex; flex-direction:column; gap:.55rem; font-size:.9rem; }
+  .leg div { display:flex; align-items:center; gap:.6rem; }
+  .leg i { width:16px; height:16px; border-radius:4px; border:1px solid var(--line-strong); flex:none; }
+  .leg small { color:var(--muted); }
+
+  /* step flow */
+  ol.flow { counter-reset:s; list-style:none; margin:1.2rem 0; padding:0; display:flex; flex-direction:column; gap:.55rem; }
+  ol.flow li { counter-increment:s; position:relative; padding:.75rem 1rem .75rem 3rem; background:var(--surface); border:1px solid var(--line); border-radius:10px; box-shadow:var(--shadow); font-size:.95rem; }
+  ol.flow li::before { content:counter(s,decimal-leading-zero); position:absolute; left:.9rem; top:.75rem; font-family:var(--mono); font-weight:700; font-size:.82rem; color:var(--c); }
+
+  .callout { margin:1.5rem 0; padding:1.1rem 1.2rem; border-left:3px solid var(--c); background:var(--cbg); border-radius:0 10px 10px 0; font-size:.95rem; }
+  .callout b { color:var(--ink); }
+  .callout .lab { font-family:var(--mono); font-size:.7rem; text-transform:uppercase; letter-spacing:.1em; color:var(--c); font-weight:700; display:block; margin-bottom:.35rem; }
+
+  /* costmap layer stack */
+  .stack { display:flex; flex-direction:column; gap:.5rem; margin:1.3rem 0; padding:1.2rem; background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); }
+  .layer-row { display:flex; align-items:center; gap:.9rem; padding:.7rem .9rem; border-radius:10px; border:1px solid var(--line); background:var(--surface-2); }
+  .layer-row .ic { font-family:var(--mono); font-size:.68rem; font-weight:700; letter-spacing:.05em; padding:.3em .6em; border-radius:6px; flex:none; color:#fff; }
+  .layer-row .tx b { display:block; } .layer-row .tx small { color:var(--muted); font-size:.86rem; }
+  .li-static .ic { background:var(--slam); } .li-obs .ic { background:var(--warn); } .li-inf .ic { background:var(--nav); }
+  .plus { text-align:center; color:var(--line-strong); font-family:var(--mono); font-size:1.1rem; line-height:0; }
+
+  .cols2 { display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin:1.3rem 0; }
+  .mini { padding:1rem 1.1rem; border-radius:12px; border:1px solid var(--line); background:var(--surface); box-shadow:var(--shadow); }
+  .mini .h { font-weight:600; margin-bottom:.3rem; display:flex; align-items:center; gap:.5rem; }
+  .mini .h .dot { width:9px; height:9px; border-radius:50%; flex:none; }
+  .mini small { color:var(--muted); font-size:.88rem; }
+
+  ul.tick { list-style:none; padding:0; margin:1rem 0; display:flex; flex-direction:column; gap:.5rem; }
+  ul.tick li { padding-left:1.5rem; position:relative; font-size:.95rem; color:var(--muted); }
+  ul.tick li b { color:var(--ink); }
+  ul.tick li::before { content:"→"; position:absolute; left:0; color:var(--c); font-family:var(--mono); }
+
+  footer { margin-top:3rem; padding-top:1.4rem; border-top:1px solid var(--line); color:var(--muted); font-family:var(--mono); font-size:.75rem; }
+
+  @media (max-width:720px){ .cols2 { grid-template-columns:1fr; } }
+</style>
+
+</head>
+<body>
+<div class="wrap">
+  <header class="col">
+    <p class="eyebrow">Robocar · TFM · Fundamentos</p>
+    <h1>Construir el mapa, y esquivar lo que no está en él</h1>
+    <p class="lede">Dos caras del mismo entorno: primero se levanta un plano estático del sitio; luego, en marcha, el robot reacciona a lo que aparece y que ningún plano previó — una persona, una caja, una silla que alguien movió.</p>
+  </header>
+  <nav class="chapnav">
+    <a class="m" href="#cap1"><span class="num">I</span> Cómo construir un mapa</a>
+    <a class="o" href="#cap2"><span class="num">II</span> Evitar obstáculos no mapeados</a>
+  </nav>
+
+  <!-- ============ CAP I ============ -->
+  <section class="chap ch-map" id="cap1">
+    <div class="chap-head"><span class="cnum">CAP · I</span><h2>Cómo construir un mapa</h2></div>
+    <div class="col"><p>Mapear es recorrer el espacio una vez, con calma, para que el robot se fabrique un plano que después reutilizará mil veces para localizarse y navegar. El resultado es un fichero estático; el proceso es una sesión de conducción guiada.</p></div>
+
+    <h3>¿Qué es "el mapa"? <span class="k">nav_msgs/OccupancyGrid</span></h3>
+    <div class="col"><p>Una <b>rejilla de ocupación</b>: el suelo se divide en celdas de tamaño fijo (p. ej. <b>5 cm</b>) y cada una guarda una probabilidad de estar ocupada. En la práctica, tres estados:</p></div>
+    <div class="grid-demo">
+      <div class="ogrid" aria-hidden="true">
+        <span class="cell-u"></span><span class="cell-u"></span><span class="cell-o"></span><span class="cell-o"></span><span class="cell-o"></span><span class="cell-o"></span><span class="cell-u"></span><span class="cell-u"></span>
+        <span class="cell-u"></span><span class="cell-o"></span><span class="cell-f"></span><span class="cell-f"></span><span class="cell-f"></span><span class="cell-f"></span><span class="cell-o"></span><span class="cell-u"></span>
+        <span class="cell-o"></span><span class="cell-f"></span><span class="cell-f"></span><span class="cell-f"></span><span class="cell-f"></span><span class="cell-f"></span><span class="cell-f"></span><span class="cell-o"></span>
+        <span class="cell-o"></span><span class="cell-f"></span><span class="cell-f"></span><span class="cell-o"></span><span class="cell-o"></span><span class="cell-f"></span><span class="cell-f"></span><span class="cell-o"></span>
+        <span class="cell-o"></span><span class="cell-f"></span><span class="cell-f"></span><span class="cell-o"></span><span class="cell-o"></span><span class="cell-f"></span><span class="cell-f"></span><span class="cell-o"></span>
+        <span class="cell-o"></span><span class="cell-f"></span><span class="cell-f"></span><span class="cell-f"></span><span class="cell-f"></span><span class="cell-f"></span><span class="cell-f"></span><span class="cell-o"></span>
+        <span class="cell-u"></span><span class="cell-o"></span><span class="cell-f"></span><span class="cell-f"></span><span class="cell-f"></span><span class="cell-f"></span><span class="cell-o"></span><span class="cell-u"></span>
+        <span class="cell-u"></span><span class="cell-u"></span><span class="cell-o"></span><span class="cell-o"></span><span class="cell-o"></span><span class="cell-o"></span><span class="cell-u"></span><span class="cell-u"></span>
+      </div>
+      <div class="leg">
+        <div><i style="background:var(--free)"></i><span><b>Libre</b> &nbsp;<small>el láser lo atravesó: se puede circular</small></span></div>
+        <div><i style="background:var(--occ)"></i><span><b>Ocupado</b> &nbsp;<small>el láser chocó: pared u objeto</small></span></div>
+        <div><i style="background:var(--unk)"></i><span><b>Desconocido</b> &nbsp;<small>nunca se vio: sin explorar</small></span></div>
+      </div>
+    </div>
+    <div class="col"><p>Se guarda como una <b>imagen</b> (<span class="mono">.pgm</span>) más un <span class="mono">.yaml</span> con los metadatos: resolución, origen y umbrales. Eso es todo el "mapa".</p></div>
+
+    <h3>Los ingredientes</h3>
+    <div class="col"><p>El SLAM no inventa el mapa de la nada; necesita dos entradas sincronizadas por el árbol <span class="mono">TF</span>:</p></div>
+    <ul class="tick">
+      <li><b>El lidar</b> (<span class="topic">/scan</span>): mide distancias a las paredes 360° a su alrededor.</li>
+      <li><b>La odometría</b> (<span class="frame">odom→base_link</span>): dice cuánto se ha movido el robot entre escaneo y escaneo, para saber <em>desde dónde</em> mira cada barrido.</li>
+      <li><b>Cartographer</b>: junta ambos, encaja los escaneos (<em>scan-matching</em>) y va cosiendo <b>submapas</b> en un mapa global.</li>
+    </ul>
+
+    <h3>La sesión de mapeo, paso a paso</h3>
+    <ol class="flow">
+      <li>Arrancar la pila mínima: <b>odometría</b> (TF), <b>lidar</b> (<span class="topic">/scan</span>) y <b>Cartographer en modo mapeo</b>.</li>
+      <li>Conducir el robot <b>despacio</b> (teleop) recorriendo <b>todo</b> el espacio: pasillos, esquinas, cada habitación.</li>
+      <li>Cartographer mantiene la pose en tiempo real (scan-matching local) y acumula los barridos en submapas.</li>
+      <li><b>Cerrar bucles</b>: volver a sitios ya vistos. Al reconocerlos, Cartographer corrige de golpe la deriva acumulada y cuadra el mapa.</li>
+      <li>Comprobar la cobertura: que no queden huecos <em>desconocidos</em> donde luego haya que navegar.</li>
+      <li><b>Guardar el mapa</b> con <span class="mono">map_saver</span> → <span class="mono">mapa.pgm</span> + <span class="mono">mapa.yaml</span>. Listo para navegación.</li>
+    </ol>
+
+    <div class="callout"><span class="lab">La clave: cierre de bucle</span><b>La deriva es inevitable</b> mientras mapeas: pequeños errores de odometría y de encaje se van sumando, y un pasillo largo acaba "torcido". El <b>loop closure</b> es el antídoto: cuando el robot detecta que ha vuelto a un lugar conocido, reoptimiza toda la trayectoria y reparte el error. Por eso una buena sesión de mapeo <b>traza lazos</b> y regresa al punto de partida, en vez de ir y volver en línea recta.</div>
+
+    <h3>Buenas prácticas <span class="k">en la Raspberry Pi</span></h3>
+    <ul class="tick">
+      <li><b>Odometría sólida primero</b> (Capa 0): cuanto mejor sea, menos trabajo de corrección y mejor mapa.</li>
+      <li><b>Velocidad baja y giros suaves</b>: los movimientos bruscos emborronan el scan-matching.</li>
+      <li><b>Resolución moderada</b> (~5 cm) y optimización global contenida: en una Pi, agresividad = pérdida de tiempo real.</li>
+      <li><b>Cubrir de verdad</b>: lo que no se ve queda <em>desconocido</em>, y ahí Nav2 no planificará.</li>
+    </ul>
+  </section>
+
+  <!-- ============ CAP II ============ -->
+  <section class="chap ch-obs" id="cap2">
+    <div class="chap-head"><span class="cnum">CAP · II</span><h2>Evitar obstáculos no incluidos en el mapa</h2></div>
+    <div class="col"><p>El mapa estático congela el mundo tal como estaba el día del mapeo: paredes, muebles fijos. Pero el mundo real se mueve — aparecen personas, cajas, una puerta que se cierra. El robot no puede fiarse solo del plano: tiene que <b>ver y reaccionar en vivo</b>.</p></div>
+
+    <h3>La herramienta: los <em>costmaps</em></h3>
+    <div class="col"><p>Nav2 no navega sobre el mapa "crudo", sino sobre <b>mapas de coste</b> que mezclan lo conocido con lo que los sensores detectan <em>ahora</em>. Hay dos:</p></div>
+    <div class="cols2">
+      <div class="mini"><div class="h"><span class="dot" style="background:var(--slam)"></span>Costmap global</div><small>Cubre todo el mapa. Base para planificar la ruta larga hasta el destino. Se apoya sobre todo en el mapa estático.</small></div>
+      <div class="mini"><div class="h"><span class="dot" style="background:var(--warn)"></span>Costmap local</div><small>Una ventana pequeña que rueda con el robot, <b>refrescada a cada instante</b> con el <span class="topic">/scan</span>. Aquí es donde aparecen los obstáculos nuevos.</small></div>
+    </div>
+
+    <h3>Cómo se apila la información <span class="k">capas del costmap</span></h3>
+    <div class="stack">
+      <div class="layer-row li-static"><span class="ic">STATIC</span><span class="tx"><b>Capa estática — el mapa</b><small>Las paredes y muebles fijos que se mapearon en el Cap. I.</small></span></div>
+      <div class="plus">＋</div>
+      <div class="layer-row li-obs"><span class="ic">OBSTACLE</span><span class="tx"><b>Capa de obstáculos — sensores en vivo</b><small>El <span class="topic">/scan</span> (y los ultrasonidos) marcan como ocupadas celdas que NO están en el mapa: lo nuevo y lo que se mueve.</small></span></div>
+      <div class="plus">＋</div>
+      <div class="layer-row li-inf"><span class="ic">INFLATION</span><span class="tx"><b>Capa de inflado — margen de seguridad</b><small>Engorda cada obstáculo con un halo de coste, para que el robot mantenga distancia y no roce.</small></span></div>
+    </div>
+
+    <h3>Cómo se produce la evitación, paso a paso</h3>
+    <ol class="flow">
+      <li>El <span class="topic">/scan</span> detecta algo que no está en el mapa; la <b>capa de obstáculos</b> marca esas celdas como ocupadas en el costmap local.</li>
+      <li>El <b>inflado</b> añade un colchón alrededor: el robot tratará esa zona (y su margen) como intransitable.</li>
+      <li>El <b>controlador local (TEB)</b> recalcula una trayectoria que sigue la ruta global <em>pero</em> rodea las celdas ocupadas del costmap local.</li>
+      <li>Si el obstáculo bloquea del todo la ruta, el <b>planificador global replanifica</b> un desvío por otro camino del mapa.</li>
+      <li>Cuando el obstáculo se va, el <em>ray-casting</em> <b>limpia</b> las celdas que el láser vuelve a atravesar: el costmap se despeja solo.</li>
+      <li>Si el robot se queda atascado, entran los <b>comportamientos de recuperación</b>: limpiar el costmap, retroceder, esperar.</li>
+    </ol>
+
+    <div class="callout"><span class="lab">Matiz Ackermann</span>Robocar es un <b>coche</b>, no un robot que gira sobre sí mismo. No puede esquivar rotando en el sitio: el controlador <b>TEB</b> respeta el radio de giro mínimo y traza una curva de evitación suave. Ante un obstáculo muy cercano por delante, muchas veces la respuesta correcta no es esquivar sino <b>frenar</b> — y aquí ayudan sensores de corto alcance como los ultrasonidos.</div>
+
+    <h3>Los sensores que lo hacen posible <span class="k">en robocar</span></h3>
+    <ul class="tick">
+      <li><b>Lidar</b> (<span class="topic">/scan</span>): fuente principal. Ve 360° en un plano; alimenta la capa de obstáculos.</li>
+      <li><b>Ultrasonidos</b> (<span class="topic">/ultrasound_data</span>, del <span class="mono">distance_node</span>): corto alcance, cubren lo que el plano del lidar no ve (objetos bajos/altos) y disparan <b>parada de emergencia</b>.</li>
+      <li><b>Mapa + costmaps + TEB</b>: la parte de <b>Capa 2 (Navegación)</b>, que convierte todo eso en un <span class="topic">/cmd_vel</span> seguro.</li>
+    </ul>
+
+    <div class="callout"><span class="lab">La idea en una frase</span>El mapa dice <b>por dónde se puede ir en general</b>; los sensores en vivo dicen <b>qué ha cambiado ahora mismo</b>. La navegación fusiona ambos en el costmap y decide cada instante la trayectoria que respeta las dos cosas.</div>
+  </section>
+
+  <footer>Robocar · construir el mapa (SLAM) → esquivar obstáculos (Nav2 costmaps) · documento conceptual</footer>
+</div>
+
+</body>
+</html>

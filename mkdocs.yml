@@ -57,6 +57,7 @@ nav:
     - Capa de navegación: tfm/navegacion.md
     - "Capa de interfaz natural: LLM + MCP": tfm/llm-mcp.md
     - Roadmap de implementación: tfm/roadmap.md
+    - "Documentos conceptuales": tfm/conceptos.md
 
 markdown_extensions:
   - admonition

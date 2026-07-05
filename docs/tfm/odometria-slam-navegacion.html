@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Odometría, SLAM y navegación — cómo se combinan</title>
+<style>
+  :root {
+    --bg: #eef1f6;
+    --surface: #ffffff;
+    --surface-2: #e7ecf3;
+    --ink: #121a24;
+    --muted: #56636f;
+    --faint: #7a8794;
+    --line: #d3dbe5;
+    --line-strong: #b9c4d1;
+    --odom: #a76c12;   /* dead-reckoning · calor */
+    --slam: #0d7a8c;   /* láser · corrección */
+    --nav:  #1f8a54;   /* ruta · destino */
+    --primary: #2a56d6;
+    --odom-bg: #f7edd9;
+    --slam-bg: #dcf0f3;
+    --nav-bg:  #dcefe4;
+    --shadow: 0 1px 2px rgba(18,26,36,.06), 0 8px 24px rgba(18,26,36,.06);
+    --radius: 14px;
+    --measure: 68ch;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", "Cascadia Code", "JetBrains Mono", Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0b0f15;
+      --surface: #121a23;
+      --surface-2: #18222e;
+      --ink: #e7edf4;
+      --muted: #9aa7b4;
+      --line: #26313f;
+      --line-strong: #33414f;
+      --odom: #e2ac54;
+      --slam: #38b9d0;
+      --nav:  #4bcb8c;
+      --primary: #7699ff;
+      --odom-bg: #2a2114;
+      --slam-bg: #10262c;
+      --nav-bg:  #122a1e;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 30px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="light"] {
+    --bg:#eef1f6; --surface:#fff; --surface-2:#e7ecf3; --ink:#121a24; --muted:#56636f;
+    --line:#d3dbe5; --line-strong:#b9c4d1; --odom:#a76c12; --slam:#0d7a8c; --nav:#1f8a54;
+    --primary:#2a56d6; --odom-bg:#f7edd9; --slam-bg:#dcf0f3; --nav-bg:#dcefe4;
+    --shadow:0 1px 2px rgba(18,26,36,.06),0 8px 24px rgba(18,26,36,.06);
+  }
+  :root[data-theme="dark"] {
+    --bg:#0b0f15; --surface:#121a23; --surface-2:#18222e; --ink:#e7edf4; --muted:#9aa7b4;
+    --line:#26313f; --line-strong:#33414f; --odom:#e2ac54; --slam:#38b9d0; --nav:#4bcb8c;
+    --primary:#7699ff; --odom-bg:#2a2114; --slam-bg:#10262c; --nav-bg:#122a1e;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px rgba(0,0,0,.35);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: var(--sans); line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1000px; margin: 0 auto; padding: clamp(1.2rem, 4vw, 3.5rem) clamp(1rem, 4vw, 2rem); }
+  .col { max-width: var(--measure); }
+  p { margin: 0 0 1rem; }
+  a { color: var(--primary); }
+
+  .eyebrow {
+    font-family: var(--mono); font-size: .72rem; letter-spacing: .18em;
+    text-transform: uppercase; color: var(--muted); margin: 0 0 .9rem;
+    display: flex; align-items: center; gap: .6rem;
+  }
+  .eyebrow::before { content:""; width: 26px; height: 2px; background: var(--primary); display:inline-block; }
+
+  h1 {
+    font-size: clamp(1.9rem, 4.6vw, 3rem); line-height: 1.08; margin: 0 0 1rem;
+    letter-spacing: -.02em; text-wrap: balance; font-weight: 700;
+  }
+  .lede { font-size: clamp(1.05rem, 2.2vw, 1.3rem); color: var(--muted); text-wrap: pretty; }
+
+  h2 {
+    font-size: 1.4rem; letter-spacing: -.01em; margin: 3.2rem 0 1rem; text-wrap: balance;
+    display:flex; align-items:baseline; gap:.7rem;
+  }
+  h2 .n { font-family: var(--mono); font-size: .8rem; color: var(--muted); font-weight: 600; }
+  h3 { font-size: 1.05rem; margin: 0 0 .4rem; }
+
+  code, .mono { font-family: var(--mono); font-size: .88em; }
+  .frame {
+    font-family: var(--mono); font-weight: 600; padding: .12em .45em; border-radius: 6px;
+    background: var(--surface-2); border: 1px solid var(--line); white-space: nowrap;
+  }
+  .topic { font-family: var(--mono); color: var(--primary); font-size: .92em; }
+
+  hr.rule { border: 0; border-top: 1px solid var(--line); margin: 3rem 0 0; }
+
+  /* ---- TF backbone ---- */
+  .tf {
+    margin: 1.6rem 0 .4rem; padding: 1.4rem 1.2rem; background: var(--surface);
+    border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow);
+    overflow-x: auto;
+  }
+  .tf-row { display: flex; align-items: stretch; gap: 0; min-width: 640px; }
+  .tf-node {
+    flex: 1; text-align: center; padding: .5rem; display:flex; flex-direction:column; gap:.25rem; justify-content:center;
+  }
+  .tf-node .frame { display:inline-block; font-size: .95rem; }
+  .tf-node small { color: var(--muted); font-size: .74rem; line-height:1.3; }
+  .tf-link { flex: 1.3; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:.35rem; padding: 0 .2rem; }
+  .tf-link .who {
+    font-family: var(--mono); font-size: .7rem; text-transform:uppercase; letter-spacing:.06em;
+    padding:.18em .5em; border-radius: 999px; font-weight:600; text-align:center; line-height:1.3;
+  }
+  .tf-link .arrow { color: var(--line-strong); font-size: 1.4rem; line-height:1; width:100%; text-align:center; position:relative; }
+  .tf-link .arrow::before { content:""; position:absolute; left:0; right:1.1rem; top:50%; height:2px; background: currentColor; }
+  .tf-link .arrow::after { content:"▸"; position:absolute; right:.2rem; top:50%; transform: translateY(-50%); font-size:1rem; }
+  .who.w-slam { color: var(--slam); background: var(--slam-bg); }
+  .who.w-odom { color: var(--odom); background: var(--odom-bg); }
+  .who.w-fix  { color: var(--muted); background: var(--surface-2); }
+  .caption { font-size:.82rem; color: var(--muted); margin:.6rem 0 0; font-family: var(--mono); }
+
+  /* ---- concept cards ---- */
+  .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin: 1.5rem 0 .5rem; }
+  .card {
+    background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 1.2rem 1.15rem; box-shadow: var(--shadow); border-top: 3px solid var(--c);
+    display:flex; flex-direction:column; gap:.55rem;
+  }
+  .card .tag {
+    font-family: var(--mono); font-size:.68rem; text-transform:uppercase; letter-spacing:.12em;
+    color: var(--c); font-weight:700;
+  }
+  .card h3 { margin: 0; }
+  .card .q { font-style: italic; color: var(--ink); font-size:.98rem; }
+  .card ul { margin: .2rem 0 0; padding-left: 1.05rem; color: var(--muted); font-size:.9rem; }
+  .card li { margin: .25rem 0; }
+  .card b { color: var(--ink); font-weight: 600; }
+  .c-odom { --c: var(--odom); }
+  .c-slam { --c: var(--slam); }
+  .c-nav  { --c: var(--nav); }
+
+  /* ---- loop ---- */
+  .loop {
+    margin: 1.5rem 0; padding: 1.4rem; background: var(--surface); border:1px solid var(--line);
+    border-radius: var(--radius); box-shadow: var(--shadow);
+    display:grid; grid-template-columns: repeat(2, 1fr); gap: .8rem;
+  }
+  .step {
+    display:flex; gap:.75rem; align-items:flex-start; padding:.7rem .8rem; border-radius:10px;
+    background: var(--surface-2); border:1px solid var(--line);
+  }
+  .step .k { font-family: var(--mono); font-weight:700; color: var(--c, var(--primary)); font-size:.82rem; flex:none; padding-top:.05rem; }
+  .step .b { font-size:.9rem; }
+  .step .b b { display:block; margin-bottom:.1rem; }
+  .step .b small { color: var(--muted); }
+  .s-nav { --c: var(--nav); } .s-act{ --c: var(--muted);} .s-odom{ --c: var(--odom);} .s-slam{ --c: var(--slam);}
+  .loopback {
+    grid-column: 1 / -1; text-align:center; font-family:var(--mono); font-size:.78rem;
+    color: var(--muted); letter-spacing:.04em; padding-top:.2rem;
+  }
+  .loopback b { color: var(--primary); }
+
+  /* ---- destination steps ---- */
+  ol.dest { counter-reset: d; list-style:none; margin: 1.3rem 0; padding:0; display:flex; flex-direction:column; gap:.55rem; }
+  ol.dest li {
+    counter-increment: d; position:relative; padding: .75rem 1rem .75rem 3rem; background: var(--surface);
+    border:1px solid var(--line); border-radius: 10px; box-shadow: var(--shadow); font-size:.95rem;
+  }
+  ol.dest li::before {
+    content: counter(d, decimal-leading-zero); position:absolute; left:.9rem; top:.7rem;
+    font-family: var(--mono); font-weight:700; font-size:.82rem; color: var(--primary);
+  }
+  ol.dest b { font-weight:600; }
+
+  /* ---- project map ---- */
+  .layers { display:grid; grid-template-columns: repeat(3,1fr); gap:.8rem; margin:1.3rem 0; }
+  .layer { padding: .9rem 1rem; border-radius:10px; border:1px solid var(--line); background: var(--surface); }
+  .layer .l { font-family:var(--mono); font-size:.7rem; text-transform:uppercase; letter-spacing:.1em; color:var(--muted); }
+  .layer .t { font-weight:600; margin:.2rem 0; }
+  .layer small { color: var(--muted); font-size:.85rem; }
+
+  .note {
+    margin-top: 2.4rem; padding: 1.1rem 1.2rem; border-left: 3px solid var(--primary);
+    background: var(--surface); border-radius: 0 10px 10px 0; color: var(--muted); font-size:.95rem;
+  }
+  .note b { color: var(--ink); }
+  footer { margin-top: 2.6rem; color: var(--muted); font-family: var(--mono); font-size:.75rem; }
+
+  @media (max-width: 720px) {
+    .cards, .loop, .layers { grid-template-columns: 1fr; }
+    .loopback { display:none; }
+  }
+</style>
+
+</head>
+<body>
+<div class="wrap">
+  <header class="col">
+    <p class="eyebrow">Robocar · TFM · Fundamentos</p>
+    <h1>Odometría, SLAM y navegación: cómo encajan para llegar a un destino</h1>
+    <p class="lede">Tres piezas, una sola pregunta: «¿cómo lleva el robot su chasis desde <em>aquí</em> hasta un punto del mapa, sin chocar?». La respuesta no está en ninguna de las tres por separado, sino en cómo se encadenan.</p>
+  </header>
+
+  <section class="col">
+    <p style="margin-top:2rem">Cada concepto responde a una pregunta distinta y produce una pieza distinta del sistema de coordenadas del robot. Ese sistema —el árbol <span class="mono">TF</span>— es el hilo que las cose. Verlo es entender la relación.</p>
+  </section>
+
+  <h2><span class="n">01</span> La columna vertebral compartida: el árbol TF</h2>
+  <div class="col"><p>En ROS2 todo se ancla a una cadena de marcos de referencia. Leída de izquierda a derecha va del mundo al robot; cada flecha es una transformación, y <b>cada concepto es dueño de una flecha</b>.</p></div>
+
+  <div class="tf">
+    <div class="tf-row">
+      <div class="tf-node">
+        <span class="frame">map</span>
+        <small>el mundo / mapa fijo</small>
+      </div>
+      <div class="tf-link">
+        <span class="who w-slam">SLAM · map→odom</span>
+        <span class="arrow"></span>
+        <span class="who w-fix">corrige la deriva</span>
+      </div>
+      <div class="tf-node">
+        <span class="frame">odom</span>
+        <small>origen del recorrido</small>
+      </div>
+      <div class="tf-link">
+        <span class="who w-odom">Odometría · odom→base_link</span>
+        <span class="arrow"></span>
+        <span class="who w-fix">cambia al moverse</span>
+      </div>
+      <div class="tf-node">
+        <span class="frame">base_link</span>
+        <small>centro del robot</small>
+      </div>
+      <div class="tf-link">
+        <span class="who w-fix">URDF · fijo</span>
+        <span class="arrow"></span>
+      </div>
+      <div class="tf-node">
+        <span class="frame">laser</span> · <span class="frame">imu</span>
+        <small>sensores atornillados</small>
+      </div>
+    </div>
+  </div>
+  <p class="caption">map → odom → base_link → sensores &nbsp;·&nbsp; componer todas da la pose del robot en el mundo</p>
+
+  <div class="col">
+    <p style="margin-top:1.4rem">La clave: <b>nadie posee la cadena entera</b>. La <span style="color:var(--odom);font-weight:600">odometría</span> produce <span class="frame">odom→base_link</span> (movimiento local, suave, pero que deriva). El <span style="color:var(--slam);font-weight:600">SLAM</span> produce <span class="frame">map→odom</span> (una corrección global que cancela esa deriva). Al componer las dos sale <span class="frame">map→base_link</span>: dónde está el robot en el mapa. Y eso es exactamente lo que la <span style="color:var(--nav);font-weight:600">navegación</span> necesita para trazar y seguir una ruta.</p>
+  </div>
+
+  <h2><span class="n">02</span> Las tres piezas, una por pregunta</h2>
+  <div class="cards">
+    <div class="card c-odom">
+      <span class="tag">Local · continua</span>
+      <h3>Odometría</h3>
+      <p class="q">«¿Cuánto y cómo me he movido?»</p>
+      <ul>
+        <li>Provee <b>odom→base_link</b>.</li>
+        <li>Fuentes: <b>encoder</b> (velocidad) + <b>IMU</b> (giro) + <b>láser</b>, fusionados por un <b>EKF</b>.</li>
+        <li>Suave y sin saltos, pero <b>acumula deriva</b>.</li>
+      </ul>
+    </div>
+    <div class="card c-slam">
+      <span class="tag">Global · correctiva</span>
+      <h3>SLAM / Localización</h3>
+      <p class="q">«¿Dónde estoy en el mapa?»</p>
+      <ul>
+        <li>Provee <b>map→odom</b> y el <b>mapa</b>.</li>
+        <li><b>Cartographer</b>: casa el <span class="topic">/scan</span> del lidar con el mapa (scan-matching + cierre de bucle).</li>
+        <li>Corrige a saltos, <b>sin deriva a largo plazo</b>.</li>
+      </ul>
+    </div>
+    <div class="card c-nav">
+      <span class="tag">Decisión · acción</span>
+      <h3>Navegación</h3>
+      <p class="q">«¿Cómo llego sin chocar?»</p>
+      <ul>
+        <li>Consume <b>map→base_link</b> + el mapa + el <span class="topic">/scan</span>.</li>
+        <li><b>Nav2</b>: planificador (ruta) + controlador <b>TEB</b> (Ackermann).</li>
+        <li>Emite <span class="topic">/cmd_vel</span> hacia los motores.</li>
+      </ul>
+    </div>
+  </div>
+
+  <h2><span class="n">03</span> Cómo se relacionan: un bucle cerrado</h2>
+  <div class="col"><p>No es una tubería recta, es un <b>ciclo</b>. La navegación decide, el robot se mueve, la odometría mide ese movimiento, el SLAM lo corrige contra el mapa, y la pose resultante vuelve a la navegación para replanificar. Una vuelta tras otra hasta llegar.</p></div>
+
+  <div class="loop">
+    <div class="step s-nav"><span class="k">NAV</span><span class="b"><b>Nav2 planifica y controla</b><small>De la pose y el mapa saca una ruta y genera <span class="topic">/cmd_vel</span> (avanza a X m/s, gira a Y rad/s).</small></span></div>
+    <div class="step s-act"><span class="k">ACT</span><span class="b"><b>car_control actúa (puente Ackermann)</b><small>Traduce <span class="topic">/cmd_vel</span> a ángulo de servo + throttle del ESC. El coche se mueve.</small></span></div>
+    <div class="step s-odom"><span class="k">ODO</span><span class="b"><b>Odometría mide el movimiento</b><small>EKF (encoder+IMU+láser) actualiza <span class="frame">odom→base_link</span>: cuánto se ha desplazado.</small></span></div>
+    <div class="step s-slam"><span class="k">SLAM</span><span class="b"><b>SLAM corrige contra el mapa</b><small>Cartographer casa el <span class="topic">/scan</span> y ajusta <span class="frame">map→odom</span>, cancelando la deriva → pose fiable.</small></span></div>
+    <div class="loopback">↑ la pose corregida (<span class="frame">map→base_link</span>) vuelve a <b>Nav2</b>, que comprueba el avance, esquiva obstáculos y replanifica — y el ciclo se repite</div>
+  </div>
+
+  <h2><span class="n">04</span> Llegar a un destino, paso a paso</h2>
+  <ol class="dest">
+    <li>Le das un <b>destino</b>: una coordenada (x, y) en el <span class="frame">map</span>.</li>
+    <li>El <b>planificador global</b> de Nav2 traza una ruta sobre el mapa de Cartographer.</li>
+    <li>El <b>controlador local (TEB)</b>, que respeta el radio de giro Ackermann, genera <span class="topic">/cmd_vel</span> para seguir esa ruta.</li>
+    <li><b>car_control</b> convierte <span class="topic">/cmd_vel</span> en dirección + tracción, y el robot avanza.</li>
+    <li>La <b>odometría</b> (EKF) va estimando el movimiento en tiempo real → <span class="frame">odom→base_link</span>.</li>
+    <li>El <b>SLAM</b> compara el lidar con el mapa y corrige la deriva → <span class="frame">map→odom</span>. La pose real queda fijada.</li>
+    <li>Nav2 usa esa pose para <b>medir el progreso</b>, sortear obstáculos (costmaps del <span class="topic">/scan</span>) y <b>replanificar</b> si hace falta.</li>
+    <li>Se repite desde el paso 3 hasta que la pose coincide con el destino. <b>Llegada.</b></li>
+  </ol>
+
+  <h2><span class="n">05</span> Dónde vive cada pieza en robocar</h2>
+  <div class="layers">
+    <div class="layer" style="border-top:3px solid var(--odom)">
+      <div class="l">Capa 0 · Fundamentos</div>
+      <div class="t">Odometría</div>
+      <small>EKF fusionando encoder + IMU (+ láser y ángulo de dirección como mejoras). Es el cimiento: sin ella, nada arranca.</small>
+    </div>
+    <div class="layer" style="border-top:3px solid var(--slam)">
+      <div class="l">Capa 1 · Percepción</div>
+      <div class="t">SLAM</div>
+      <small>RPLidar C1 → <span class="topic">/scan</span> → Cartographer 2D. Construye el mapa y localiza sobre él.</small>
+    </div>
+    <div class="layer" style="border-top:3px solid var(--nav)">
+      <div class="l">Capa 2 · Navegación</div>
+      <div class="t">Nav2 + TEB</div>
+      <small>Planifica y sigue la ruta al destino respetando la cinemática del coche.</small>
+    </div>
+  </div>
+
+  <div class="note col">
+    <b>Una forma de recordarlo.</b> La odometría es caminar con los ojos cerrados contando pasos: preciso a corto plazo, pero te acabas desviando. El SLAM es abrir los ojos y reconocer la sala para corregir dónde crees que estás. La navegación es decidir la ruta hasta la puerta y caminarla. Ninguna basta sola; el robot llega porque las tres se turnan, vuelta tras vuelta, sobre el mismo árbol <span class="mono">TF</span>.
+  </div>
+
+  <footer>Robocar · odometría → SLAM → navegación · documento conceptual</footer>
+</div>
+
+</body>
+</html>
