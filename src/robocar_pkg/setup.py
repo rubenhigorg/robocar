@@ -1,3 +1,5 @@
+import os
+from glob import glob
 from setuptools import find_packages, setup
 
 package_name = 'robocar_pkg'
@@ -10,6 +12,8 @@ setup(
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
+        (os.path.join('share', package_name, 'launch'), glob('launch/*.launch.py')),
+        (os.path.join('share', package_name, 'config'), glob('config/*.yaml')),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
@@ -27,6 +31,7 @@ setup(
             'distance_node = robocar_pkg.distance_node:main',
             'processing_node = robocar_pkg.processing_node:main',
             'encoder_node = robocar_pkg.encoder_node:main',
+            'wheel_twistcov_node = robocar_pkg.wheel_twistcov_node:main',
         ],
     },
 )
