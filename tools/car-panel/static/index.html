@@ -49,6 +49,17 @@
 
     <section class="side">
       <div class="panel">
+        <div class="panel-head"><h2>Velocidad</h2><span id="speedDot" class="dot red"></span></div>
+        <div class="speed-row">
+          <span id="speedVal" class="speed-big">—</span>
+          <span class="speed-unit">m/s</span>
+          <span id="speedKmh" class="speed-kmh"></span>
+        </div>
+        <canvas id="speedSpark" width="300" height="46"></canvas>
+        <div class="muted small">encoder de rueda · PPR=20 placeholder — calibrar dientes</div>
+      </div>
+
+      <div class="panel">
         <div class="panel-head"><h2>IMU</h2><span id="imuDot" class="dot red"></span></div>
         <div class="spark-block">
           <div class="spark-title">aceleración (m/s²) <span id="accVals" class="vals"></span></div>

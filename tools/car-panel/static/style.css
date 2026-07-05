@@ -44,6 +44,12 @@ main { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(280px, 1fr)
 .vals { font-variant-numeric: tabular-nums; }
 canvas.spark, #accSpark, #gyroSpark { width: 100%; height: 60px; background: #0a0e18; border-radius: 6px; display: block; }
 
+.speed-row { display: flex; align-items: baseline; gap: 8px; margin-bottom: 6px; }
+.speed-big { font-size: 2rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+.speed-unit { color: var(--muted); font-size: .9rem; }
+.speed-kmh { margin-left: auto; color: var(--muted); font-size: .9rem; font-variant-numeric: tabular-nums; }
+#speedSpark { width: 100%; height: 46px; background: #0a0e18; border-radius: 6px; display: block; }
+
 .us-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; text-align: center; }
 .us-cell { background: var(--panel-2); border-radius: 8px; padding: 8px 4px; }
 .us-label { font-size: .7rem; color: var(--muted); }

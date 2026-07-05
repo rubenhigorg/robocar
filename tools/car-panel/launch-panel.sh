@@ -21,6 +21,7 @@ source /home/lab/robocar/.venv/bin/activate 2>/dev/null
 nohup ros2 run robocar_pkg accelerometer_node > ~/panel_imu.log 2>&1 &
 nohup ros2 run robocar_pkg distance_node > ~/panel_us.log 2>&1 &
 nohup ros2 run robocar_pkg energy_node > ~/panel_energy.log 2>&1 &
+nohup ros2 run robocar_pkg encoder_node > ~/panel_encoder.log 2>&1 &
 
 # LIDAR si esta conectado (saltar con NOLIDAR=1 — su motor puede hundir el 5V)
 if [ -e /dev/ttyUSB0 ] && [ -z "$NOLIDAR" ]; then

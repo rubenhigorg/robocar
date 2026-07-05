@@ -15,13 +15,14 @@ const TOPICS = [
   { name: "/ultrasound_data", type: "messages_pkg/msg/Distance", throttle: 200 },
   { name: "/energy",          type: "messages_pkg/msg/Energy", throttle: 1000 },
   { name: "/scan",            type: "sensor_msgs/msg/LaserScan", throttle: 200 },
+  { name: "/wheel_speed",     type: "geometry_msgs/msg/TwistStamped", throttle: 200 },
 ];
 
 const $ = s => document.querySelector(s);
 const state = {
-  imu: null, us: null, energy: null, scan: null,
+  imu: null, us: null, energy: null, scan: null, wheel: null,
   last: {},              // topic -> timestamp ms
-  acc: [], gyro: [],     // buffers sparkline
+  acc: [], gyro: [], speed: [],  // buffers sparkline
   radius: 1.5,           // metros visibles desde el centro
 };
 
@@ -46,6 +47,11 @@ function connect() {
     else if (m.topic === "/ultrasound_data") state.us = m.msg;
     else if (m.topic === "/energy") state.energy = m.msg;
     else if (m.topic === "/scan") state.scan = m.msg;
+    else if (m.topic === "/wheel_speed") {
+      state.wheel = m.msg;
+      state.speed.push([m.msg.twist.linear.x]);
+      if (state.speed.length > 150) state.speed.shift();
+    }
   };
   ws.onclose = () => { setConn("red", "sin conexión — reintentando…"); setTimeout(connect, 3000); };
   ws.onerror = () => ws.close();
@@ -148,7 +154,8 @@ function drawSpark(canvas, buf, range) {
   c.clearRect(0, 0, W, H);
   c.strokeStyle = "#1c2333"; c.beginPath(); c.moveTo(0, H / 2); c.lineTo(W, H / 2); c.stroke();
   const colors = ["#e05c5c", "#3fb96b", "#5aa2ff"];
-  for (let k = 0; k < 3; k++) {
+  const nSeries = buf.length ? buf[0].length : 0;
+  for (let k = 0; k < nSeries; k++) {
     c.strokeStyle = colors[k]; c.beginPath();
     buf.forEach((v, i) => {
       const x = (i / 149) * W, y = H / 2 - (v[k] / range) * (H / 2);
@@ -212,6 +219,13 @@ function tick() {
     $("#v3").textContent = fmt(state.energy.voltage_battery_3, 2) + " V";
     $("#cur").textContent = fmt(state.energy.current, 2) + " A";
   }
+  if (state.wheel) {
+    const v = state.wheel.twist.linear.x;
+    $("#speedVal").textContent = fmt(v, 2);
+    $("#speedKmh").textContent = fmt(v * 3.6, 1) + " km/h";
+    drawSpark($("#speedSpark"), state.speed, 1.0);
+  }
+  $("#speedDot").className = "dot " + fresh("/wheel_speed", 2000);
   updateBattery();
   $("#imuDot").className = "dot " + fresh("/imu", 1500);
   $("#usDot").className = "dot " + fresh("/ultrasound_data", 1500);
