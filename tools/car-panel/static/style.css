@@ -38,6 +38,8 @@ main { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(280px, 1fr)
 .sw { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
 .sw.us { background: var(--us); }
 .sw.scan { background: var(--scan); }
+.sw.trail { background: #78dca0; }
+.speed-meta { display: flex; justify-content: space-between; gap: 8px; margin-top: 5px; flex-wrap: wrap; }
 
 .spark-block { margin-bottom: 8px; }
 .spark-title { font-size: .75rem; color: var(--muted); margin-bottom: 3px; display: flex; justify-content: space-between; }

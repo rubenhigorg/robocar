@@ -16,15 +16,19 @@ const TOPICS = [
   { name: "/energy",          type: "messages_pkg/msg/Energy", throttle: 1000 },
   { name: "/scan",            type: "sensor_msgs/msg/LaserScan", throttle: 200 },
   { name: "/wheel_speed",     type: "geometry_msgs/msg/TwistStamped", throttle: 200 },
+  { name: "/odometry/filtered", type: "nav_msgs/msg/Odometry", throttle: 150 },
 ];
 
 const $ = s => document.querySelector(s);
 const state = {
-  imu: null, us: null, energy: null, scan: null, wheel: null,
+  imu: null, us: null, energy: null, scan: null, wheel: null, odom: null,
   last: {},              // topic -> timestamp ms
   acc: [], gyro: [], speed: [],  // buffers sparkline
+  trail: [],             // trayectoria de la odometría EKF (frame odom)
   radius: 1.5,           // metros visibles desde el centro
 };
+
+const yawOf = q => Math.atan2(2 * (q.w * q.z + q.x * q.y), 1 - 2 * (q.y * q.y + q.z * q.z));
 
 /* ── conexión rosbridge ── */
 const HOST = location.hostname || "robocar.local";
@@ -49,8 +53,21 @@ function connect() {
     else if (m.topic === "/scan") state.scan = m.msg;
     else if (m.topic === "/wheel_speed") {
       state.wheel = m.msg;
-      state.speed.push([m.msg.twist.linear.x]);
+      if (!state.odom) {           // sin EKF, la gráfica usa el encoder crudo
+        state.speed.push([m.msg.twist.linear.x]);
+        if (state.speed.length > 150) state.speed.shift();
+      }
+    }
+    else if (m.topic === "/odometry/filtered") {
+      state.odom = m.msg;
+      state.speed.push([m.msg.twist.twist.linear.x]);   // gráfica: velocidad fusionada
       if (state.speed.length > 150) state.speed.shift();
+      const p = m.msg.pose.pose.position;
+      const last = state.trail[state.trail.length - 1];
+      if (!last || Math.hypot(p.x - last[0], p.y - last[1]) > 0.01) {
+        state.trail.push([p.x, p.y]);
+        if (state.trail.length > 800) state.trail.shift();
+      }
     }
   };
   ws.onclose = () => { setConn("red", "sin conexión — reintentando…"); setTimeout(connect, 3000); };
@@ -86,6 +103,24 @@ function drawView() {
   for (let r = 0.5; r <= state.radius + 0.01; r += 0.5) {
     vc.beginPath(); vc.arc(W / 2, H / 2, r * S, 0, 2 * Math.PI); vc.stroke();
     vc.fillText(r.toFixed(1) + " m", W / 2 + 4, H / 2 - r * S + 12);
+  }
+
+  // estela de la trayectoria (odometría EKF, transformada al frame del coche)
+  if (state.odom && state.trail.length > 1) {
+    const pp = state.odom.pose.pose;
+    const cx0 = pp.position.x, cy0 = pp.position.y, th = yawOf(pp.orientation);
+    const cos = Math.cos(th), sin = Math.sin(th);
+    const n = state.trail.length;
+    vc.lineWidth = 2; vc.lineCap = "round";
+    for (let i = 1; i < n; i++) {
+      const a = state.trail[i - 1], b = state.trail[i];
+      const ax = cos * (a[0] - cx0) + sin * (a[1] - cy0), ay = -sin * (a[0] - cx0) + cos * (a[1] - cy0);
+      const bx = cos * (b[0] - cx0) + sin * (b[1] - cy0), by = -sin * (b[0] - cx0) + cos * (b[1] - cy0);
+      const [x1, y1] = carToScreen(ax, ay), [x2, y2] = carToScreen(bx, by);
+      vc.strokeStyle = `rgba(120,220,160,${(0.15 + 0.75 * i / n).toFixed(2)})`;
+      vc.beginPath(); vc.moveTo(x1, y1); vc.lineTo(x2, y2); vc.stroke();
+    }
+    vc.lineWidth = 1;
   }
 
   // puntos LIDAR
@@ -219,13 +254,23 @@ function tick() {
     $("#v3").textContent = fmt(state.energy.voltage_battery_3, 2) + " V";
     $("#cur").textContent = fmt(state.energy.current, 2) + " A";
   }
-  if (state.wheel) {
+  if (state.odom) {
+    const v = state.odom.twist.twist.linear.x;
+    $("#speedVal").textContent = fmt(v, 2);
+    $("#speedKmh").textContent = fmt(v * 3.6, 1) + " km/h";
+    const pp = state.odom.pose.pose;
+    $("#odomPose").textContent =
+      `x ${fmt(pp.position.x, 2)} m · y ${fmt(pp.position.y, 2)} m · θ ${fmt(yawOf(pp.orientation) * 180 / Math.PI, 0)}°`;
+    if (state.wheel) $("#speedRaw").textContent = `encoder crudo: ${fmt(state.wheel.twist.linear.x, 2)} m/s`;
+    drawSpark($("#speedSpark"), state.speed, 1.0);
+  } else if (state.wheel) {
     const v = state.wheel.twist.linear.x;
     $("#speedVal").textContent = fmt(v, 2);
     $("#speedKmh").textContent = fmt(v * 3.6, 1) + " km/h";
+    $("#odomPose").textContent = "(EKF sin datos — mostrando encoder crudo)";
     drawSpark($("#speedSpark"), state.speed, 1.0);
   }
-  $("#speedDot").className = "dot " + fresh("/wheel_speed", 2000);
+  $("#speedDot").className = "dot " + (state.odom ? fresh("/odometry/filtered", 1500) : fresh("/wheel_speed", 2000));
   updateBattery();
   $("#imuDot").className = "dot " + fresh("/imu", 1500);
   $("#usDot").className = "dot " + fresh("/ultrasound_data", 1500);
