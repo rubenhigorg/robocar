@@ -23,13 +23,20 @@ nohup ros2 run robocar_pkg distance_node > ~/panel_us.log 2>&1 &
 nohup ros2 run robocar_pkg energy_node > ~/panel_energy.log 2>&1 &
 nohup ros2 run robocar_pkg encoder_node > ~/panel_encoder.log 2>&1 &
 
-# LIDAR si esta conectado (saltar con NOLIDAR=1 — su motor puede hundir el 5V)
-if [ -e /dev/ttyUSB0 ] && [ -z "$NOLIDAR" ]; then
-  sudo chmod 666 /dev/ttyUSB0 2>/dev/null
+# LIDAR: puerto por LIDAR_PORT, o autodeteccion — USB primero, y si no, la
+# UART de los pines (/dev/ttyS0, conexion definitiva desde jul 2026; validada
+# a 460800 con la consola serie deshabilitada). Saltar con NOLIDAR=1.
+# Permisos: el usuario lab pertenece al grupo dialout.
+LIDAR_DEV="${LIDAR_PORT:-}"
+if [ -z "$LIDAR_DEV" ]; then
+  if [ -e /dev/ttyUSB0 ]; then LIDAR_DEV=/dev/ttyUSB0
+  elif [ -e /dev/ttyS0 ]; then LIDAR_DEV=/dev/ttyS0; fi
+fi
+if [ -n "$LIDAR_DEV" ] && [ -z "$NOLIDAR" ]; then
   nohup ros2 run rplidar_ros rplidar_node --ros-args \
-    -p serial_port:=/dev/ttyUSB0 -p serial_baudrate:=460800 -p frame_id:=laser \
+    -p serial_port:="$LIDAR_DEV" -p serial_baudrate:=460800 -p frame_id:=laser \
     > ~/panel_lidar.log 2>&1 &
-  echo "LIDAR detectado y lanzado"
+  echo "LIDAR lanzado en $LIDAR_DEV"
 fi
 
 sleep 6
