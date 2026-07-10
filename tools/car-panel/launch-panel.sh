@@ -21,7 +21,7 @@ source /home/lab/robocar/.venv/bin/activate 2>/dev/null
 nohup ros2 run robocar_pkg accelerometer_node > ~/panel_imu.log 2>&1 &
 nohup ros2 run robocar_pkg distance_node > ~/panel_us.log 2>&1 &
 nohup ros2 run robocar_pkg energy_node > ~/panel_energy.log 2>&1 &
-nohup ros2 run robocar_pkg encoder_node --ros-args -p pulses_per_rev:=212.0 -p wheel_diameter_m:=0.064 > ~/panel_encoder.log 2>&1 &
+nohup ros2 run robocar_pkg encoder_node --ros-args -p pulses_per_rev:=212.0 -p wheel_diameter_m:=0.068 > ~/panel_encoder.log 2>&1 &
 
 # LIDAR: puerto por LIDAR_PORT, o autodeteccion — USB primero, y si no, la
 # UART de los pines (/dev/ttyS0, conexion definitiva desde jul 2026; validada
