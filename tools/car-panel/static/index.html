@@ -65,6 +65,13 @@
       </div>
 
       <div class="panel">
+        <div class="panel-head"><h2>Odometría · frame odom</h2><span id="odomDot" class="dot red"></span></div>
+        <div id="odomBig" class="odom-big">—</div>
+        <canvas id="odomWorld" width="320" height="320" class="odom-canvas"></canvas>
+        <div class="muted small">posición (x,y) fusionada por el EKF en el plano · el coche se mueve, la rejilla es fija</div>
+      </div>
+
+      <div class="panel">
         <div class="panel-head"><h2>IMU</h2><span id="imuDot" class="dot red"></span></div>
         <div class="spark-block">
           <div class="spark-title">aceleración (m/s²) <span id="accVals" class="vals"></span></div>

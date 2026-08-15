@@ -234,6 +234,7 @@ const fmt = (v, dec = 1) => (v === undefined || v === null) ? "—" : (+v).toFix
 
 function tick() {
   drawView();
+  drawOdomWorld();
   if (state.acc.length) {
     drawSpark($("#accSpark"), state.acc, 15);
     drawSpark($("#gyroSpark"), state.gyro, 5);
@@ -294,3 +295,73 @@ document.querySelectorAll(".zoom button").forEach(b => b.onclick = () => {
 
 connect();
 requestAnimationFrame(tick);
+
+
+/* -- vista de odometria en el frame odom (mundo fijo, el coche se mueve) -- */
+function niceStep(v) {
+  const p = Math.pow(10, Math.floor(Math.log10(v)));
+  const f = v / p;
+  return (f < 1.5 ? 1 : f < 3.5 ? 2 : f < 7.5 ? 5 : 10) * p;
+}
+
+function drawOdomWorld() {
+  const cv = document.getElementById("odomWorld");
+  if (!cv) return;
+  const g = cv.getContext("2d"), W = cv.width, H = cv.height;
+  g.clearRect(0, 0, W, H);
+
+  if (state.odom) {
+    const p = state.odom.pose.pose;
+    $("#odomBig").textContent =
+      `x ${fmt(p.position.x, 2)} · y ${fmt(p.position.y, 2)} m · θ ${fmt(yawOf(p.orientation) * 180 / Math.PI, 0)}°`;
+    $("#odomDot").className = "dot " + fresh("/odometry/filtered", 1500);
+  } else {
+    $("#odomBig").textContent = "sin datos EKF";
+  }
+
+  const pts = state.trail.slice();
+  pts.push([0, 0]);
+  if (state.odom) { const p = state.odom.pose.pose.position; pts.push([p.x, p.y]); }
+  let minx = 1e9, maxx = -1e9, miny = 1e9, maxy = -1e9;
+  for (const q of pts) { if (q[0] < minx) minx = q[0]; if (q[0] > maxx) maxx = q[0]; if (q[1] < miny) miny = q[1]; if (q[1] > maxy) maxy = q[1]; }
+  const cx = (minx + maxx) / 2, cy = (miny + maxy) / 2;
+  const span = Math.max(maxx - minx, maxy - miny, 0.5) * 1.3;
+  const S = Math.min(W, H) / span;
+  const toS = (x, y) => [W / 2 - (y - cy) * S, H / 2 - (x - cx) * S];
+
+  const step = niceStep(span / 4);
+  g.strokeStyle = "#1c2333"; g.fillStyle = "#4a5578"; g.font = "10px system-ui"; g.lineWidth = 1;
+  for (let gx = Math.ceil((cx - span / 2) / step) * step; gx <= cx + span / 2 + 1e-6; gx += step) {
+    const sy = toS(gx, cy)[1];
+    g.beginPath(); g.moveTo(0, sy); g.lineTo(W, sy); g.stroke();
+    g.fillText(gx.toFixed(1), 2, sy - 2);
+  }
+  for (let gy = Math.ceil((cy - span / 2) / step) * step; gy <= cy + span / 2 + 1e-6; gy += step) {
+    const sx = toS(cx, gy)[0];
+    g.beginPath(); g.moveTo(sx, 0); g.lineTo(sx, H); g.stroke();
+  }
+
+  const o = toS(0, 0);
+  g.fillStyle = "#5b6b8c"; g.beginPath(); g.arc(o[0], o[1], 3, 0, 6.283); g.fill();
+  g.fillText("origen", o[0] + 5, o[1] + 12);
+
+  if (state.trail.length > 1) {
+    g.strokeStyle = "#78dca0"; g.lineWidth = 2; g.lineJoin = "round"; g.beginPath();
+    for (let i = 0; i < state.trail.length; i++) {
+      const s = toS(state.trail[i][0], state.trail[i][1]);
+      i ? g.lineTo(s[0], s[1]) : g.moveTo(s[0], s[1]);
+    }
+    g.stroke(); g.lineWidth = 1;
+  }
+
+  if (state.odom) {
+    const p = state.odom.pose.pose, th = yawOf(p.orientation);
+    const hx = Math.cos(th), hy = Math.sin(th), lx = -hy, ly = hx;
+    const L = 0.11, Wd = 0.06, x = p.position.x, y = p.position.y;
+    const tip = toS(x + hx * L, y + hy * L);
+    const bl = toS(x - hx * L * 0.5 + lx * Wd, y - hy * L * 0.5 + ly * Wd);
+    const br = toS(x - hx * L * 0.5 - lx * Wd, y - hy * L * 0.5 - ly * Wd);
+    g.fillStyle = "#8affce";
+    g.beginPath(); g.moveTo(tip[0], tip[1]); g.lineTo(bl[0], bl[1]); g.lineTo(br[0], br[1]); g.closePath(); g.fill();
+  }
+}
