@@ -9,15 +9,17 @@ options = {
   trajectory_builder = TRAJECTORY_BUILDER,
   map_frame = "map",
   tracking_frame = "base_link",
-  published_frame = "base_link",
+  -- Con odometria externa (EKF) publicamos map->odom: published_frame=odom.
+  -- (El EKF ya publica odom->base_link; asi base_link tiene UN solo padre.)
+  published_frame = "odom",
   odom_frame = "odom",
-  -- Nadie publica odom: Cartographer crea la cadena map->odom->base_link (Nav2 la exige)
-  provide_odom_frame = true,
+  -- El EKF de Antonio (0.4) publica odom->base_link. Cartographer NO debe
+  -- volver a publicarlo: solo corrige map->odom. (Antes D2=A publicaba todo.)
+  provide_odom_frame = false,
   publish_frame_projected_to_2d = true,
-  -- D2 = opcion A: sin odometria de ruedas; el scan-matching hace ese papel.
-  -- Futuro plan B: cuando la fusion IMU+encoder (Antonio) de una odometria real,
-  -- cambiar a true y publicar odom desde ese nodo.
-  use_odometry = false,
+  -- Plan B (D2->B) EN USO: la fusion IMU+encoder (EKF de Antonio) publica una
+  -- odometria real en /odometry/filtered; Cartographer la consume como prior.
+  use_odometry = true,
   use_nav_sat = false,
   use_landmarks = false,
   num_laser_scans = 1,
