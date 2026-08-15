@@ -277,7 +277,64 @@ odom0_pose_rejection_threshold: 2.0   <span class="c"># cortafuegos anti-salto</
     </div>
   </div>
 
-  <h2><span class="sn">6</span> Síntesis</h2>
+  <h2><span class="sn">6</span> Adaptación en caliente</h2>
+  <div class="col">
+    <p>Los perfiles anteriores son fijos, pero el peso puede cambiar <b>sobre la marcha</b> según el contexto — por ejemplo, en función de la <b>velocidad</b> o la <b>aceleración</b> del robot. La cuestión decisiva es <em>dónde</em> se cambia.</p>
+
+    <div class="callout c-key">
+      <span class="lab">Dónde vive la adaptación</span>
+      En <span class="frame">robot_localization</span> la covarianza de cada medida <b>viene en el propio mensaje</b>, no en un parámetro que se cambie fácilmente en caliente. Por eso la adaptación no se hace en el EKF, sino <b>aguas arriba</b>, en los nodos adaptadores (como <span class="frame">wheel_twistcov_node</span>), que ya estampan la covarianza. Basta con que esa covarianza sea <b>una función del contexto</b>: se recalcula en cada mensaje y el peso varía de forma continua, sin reiniciar nada.
+    </div>
+
+    <h3>Continua frente a por saltos</h3>
+  </div>
+  <div class="tbl">
+    <table>
+      <thead><tr><th></th><th>Modulación continua</th><th>Perfil discreto</th></tr></thead>
+      <tbody>
+        <tr><td><b>Qué</b></td><td>cov = <span class="var">f</span>(<span class="var">v</span>, <span class="var">a</span>): función suave de la señal</td><td>un supervisor conmuta perfiles por umbrales</td></tr>
+        <tr><td><b>Dónde</b></td><td>en los adaptadores, por mensaje</td><td>un nodo que reconfigura</td></tr>
+        <tr><td><b>Ventaja</b></td><td><span class="pill hi">sin saltos · sin relanzar</span></td><td>perfiles claros y legibles</td></tr>
+        <tr><td><b>Riesgo</b></td><td>—</td><td><span class="pill lo">saltos de pose al conmutar</span> → histéresis</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <p>La <b>continua</b> es preferible: adapta sin discontinuidades y no necesita lógica de conmutación ni relanzar el filtro.</p>
+
+    <h3>Ejemplo: pesos en función de la velocidad</h3>
+    <ul class="tick">
+      <li><b>Arranque / baja velocidad.</b> Es cuando las ruedas patinan → <b>inflar la covarianza del encoder</b> (bajar su peso). Ley típica:</li>
+    </ul>
+    <div class="eq">
+      cov<sub>encoder</sub> = cov<sub>base</sub> · ( 1 + <span class="var">k</span> · |<span class="var">a</span><sub>comandada</sub>| )
+      <span class="lbl">al pisar gas fuerte, el encoder pesa menos automáticamente</span>
+    </div>
+    <ul class="tick">
+      <li><b>Alta velocidad.</b> El scan-matching del láser degrada (menos solape entre barridos, más riesgo de derrape) → subir su covarianza y apoyarse más en el <b>giróscopo</b>.</li>
+      <li><b>Muy baja velocidad / parado.</b> El giróscopo puede quedar bajo su propio ruido; encoder y láser mandan.</li>
+    </ul>
+
+    <div class="callout c-warn">
+      <span class="lab">El bucle que hay que evitar</span>
+      Cuidado con <b>de dónde sacas la velocidad</b> para calcular los pesos. Si usas la salida del propio EKF (<span class="frame">/odometry/filtered</span>) para ponderar sus entradas, creas un <b>bucle de realimentación</b> que puede volverse inestable. Usa una señal <b>independiente</b>: la velocidad <b>comandada</b> (<span class="frame">/cmd_vel</span>) o su derivada, o la velocidad <b>cruda</b> del encoder. Así la adaptación no se muerde la cola.
+    </div>
+
+    <h3>Arquitectura</h3>
+    <p>El EKF se queda <b>igual</b> (configuración estática); toda la inteligencia adaptativa vive en los adaptadores, aguas arriba:</p>
+    <pre><span class="c"># una señal independiente gobierna la covarianza, no la salida del EKF</span>
+/cmd_vel  (v, a comandadas)
+    │
+    ▼
+ [adaptador]   cov = f(v, a)        /wheel_speed
+    │                                    │
+    └──────────►  /wheel_speed_cov  ◄────┘   (covarianza adaptada)
+                        │
+                        ▼
+                      EKF   (config fija)  ──►  /odometry/filtered</pre>
+  </div>
+
+  <h2><span class="sn">7</span> Síntesis</h2>
   <div class="col">
     <ul class="tick">
       <li>El <b>peso de cada sensor es su covarianza</b>: la fusión es una mesa de mezclas, no un interruptor.</li>
