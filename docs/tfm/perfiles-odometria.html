@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pesos de sensores y perfiles de odometría — estudio</title>
+<style>
+  :root{
+    --bg:#e9edf3; --surface:#fbfcfe; --raise:#f2f5f9;
+    --ink:#17212e; --muted:#586372; --faint:#8b97a6; --line:#d3dbe4; --line-2:#c0cad6;
+    --accent:#1f66c9; --accent2:#0e7c86;
+    --warn:#b5651d; --warn-bg:#f7ead9; --good:#2f8f5b; --good-bg:#e0f0e6;
+    --off:#c0cad6;
+    --shadow:0 1px 2px rgba(23,33,46,.05),0 8px 26px rgba(23,33,46,.07);
+    --serif:Georgia,"Iowan Old Style","Palatino Linotype","Book Antiqua",serif;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --mono:ui-monospace,"SF Mono","Cascadia Code","JetBrains Mono",Menlo,Consolas,monospace;
+    --measure:64ch;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --bg:#0c1017; --surface:#141c26; --raise:#0f1620;
+      --ink:#e6ecf3; --muted:#94a1b1; --faint:#657283; --line:#26323f; --line-2:#33414f;
+      --accent:#5b9bea; --accent2:#43b9c3;
+      --warn:#e0a24a; --warn-bg:#2b2011; --good:#4dc287; --good-bg:#122a1e; --off:#33414f;
+      --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px rgba(0,0,0,.42);
+    }
+  }
+  :root[data-theme="light"]{--bg:#e9edf3;--surface:#fbfcfe;--raise:#f2f5f9;--ink:#17212e;--muted:#586372;--faint:#8b97a6;--line:#d3dbe4;--line-2:#c0cad6;--accent:#1f66c9;--accent2:#0e7c86;--warn:#b5651d;--warn-bg:#f7ead9;--good:#2f8f5b;--good-bg:#e0f0e6;--off:#c0cad6;--shadow:0 1px 2px rgba(23,33,46,.05),0 8px 26px rgba(23,33,46,.07);}
+  :root[data-theme="dark"]{--bg:#0c1017;--surface:#141c26;--raise:#0f1620;--ink:#e6ecf3;--muted:#94a1b1;--faint:#657283;--line:#26323f;--line-2:#33414f;--accent:#5b9bea;--accent2:#43b9c3;--warn:#e0a24a;--warn-bg:#2b2011;--good:#4dc287;--good-bg:#122a1e;--off:#33414f;--shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px rgba(0,0,0,.42);}
+
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--serif);line-height:1.7;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:840px;margin:0 auto;padding:clamp(1.4rem,4vw,3.5rem) clamp(1rem,4vw,1.6rem)}
+  .col{max-width:var(--measure)}
+  p{margin:0 0 1.05rem}
+  a{color:var(--accent)}
+
+  .eyebrow{font-family:var(--sans);font-size:.7rem;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin:0 0 1rem;display:flex;align-items:center;gap:.6rem}
+  .eyebrow::before{content:"";width:28px;height:2px;background:var(--accent);display:inline-block}
+  h1{font-size:clamp(1.8rem,4.2vw,2.6rem);line-height:1.12;margin:0 0 1rem;letter-spacing:-.01em;text-wrap:balance;font-weight:600}
+  .abstract{font-size:1.05rem;color:var(--muted);border-left:3px solid var(--line-2);padding-left:1.1rem;margin:1.4rem 0 0}
+  .abstract b{color:var(--ink)}
+
+  h2{font-size:1.5rem;margin:3rem 0 .3rem;letter-spacing:-.01em;text-wrap:balance;display:flex;align-items:baseline;gap:.7rem;font-weight:600}
+  h2 .sn{font-family:var(--sans);font-size:.85rem;font-weight:700;color:var(--accent);font-variant-numeric:tabular-nums}
+  h3{font-family:var(--sans);font-size:1rem;font-weight:650;margin:1.8rem 0 .5rem}
+  h2+p,h2+.col{margin-top:.6rem}
+
+  .mono,code{font-family:var(--mono);font-size:.86em}
+  .var{font-style:italic}
+  .frame{font-family:var(--mono);font-weight:600;font-size:.82em;background:var(--raise);border:1px solid var(--line);border-radius:5px;padding:.08em .4em;white-space:nowrap}
+
+  .callout{margin:1.6rem 0;padding:1rem 1.2rem;border-radius:0 12px 12px 0;font-size:.98rem;border-left:3px solid var(--c,var(--accent));background:var(--cbg,var(--raise))}
+  .callout .lab{font-family:var(--sans);font-size:.7rem;text-transform:uppercase;letter-spacing:.1em;font-weight:700;color:var(--c,var(--accent));display:block;margin-bottom:.4rem}
+  .callout b{color:var(--ink)}
+  .c-key{--c:var(--accent);--cbg:color-mix(in srgb,var(--accent) 8%,transparent)}
+  .c-warn{--c:var(--warn);--cbg:var(--warn-bg)}
+  .c-good{--c:var(--good);--cbg:var(--good-bg)}
+
+  ul.tick{list-style:none;padding:0;margin:1rem 0;display:flex;flex-direction:column;gap:.6rem}
+  ul.tick li{padding-left:1.5rem;position:relative}
+  ul.tick li::before{content:"→";position:absolute;left:0;color:var(--accent);font-family:var(--sans)}
+  ul.tick b{font-weight:600}
+
+  /* meter / fader */
+  .fader{display:grid;grid-template-columns:96px 1fr 52px;gap:.55rem;align-items:center;font-family:var(--sans)}
+  .fader .fn{font-size:.82rem;color:var(--ink);font-weight:550}
+  .meter{display:flex;gap:3px}
+  .meter i{height:9px;flex:1;border-radius:2px;background:var(--off);opacity:.5}
+  .meter i.on{opacity:1}
+  .meter.g i.on{background:var(--good)} .meter.a i.on{background:var(--accent)}
+  .fader .lv{font-size:.68rem;color:var(--muted);text-align:right;letter-spacing:.04em;font-weight:600}
+
+  .profiles{display:grid;grid-template-columns:repeat(2,1fr);gap:1rem;margin:1.5rem 0}
+  .pcard{background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:1.1rem 1.15rem;border-top:3px solid var(--pc,var(--accent));display:flex;flex-direction:column;gap:.5rem}
+  .pcard .pname{font-family:var(--sans);font-weight:700;font-size:.98rem}
+  .pcard .penv{font-family:var(--sans);font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--pc,var(--accent));font-weight:650}
+  .pcard .faders{display:flex;flex-direction:column;gap:.4rem;margin:.4rem 0}
+  .pcard .why{font-size:.86rem;color:var(--muted);border-top:1px solid var(--line);padding-top:.55rem}
+  .pcard .why b{color:var(--ink)}
+
+  .tbl{overflow-x:auto;margin:1.5rem 0}
+  table{border-collapse:collapse;width:100%;font-family:var(--sans);font-size:.85rem;min-width:600px}
+  th,td{text-align:left;padding:.55rem .7rem;border-bottom:1px solid var(--line);vertical-align:top}
+  th{font-size:.71rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:650}
+  tbody tr:hover{background:color-mix(in srgb,var(--accent) 5%,transparent)}
+  .pill{font-size:.71rem;font-weight:650;padding:.15em .55em;border-radius:999px;white-space:nowrap}
+  .pill.hi{background:var(--good-bg);color:var(--good)} .pill.lo{background:var(--warn-bg);color:var(--warn)} .pill.mid{background:var(--raise);color:var(--muted)}
+
+  .eq{font-family:var(--serif);text-align:center;font-size:1.18rem;margin:1.3rem 0}
+  .eq .frac{display:inline-flex;flex-direction:column;vertical-align:middle;text-align:center;margin:0 .15em}
+  .eq .frac>span:first-child{border-bottom:1.5px solid currentColor;padding:0 .4em .1em}
+  .eq .frac>span:last-child{padding:.1em .4em 0}
+  .eq .lbl{font-family:var(--sans);font-size:.7rem;color:var(--faint);display:block;margin-top:.5rem}
+
+  pre{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:.9rem 1rem;overflow-x:auto;font-family:var(--mono);font-size:.8rem;line-height:1.55;box-shadow:var(--shadow)}
+  pre .c{color:var(--faint)}
+  hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+  footer{margin-top:2.5rem;color:var(--faint);font-family:var(--sans);font-size:.75rem;text-align:center}
+  .legend{font-family:var(--sans);font-size:.75rem;color:var(--muted);display:flex;flex-wrap:wrap;gap:1rem;margin:.4rem 0 0;align-items:center}
+  .legend .k{display:flex;align-items:center;gap:.35rem}
+  .legend .m{display:flex;gap:2px}.legend .m i{width:9px;height:9px;border-radius:2px;background:var(--off);opacity:.5}.legend .m i.on{opacity:1;background:var(--accent)}
+
+  @media (max-width:720px){ .profiles{grid-template-columns:1fr} }
+</style>
+
+</head>
+<body>
+<div class="wrap">
+  <header class="col">
+    <p class="eyebrow">Robocar · TFM · Estudio de diseño</p>
+    <h1>Pesos de sensores y perfiles de odometría</h1>
+    <p class="abstract">La fusión de odometría (EKF) no trata a todos los sensores por igual: los <b>pondera según su fiabilidad</b>. Ese peso <b>es la covarianza</b>. Ajustándola por sensor se obtienen <b>perfiles de odometría</b> —recetas de confianza— que se adaptan a cada ambiente: una sala con paredes, un pasillo largo, un espacio abierto o un suelo resbaladizo. Este estudio define el mecanismo, la fuerza de cada sensor por entorno, y un conjunto de perfiles listos para configurar.</p>
+  </header>
+
+  <h2><span class="sn">1</span> El peso <em>es</em> la covarianza</h2>
+  <div class="col">
+    <p>En un filtro de Kalman, cada medida entra con una <b>covarianza</b> que expresa cuánta incertidumbre tiene. El filtro calcula la <em>ganancia de Kalman</em>, que reparte la corrección de forma <b>inversa a la covarianza</b>: menos covarianza → más confianza → <b>más peso</b>; más covarianza → se ignora casi.</p>
+    <div class="eq">
+      peso &nbsp;∝&nbsp; <span class="frac"><span>1</span><span>covarianza</span></span>
+      <span class="lbl">bajar la covarianza de un sensor = subir su fader en la mezcla</span>
+    </div>
+    <p>No hay un parámetro literal llamado «peso»: <b>se sube o baja el fader ajustando la covarianza</b> de cada fuente. Es exactamente una <b>mesa de mezclas</b> donde cada sensor es un canal.</p>
+  </div>
+
+  <h2><span class="sn">2</span> Las palancas que ofrece <span class="mono" style="font-size:.8em">robot_localization</span></h2>
+  <div class="col">
+    <p>El EKF del robocar (<span class="frame">robot_localization</span>) da cuatro palancas para ponderar, de la más gruesa a la más fina:</p>
+    <ul class="tick">
+      <li><b>Covarianza de la medida.</b> La que trae cada mensaje (la del <span class="frame">/imu</span>, la que fija el adaptador del encoder, la que publica rf2o). Es el fader principal de cada canal.</li>
+      <li><b>Matriz de configuración por eje.</b> Para cada fuente se eligen <em>qué componentes</em> se fusionan (x, y, yaw, vx, vyaw…). Permite algo muy potente: usar <b>solo parte</b> de un sensor — p. ej. fusionar el <em>yaw</em> del láser pero <b>no</b> su avance longitudinal en un pasillo.</li>
+      <li><b>Umbral de rechazo (Mahalanobis).</b> <span class="frame">..._rejection_threshold</span> descarta medidas que se apartan demasiado de la predicción: un cortafuegos contra saltos (un derrape, un mal emparejamiento del láser).</li>
+      <li><b>Ruido de proceso (Q).</b> Cuánto se fía el filtro de su propio modelo frente a las medidas. Sube la agilidad o la suavidad global.</li>
+    </ul>
+    <div class="callout c-key">
+      <span class="lab">El truco por eje</span>
+      La matriz de configuración es la clave para adaptar a entornos difíciles. En un pasillo largo el láser estima mal el <b>avance</b> (todo se ve igual a lo largo), pero sigue estimando bien el <b>giro</b> y la <b>posición lateral</b>. Solución: fusionar del láser solo <span class="frame">yaw</span> y <span class="frame">y</span>, dejar el avance <span class="frame">x</span> al encoder. No es todo-o-nada.
+    </div>
+  </div>
+
+  <h2><span class="sn">3</span> Fuerza de cada sensor según el entorno</h2>
+  <div class="col"><p>Antes de recetar perfiles, qué sensor brilla y cuál falla en cada situación:</p></div>
+  <div class="tbl">
+    <table>
+      <thead><tr><th>Sensor</th><th>Mide</th><th>Fuerte en</th><th>Débil en</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><b>Encoder</b></td><td>velocidad de rueda</td>
+          <td>suelo con agarre, avance recto</td>
+          <td><span class="pill lo">patinaje</span> arranques, suelo resbaladizo</td>
+        </tr>
+        <tr>
+          <td><b>IMU · giróscopo</b></td><td>velocidad de giro</td>
+          <td><span class="pill hi">casi todo</span> inmune al patinaje</td>
+          <td>deriva de bias en giros muy largos</td>
+        </tr>
+        <tr>
+          <td><b>Láser (rf2o)</b></td><td>desplazamiento vs entorno</td>
+          <td><span class="pill hi">salas con estructura</span> paredes, esquinas</td>
+          <td><span class="pill lo">pasillos/espacios abiertos</span> geometría pobre; CPU</td>
+        </tr>
+        <tr>
+          <td><b>Dirección</b></td><td><span class="var">v</span>·tan<span class="var">δ</span>/<span class="var">L</span></td>
+          <td>marcha normal, redundancia de yaw</td>
+          <td><span class="pill lo">derrape</span> deslizamiento; ángulo comandado</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <p>Dos ejes de fallo dominan: el <b>deslizamiento</b> (hunde encoder y dirección; giróscopo y láser aguantan) y la <b>pobreza geométrica</b> del entorno (hunde el láser; encoder y giróscopo aguantan). Los perfiles se construyen para que <b>en cada ambiente pesen los sensores que no fallan ahí</b>.</p>
+  </div>
+
+  <h2><span class="sn">4</span> Perfiles de odometría</h2>
+  <div class="col"><p>Cada perfil es una receta de pesos (faders) por sensor, pensada para un ambiente. El nivel es la <b>confianza</b>: a más nivel, menos covarianza.</p></div>
+  <div class="legend">
+    <span class="k">Nivel de confianza:</span>
+    <span class="k"><span class="m"><i></i><i></i><i></i></span> OFF</span>
+    <span class="k"><span class="m"><i class="on"></i><i></i><i></i></span> bajo</span>
+    <span class="k"><span class="m"><i class="on"></i><i class="on"></i><i></i></span> medio</span>
+    <span class="k"><span class="m"><i class="on"></i><i class="on"></i><i class="on"></i></span> alto</span>
+  </div>
+
+  <div class="profiles">
+    <!-- P1 -->
+    <div class="pcard" style="--pc:var(--accent2)">
+      <div class="penv">Interior estructurado</div>
+      <div class="pname">Sala / mapeo</div>
+      <div class="faders">
+        <div class="fader"><span class="fn">Encoder</span><span class="meter a"><i class="on"></i><i class="on"></i><i></i></span><span class="lv">MEDIO</span></div>
+        <div class="fader"><span class="fn">Giróscopo</span><span class="meter g"><i class="on"></i><i class="on"></i><i class="on"></i></span><span class="lv">ALTO</span></div>
+        <div class="fader"><span class="fn">Láser</span><span class="meter g"><i class="on"></i><i class="on"></i><i class="on"></i></span><span class="lv">ALTO</span></div>
+        <div class="fader"><span class="fn">Dirección</span><span class="meter a"><i class="on"></i><i></i><i></i></span><span class="lv">BAJO</span></div>
+      </div>
+      <div class="why"><b>Por qué:</b> con paredes y esquinas el láser es preciso e inmune al patinaje; el giróscopo fija el rumbo. El encoder aporta escala; la dirección, redundancia menor. Es el perfil por defecto para mapear con Cartographer.</div>
+    </div>
+    <!-- P2 -->
+    <div class="pcard" style="--pc:var(--accent)">
+      <div class="penv">Geometría degenerada</div>
+      <div class="pname">Pasillo largo</div>
+      <div class="faders">
+        <div class="fader"><span class="fn">Encoder</span><span class="meter g"><i class="on"></i><i class="on"></i><i class="on"></i></span><span class="lv">ALTO</span></div>
+        <div class="fader"><span class="fn">Giróscopo</span><span class="meter g"><i class="on"></i><i class="on"></i><i class="on"></i></span><span class="lv">ALTO</span></div>
+        <div class="fader"><span class="fn">Láser <span style="color:var(--faint)">(yaw+lat.)</span></span><span class="meter a"><i class="on"></i><i class="on"></i><i></i></span><span class="lv">PARCIAL</span></div>
+        <div class="fader"><span class="fn">Dirección</span><span class="meter a"><i class="on"></i><i class="on"></i><i></i></span><span class="lv">MEDIO</span></div>
+      </div>
+      <div class="why"><b>Por qué:</b> a lo largo del pasillo el láser no distingue el avance → se le desactiva la componente <span class="frame">x</span> y se conserva solo <span class="frame">yaw</span> y <span class="frame">y</span>. El encoder lleva el avance; el giróscopo, el rumbo.</div>
+    </div>
+    <!-- P3 -->
+    <div class="pcard" style="--pc:var(--warn)">
+      <div class="penv">Espacio abierto</div>
+      <div class="pname">Nave / exterior</div>
+      <div class="faders">
+        <div class="fader"><span class="fn">Encoder</span><span class="meter g"><i class="on"></i><i class="on"></i><i class="on"></i></span><span class="lv">ALTO</span></div>
+        <div class="fader"><span class="fn">Giróscopo</span><span class="meter g"><i class="on"></i><i class="on"></i><i class="on"></i></span><span class="lv">ALTO</span></div>
+        <div class="fader"><span class="fn">Láser</span><span class="meter"><i></i><i></i><i></i></span><span class="lv">OFF</span></div>
+        <div class="fader"><span class="fn">Dirección</span><span class="meter a"><i class="on"></i><i class="on"></i><i></i></span><span class="lv">MEDIO</span></div>
+      </div>
+      <div class="why"><b>Por qué:</b> sin paredes en rango el láser no ve nada útil → se apaga para no meter ruido. Queda dead-reckoning: encoder + giróscopo (+ dirección como refuerzo cinemático). Cuidado con la deriva a largo plazo.</div>
+    </div>
+    <!-- P4 -->
+    <div class="pcard" style="--pc:var(--good)">
+      <div class="penv">Baja tracción</div>
+      <div class="pname">Suelo resbaladizo</div>
+      <div class="faders">
+        <div class="fader"><span class="fn">Encoder</span><span class="meter a"><i class="on"></i><i></i><i></i></span><span class="lv">BAJO</span></div>
+        <div class="fader"><span class="fn">Giróscopo</span><span class="meter g"><i class="on"></i><i class="on"></i><i class="on"></i></span><span class="lv">ALTO</span></div>
+        <div class="fader"><span class="fn">Láser</span><span class="meter g"><i class="on"></i><i class="on"></i><i class="on"></i></span><span class="lv">ALTO</span></div>
+        <div class="fader"><span class="fn">Dirección</span><span class="meter"><i></i><i></i><i></i></span><span class="lv">OFF</span></div>
+      </div>
+      <div class="why"><b>Por qué:</b> el patinaje engaña a encoder y dirección → se bajan mucho. El láser (mide contra el entorno) y el giróscopo (mide el giro real) son inmunes al resbalón y sostienen la estimación. Es el perfil anti-derrape.</div>
+    </div>
+    <!-- P5 -->
+    <div class="pcard" style="--pc:var(--muted)">
+      <div class="penv">Marcha normal</div>
+      <div class="pname">Equilibrado</div>
+      <div class="faders">
+        <div class="fader"><span class="fn">Encoder</span><span class="meter a"><i class="on"></i><i class="on"></i><i></i></span><span class="lv">MEDIO</span></div>
+        <div class="fader"><span class="fn">Giróscopo</span><span class="meter g"><i class="on"></i><i class="on"></i><i class="on"></i></span><span class="lv">ALTO</span></div>
+        <div class="fader"><span class="fn">Láser</span><span class="meter a"><i class="on"></i><i class="on"></i><i></i></span><span class="lv">MEDIO</span></div>
+        <div class="fader"><span class="fn">Dirección</span><span class="meter a"><i class="on"></i><i class="on"></i><i></i></span><span class="lv">MEDIO</span></div>
+      </div>
+      <div class="why"><b>Por qué:</b> sin condiciones adversas, todos aportan. Punto de partida seguro y base desde la que derivar los demás perfiles. El giróscopo siempre alto (es el más fiable para el rumbo).</div>
+    </div>
+    <!-- P6 vacío/placeholder conceptual -->
+    <div class="pcard" style="--pc:var(--line-2)">
+      <div class="penv">Adaptativo (futuro)</div>
+      <div class="pname">Cambio automático</div>
+      <div class="faders">
+        <div class="fader"><span class="fn">Detección</span><span class="meter a"><i class="on"></i><i class="on"></i><i></i></span><span class="lv">—</span></div>
+      </div>
+      <div class="why"><b>Idea:</b> en vez de elegir el perfil a mano, <b>detectar el contexto</b> y ajustar las covarianzas en caliente: si la aceleración comandada es alta → inflar la del encoder (arranque); si el láser da poca cobertura → bajarlo. Es el paso siguiente a los perfiles fijos.</div>
+    </div>
+  </div>
+
+  <h2><span class="sn">5</span> Cómo se configura en la práctica</h2>
+  <div class="col">
+    <p>Dos formas de materializar los perfiles, de menor a mayor sofisticación:</p>
+    <ul class="tick">
+      <li><b>Ficheros de perfil</b> (recomendado para empezar). Un <span class="frame">ekf.yaml</span> por escenario (<span class="frame">ekf_sala.yaml</span>, <span class="frame">ekf_pasillo.yaml</span>…) que cambian las covarianzas y las matrices de configuración por eje. Se elige al lanzar con un argumento: <span class="frame">ros2 launch … profile:=pasillo</span>.</li>
+      <li><b>Escalado en caliente</b>. Exponer un multiplicador de covarianza por sensor como parámetro ROS, ajustable con <span class="frame">ros2 param set</span> sin reiniciar. Base para el perfil adaptativo.</li>
+    </ul>
+    <p>La ponderación por eje se expresa en la matriz de configuración de cada fuente (15 booleanos: <span class="mono">x y z roll pitch yaw vx vy vz vroll vpitch vyaw ax ay az</span>). Por ejemplo, el láser en el perfil «pasillo», fusionando solo giro y lateral, no el avance:</p>
+    <pre><span class="c"># ekf_pasillo.yaml — odom del laser: yaw + y, SIN x</span>
+odom0: /odom_laser
+odom0_config: [false, <b>true</b>, false,   <span class="c"># x, y, z</span>
+               false, false, <b>true</b>,   <span class="c"># roll, pitch, yaw</span>
+               false, false, false,
+               false, false, false,
+               false, false, false]
+odom0_differential: true
+odom0_pose_rejection_threshold: 2.0   <span class="c"># cortafuegos anti-salto</span></pre>
+    <div class="callout c-warn">
+      <span class="lab">Requisitos y honestidad</span>
+      Estos perfiles asumen que las fuentes existen en el EKF. Hoy están el <b>encoder</b> y el <b>giróscopo</b>; el <b>láser</b> (rf2o) y la <b>dirección</b> son mejoras pendientes (tareas 67 y 66). Los perfiles con láser/dirección se activan cuando esas fuentes estén integradas. El estudio deja el mecanismo y las recetas listas para ese momento.
+    </div>
+  </div>
+
+  <h2><span class="sn">6</span> Síntesis</h2>
+  <div class="col">
+    <ul class="tick">
+      <li>El <b>peso de cada sensor es su covarianza</b>: la fusión es una mesa de mezclas, no un interruptor.</li>
+      <li>Dos fallos gobiernan la elección: el <b>deslizamiento</b> (baja encoder/dirección) y la <b>pobreza geométrica</b> (baja láser). Cada perfil sube los sensores que <b>no</b> fallan en ese ambiente.</li>
+      <li>La palanca fina —<b>fusionar por eje</b>— evita el todo-o-nada: aprovechar el yaw del láser en un pasillo aunque su avance no valga.</li>
+      <li>El <b>giróscopo</b> es la constante: alto en casi todos los perfiles, porque mide el giro real sin depender de ruedas ni entorno.</li>
+      <li>Camino natural: perfiles fijos por fichero → escalado por parámetro → <b>perfil adaptativo</b> que detecta el contexto y reajusta solo.</li>
+    </ul>
+  </div>
+
+  <footer>Robocar · estudio de diseño · ponderación de sensores y perfiles de odometría</footer>
+</div>
+
+</body>
+</html>

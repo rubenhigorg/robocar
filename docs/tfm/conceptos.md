@@ -19,3 +19,9 @@ Dos capítulos: cómo se **construye un mapa** (SLAM) y cómo el robot **evita o
 Estudio teórico: qué aporta el **modelo de bicicleta** (usar el ángulo de dirección) a la odometría, y cómo la degradan los **deslizamientos** — el patinaje de las ruedas motrices al arrancar y el derrape lateral en curva. Incluye la geometría del modelo, las ecuaciones y una comparativa de robustez por fuente.
 
 [Abrir documento](estudio-direccion-deslizamiento.html){ .md-button .md-button--primary target="_blank" }
+
+## Pesos de sensores y perfiles de odometría
+
+Estudio de diseño: en la fusión (EKF) el **peso de cada sensor es su covarianza**. Ajustándola por sensor —y por eje— se definen **perfiles de odometría** adaptados a cada ambiente (sala, pasillo, espacio abierto, suelo resbaladizo). Incluye el mecanismo de `robot_localization`, la fuerza de cada sensor por entorno y recetas de pesos.
+
+[Abrir documento](perfiles-odometria.html){ .md-button .md-button--primary target="_blank" }
