@@ -10,3 +10,7 @@
 [submodule "pruebas/rplidar/rplidar_sdk"]
 	path = pruebas/rplidar/rplidar_sdk
 	url = https://github.com/Slamtec/rplidar_sdk.git
+[submodule "src/rf2o_laser_odometry"]
+	path = src/rf2o_laser_odometry
+	url = https://github.com/MAPIRlab/rf2o_laser_odometry.git
+	branch = ros2

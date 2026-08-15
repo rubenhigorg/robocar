@@ -1,4 +1,5 @@
-# EKF de robot_localization: fusion encoder (vx) + IMU (yaw rate) -> odom->base_link
+# EKF de robot_localization: fusion encoder (vx) + IMU (yaw rate) + odometria laser
+# (rf2o, x/y/yaw diferencial) -> odom->base_link
 # Plan B de odometria (D2->B). Robot planar Ackermann.
 ekf_filter_node:
   ros__parameters:
@@ -34,3 +35,16 @@ ekf_filter_node:
     imu0_relative: false
     imu0_queue_size: 20
     imu0_remove_gravitational_acceleration: true
+
+    # --- Odometria laser (rf2o, scan-matching del LIDAR): x, y, yaw DIFERENCIAL ---
+    # Fuente independiente de las ruedas: robusta al patinaje. Se fusiona el
+    # movimiento relativo (differential) para no imponer una pose absoluta.
+    odom0: odom_rf2o
+    odom0_config: [true,  true,  false,
+                   false, false, true,
+                   false, false, false,
+                   false, false, false,
+                   false, false, false]
+    odom0_differential: true
+    odom0_relative: false
+    odom0_queue_size: 10

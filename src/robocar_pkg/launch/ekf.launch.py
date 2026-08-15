@@ -10,6 +10,23 @@ def generate_launch_description():
         get_package_share_directory('robocar_pkg'), 'config', 'ekf.yaml')
 
     return LaunchDescription([
+        # Odometria laser: scan-matching del LIDAR -> /odom_rf2o.
+        # publish_tf=False: el EKF es el dueno de odom->base_link, rf2o NO lo publica.
+        Node(
+            package='rf2o_laser_odometry',
+            executable='rf2o_laser_odometry_node',
+            name='rf2o_laser_odometry',
+            output='screen',
+            parameters=[{
+                'laser_scan_topic': '/scan',
+                'odom_topic': '/odom_rf2o',
+                'publish_tf': False,
+                'base_frame_id': 'base_link',
+                'odom_frame_id': 'odom',
+                'init_pose_from_topic': '',   # '' -> arranca en 0; SIN esto ignora los scans
+                'freq': 10.0,
+            }],
+        ),
         # Adaptador: /wheel_speed (TwistStamped) -> /wheel_speed_cov (con covarianza)
         Node(
             package='robocar_pkg',
