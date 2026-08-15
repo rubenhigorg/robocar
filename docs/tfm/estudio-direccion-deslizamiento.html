@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ángulo de dirección y deslizamiento en la odometría — estudio</title>
+<style>
+  :root{
+    --bg:#e9edf3; --surface:#fbfcfe; --raise:#f2f5f9;
+    --ink:#17212e; --muted:#586372; --faint:#8b97a6; --line:#d3dbe4; --line-2:#c0cad6;
+    --accent:#1f66c9; --accent2:#0e7c86;
+    --warn:#b5651d; --warn-bg:#f7ead9; --good:#2f8f5b; --good-bg:#e0f0e6;
+    --shadow:0 1px 2px rgba(23,33,46,.05),0 8px 26px rgba(23,33,46,.07);
+    --serif:Georgia,"Iowan Old Style","Palatino Linotype","Book Antiqua",serif;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --mono:ui-monospace,"SF Mono","Cascadia Code","JetBrains Mono",Menlo,Consolas,monospace;
+    --measure:64ch;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --bg:#0c1017; --surface:#141c26; --raise:#0f1620;
+      --ink:#e6ecf3; --muted:#94a1b1; --faint:#657283; --line:#26323f; --line-2:#33414f;
+      --accent:#5b9bea; --accent2:#43b9c3;
+      --warn:#e0a24a; --warn-bg:#2b2011; --good:#4dc287; --good-bg:#122a1e;
+      --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px rgba(0,0,0,.42);
+    }
+  }
+  :root[data-theme="light"]{--bg:#e9edf3;--surface:#fbfcfe;--raise:#f2f5f9;--ink:#17212e;--muted:#586372;--faint:#8b97a6;--line:#d3dbe4;--line-2:#c0cad6;--accent:#1f66c9;--accent2:#0e7c86;--warn:#b5651d;--warn-bg:#f7ead9;--good:#2f8f5b;--good-bg:#e0f0e6;--shadow:0 1px 2px rgba(23,33,46,.05),0 8px 26px rgba(23,33,46,.07);}
+  :root[data-theme="dark"]{--bg:#0c1017;--surface:#141c26;--raise:#0f1620;--ink:#e6ecf3;--muted:#94a1b1;--faint:#657283;--line:#26323f;--line-2:#33414f;--accent:#5b9bea;--accent2:#43b9c3;--warn:#e0a24a;--warn-bg:#2b2011;--good:#4dc287;--good-bg:#122a1e;--shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px rgba(0,0,0,.42);}
+
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--serif);line-height:1.7;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:800px;margin:0 auto;padding:clamp(1.4rem,4vw,3.5rem) clamp(1rem,4vw,1.6rem)}
+  .col{max-width:var(--measure)}
+  p{margin:0 0 1.05rem}
+  a{color:var(--accent)}
+
+  .eyebrow{font-family:var(--sans);font-size:.7rem;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin:0 0 1rem;display:flex;align-items:center;gap:.6rem}
+  .eyebrow::before{content:"";width:28px;height:2px;background:var(--accent);display:inline-block}
+  h1{font-size:clamp(1.8rem,4.2vw,2.7rem);line-height:1.12;margin:0 0 1rem;letter-spacing:-.01em;text-wrap:balance;font-weight:600}
+  .abstract{font-size:1.06rem;color:var(--muted);border-left:3px solid var(--line-2);padding-left:1.1rem;margin:1.4rem 0 0}
+  .abstract b{color:var(--ink)}
+
+  h2{font-family:var(--serif);font-size:1.5rem;margin:3rem 0 .3rem;letter-spacing:-.01em;text-wrap:balance;display:flex;align-items:baseline;gap:.7rem;font-weight:600}
+  h2 .sn{font-family:var(--sans);font-size:.85rem;font-weight:700;color:var(--accent);font-variant-numeric:tabular-nums}
+  h3{font-family:var(--sans);font-size:1rem;font-weight:650;margin:1.8rem 0 .5rem;letter-spacing:.01em}
+  h2+p, h2+.col{margin-top:.6rem}
+
+  .mono,code{font-family:var(--mono);font-size:.86em}
+  .var{font-style:italic;font-family:var(--serif)}
+  .frame{font-family:var(--mono);font-weight:600;font-size:.82em;background:var(--raise);border:1px solid var(--line);border-radius:5px;padding:.08em .4em;white-space:nowrap}
+
+  /* equations */
+  .eq{font-family:var(--serif);text-align:center;font-size:1.2rem;margin:1.3rem 0;color:var(--ink)}
+  .eq .frac{display:inline-flex;flex-direction:column;vertical-align:middle;text-align:center;margin:0 .15em}
+  .eq .frac>span:first-child{border-bottom:1.5px solid currentColor;padding:0 .4em .1em}
+  .eq .frac>span:last-child{padding:.1em .4em 0}
+  .eq i{font-style:italic}
+  .eq .lbl{font-family:var(--sans);font-size:.7rem;color:var(--faint);display:block;margin-top:.5rem;letter-spacing:.04em}
+
+  figure{margin:1.8rem 0;background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:1.2rem}
+  figure svg{width:100%;height:auto;display:block}
+  figcaption{font-family:var(--sans);font-size:.8rem;color:var(--muted);margin-top:.8rem;text-align:center}
+  .svg-ink{stroke:var(--ink)} .svg-mut{stroke:var(--muted)} .svg-acc{stroke:var(--accent)}
+  text{font-family:var(--sans);fill:var(--ink)}
+  text.mut{fill:var(--muted)} text.acc{fill:var(--accent)} text.a2{fill:var(--accent2)}
+
+  .callout{margin:1.6rem 0;padding:1rem 1.2rem;border-radius:0 12px 12px 0;font-size:.98rem;border-left:3px solid var(--c,var(--accent));background:var(--cbg,var(--raise))}
+  .callout .lab{font-family:var(--sans);font-size:.7rem;text-transform:uppercase;letter-spacing:.1em;font-weight:700;color:var(--c,var(--accent));display:block;margin-bottom:.4rem}
+  .callout b{color:var(--ink)}
+  .c-key{--c:var(--accent);--cbg:color-mix(in srgb,var(--accent) 8%,transparent)}
+  .c-warn{--c:var(--warn);--cbg:var(--warn-bg)}
+  .c-good{--c:var(--good);--cbg:var(--good-bg)}
+
+  .tbl{overflow-x:auto;margin:1.5rem 0}
+  table{border-collapse:collapse;width:100%;font-family:var(--sans);font-size:.86rem;min-width:560px}
+  th,td{text-align:left;padding:.6rem .7rem;border-bottom:1px solid var(--line);vertical-align:top}
+  th{font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:650}
+  tbody tr:hover{background:color-mix(in srgb,var(--accent) 5%,transparent)}
+  .pill{font-size:.72rem;font-weight:650;padding:.15em .55em;border-radius:999px;white-space:nowrap}
+  .pill.rob{background:var(--good-bg);color:var(--good)}
+  .pill.vul{background:var(--warn-bg);color:var(--warn)}
+  td .s{color:var(--muted);font-size:.82rem;display:block;margin-top:.15rem}
+
+  ul.tick{list-style:none;padding:0;margin:1rem 0;display:flex;flex-direction:column;gap:.6rem}
+  ul.tick li{padding-left:1.5rem;position:relative}
+  ul.tick li::before{content:"→";position:absolute;left:0;color:var(--accent);font-family:var(--sans)}
+  ul.tick b{font-weight:600}
+
+  .verdict{margin-top:2.5rem;background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:1.3rem 1.4rem}
+  .verdict h3{margin-top:0}
+  .rank{display:flex;flex-direction:column;gap:.7rem;margin-top:.8rem}
+  .rank .r{display:flex;gap:.8rem;align-items:baseline;font-family:var(--sans);font-size:.92rem}
+  .rank .r .m{font-family:var(--mono);font-size:.72rem;color:#fff;padding:.15em .5em;border-radius:5px;flex:none}
+  .rank .r.a .m{background:var(--good)} .rank .r.b .m{background:var(--accent)}
+
+  hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+  footer{margin-top:2.5rem;color:var(--faint);font-family:var(--sans);font-size:.75rem;text-align:center}
+  sub.fn{font-family:var(--sans);color:var(--accent);font-size:.65em}
+</style>
+
+</head>
+<body>
+<div class="wrap">
+  <header class="col">
+    <p class="eyebrow">Robocar · TFM · Estudio teórico</p>
+    <h1>Ángulo de dirección y deslizamiento en la odometría</h1>
+    <p class="abstract">Qué aporta el <b>modelo de bicicleta</b> (usar el ángulo de dirección) a la odometría del robocar, y cómo la degradan los <b>deslizamientos</b> —el patinaje de las ruedas motrices al arrancar, y el derrape lateral en curva—. La conclusión adelanta la decisión de implementación: el ángulo de dirección aporta <b>consistencia cinemática</b> en marcha normal, pero <b>no protege contra el deslizamiento</b>; frente al patinaje, la fuente robusta es la que <b>no depende de las ruedas</b>.</p>
+  </header>
+
+  <h2><span class="sn">1</span> Punto de partida</h2>
+  <div class="col">
+    <p>La odometría actual del robocar fusiona, con un EKF, dos medidas: la <b>velocidad lineal</b> del encoder (<span class="var">v</span>) y la <b>velocidad angular</b> del giroscopio (<span class="var">ω</span>). La pose 2D se obtiene integrando el modelo del uniciclo:</p>
+    <div class="eq">
+      <i>ẋ</i> = <i>v</i> cos <i>θ</i> &nbsp;·&nbsp; <i>ẏ</i> = <i>v</i> sin <i>θ</i> &nbsp;·&nbsp; <i>θ̇</i> = <i>ω</i>
+      <span class="lbl">pose integrada a partir de velocidad lineal y velocidad angular</span>
+    </div>
+    <p>Validado rodando, este esquema deriva ~0,17 m por vuelta cerrada. La pregunta del estudio: ¿qué añadiría medir también el <b>ángulo de dirección</b> <span class="var">δ</span>, y qué pasa cuando las ruedas <b>resbalan</b>?</p>
+  </div>
+
+  <h2><span class="sn">2</span> El modelo de bicicleta: qué añade la dirección</h2>
+  <div class="col">
+    <p>Un coche Ackermann se modela como una <b>bicicleta</b>: una rueda trasera (tracción) y una delantera (dirección), separadas por la batalla <span class="var">L</span>. Si la delantera se orienta un ángulo <span class="var">δ</span>, la geometría <b>impone</b> el centro instantáneo de rotación (CIR) y, con él, el radio de giro y la velocidad de giro.</p>
+  </div>
+
+  <figure>
+    <svg viewBox="0 0 640 380" role="img" aria-label="Geometría del modelo de bicicleta: batalla L, ángulo de dirección delta, radio R y centro instantáneo de rotación">
+      <!-- CIR -->
+      <g>
+        <!-- radios (líneas discontinuas al CIR) -->
+        <line x1="150" y1="285" x2="150" y2="90" stroke="var(--accent)" stroke-width="1.5" stroke-dasharray="5 4"/>
+        <line x1="430" y1="285" x2="150" y2="90" stroke="var(--accent)" stroke-width="1.5" stroke-dasharray="5 4"/>
+        <!-- arco de la trayectoria del eje trasero -->
+        <path d="M 150 285 A 195 195 0 0 1 292 96" fill="none" stroke="var(--accent2)" stroke-width="2" stroke-dasharray="2 5"/>
+        <!-- CIR punto -->
+        <circle cx="150" cy="90" r="4.5" fill="var(--accent)"/>
+        <text x="128" y="82" class="acc" font-size="14" font-weight="700">CIR</text>
+        <!-- R label -->
+        <text x="160" y="195" class="acc" font-size="14" font-style="italic">R</text>
+      </g>
+      <!-- chasis -->
+      <line x1="150" y1="285" x2="430" y2="285" stroke="var(--ink)" stroke-width="3"/>
+      <!-- eje trasero (rueda) -->
+      <rect x="132" y="272" width="36" height="26" rx="3" fill="var(--ink)"/>
+      <text x="118" y="330" class="mut" font-size="13">rueda trasera</text>
+      <text x="120" y="346" class="mut" font-size="11">(tracción)</text>
+      <!-- eje delantero (rueda girada) -->
+      <g transform="rotate(-40 430 285)">
+        <rect x="412" y="272" width="36" height="26" rx="3" fill="var(--accent)"/>
+      </g>
+      <text x="452" y="300" class="a2" font-size="13">rueda delantera</text>
+      <text x="452" y="316" class="mut" font-size="11">(dirección)</text>
+      <!-- delta arc -->
+      <path d="M 470 285 A 40 40 0 0 0 460 258" fill="none" stroke="var(--muted)" stroke-width="1.5"/>
+      <text x="478" y="268" class="mut" font-size="14" font-style="italic">δ</text>
+      <!-- L bracket -->
+      <line x1="150" y1="315" x2="430" y2="315" stroke="var(--muted)" stroke-width="1"/>
+      <line x1="150" y1="310" x2="150" y2="320" stroke="var(--muted)" stroke-width="1"/>
+      <line x1="430" y1="310" x2="430" y2="320" stroke="var(--muted)" stroke-width="1"/>
+      <text x="278" y="332" class="mut" font-size="14" font-style="italic">L</text>
+      <!-- v arrow -->
+      <line x1="430" y1="285" x2="510" y2="285" stroke="var(--ink)" stroke-width="2" marker-end="url(#ar)"/>
+      <text x="514" y="282" font-size="14" font-style="italic">v</text>
+      <defs>
+        <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 z" fill="var(--ink)"/></marker>
+      </defs>
+    </svg>
+    <figcaption>Modelo de bicicleta (esquemático). El ángulo <span class="var">δ</span> fija el CIR; el radio <span class="var">R</span> y la velocidad de giro se deducen de <span class="var">δ</span>, <span class="var">v</span> y la batalla <span class="var">L</span>.</figcaption>
+  </figure>
+
+  <div class="col">
+    <p>De esa geometría salen dos relaciones exactas (sin deslizamiento):</p>
+    <div class="eq">
+      <i>R</i> = <span class="frac"><span><i>L</i></span><span>tan <i>δ</i></span></span>
+      <span style="margin:0 1.4em"></span>
+      <i>ω</i> = <span class="frac"><span><i>v</i> · tan <i>δ</i></span><span><i>L</i></span></span>
+      <span class="lbl">radio de giro &nbsp;·&nbsp; velocidad de giro derivada de la dirección</span>
+    </div>
+    <p>La segunda es la clave: el par <span class="var">v</span>+<span class="var">δ</span> <b>predice la velocidad de giro</b> <span class="var">ω</span> de forma independiente al giroscopio. En el robocar, <span class="var">L</span> = 0,175 m (del URDF), con radio mínimo de 0,175 m a <span class="var">δ</span> ≈ 45°.</p>
+
+    <h3>Qué aporta realmente</h3>
+    <ul class="tick">
+      <li><b>Redundancia del yaw.</b> Un segundo estimador de <span class="var">ω</span> independiente del giroscopio. Si el gyro falla, satura o se le va el bias, la dirección sostiene el rumbo.</li>
+      <li><b>Sin deriva geométrica.</b> <span class="var">δ</span> es una medida <em>geométrica instantánea</em>, no una integración: no acumula bias como el giroscopio en giros largos y lentos.</li>
+      <li><b>Consistencia cinemática.</b> Restringe el movimiento a trayectorias físicamente posibles del Ackermann (sin desplazamiento lateral, respetando el radio mínimo). Filtra estimaciones incoherentes con la geometría del coche.</li>
+      <li><b>Valor predictivo (feedforward).</b> La dirección es una entrada <em>comandada</em>, conocida <em>antes</em> de que el movimiento ocurra: alimenta el paso de <em>predicción</em> del EKF, no solo el de corrección.</li>
+    </ul>
+
+    <div class="callout c-warn">
+      <span class="lab">Límites (por qué es una fuente "blanda")</span>
+      Se usa el ángulo <b>comandado</b> al servo, no el medido en la rueda: holguras mecánicas, deformación del neumático y la calibración <span class="frame">servo→δ</span> introducen error. Y, sobre todo, las ecuaciones anteriores asumen <b>rodadura pura, sin deslizamiento</b>. Esa hipótesis es justo la que rompen los derrapes.
+    </div>
+  </div>
+
+  <h2><span class="sn">3</span> Deslizamiento: cuando el modelo se rompe</h2>
+  <div class="col">
+    <p>Toda odometría basada en ruedas asume que <b>la rueda rueda sin resbalar</b>: que la velocidad de su superficie iguala la del suelo. Cuando no se cumple, la medida miente. Hay dos formas de deslizamiento, con efectos distintos.</p>
+
+    <h3>3.1 · Deslizamiento longitudinal (el patinaje al arrancar)</h3>
+    <p>Es el ejemplo que planteabas: al dar gas, las ruedas motrices <b>giran más rápido que el avance real</b> del coche. Se cuantifica con la <em>razón de deslizamiento</em>:</p>
+    <div class="eq">
+      <i>s</i> = <span class="frac"><span><i>ω</i><sub>rueda</sub> · <i>r</i> − <i>v</i><sub>suelo</sub></span><span><i>v</i><sub>suelo</sub></span></span>
+      <span class="lbl">s &gt; 0 al acelerar/patinar · s &lt; 0 al frenar/bloquear</span>
+    </div>
+    <p>En el arranque, la inercia del chasis se resiste al movimiento pero la rueda ya gira: <span class="var">s</span> &gt; 0. El <b>encoder cuenta vueltas que no se han convertido en avance</b>, así que la odometría <b>sobreestima la distancia</b>. Es un error sistemático, no ruido: se acumula justo en cada aceleración.</p>
+    <div class="callout c-key">
+      <span class="lab">Mitigación que ya tienes</span>
+      La <b>rampa anti-pico</b> del <span class="frame">car_control_node</span> (subir el gas gradualmente, límite de °/comando) reduce el pico de par en el arranque y, con él, el patinaje inicial. Es control de tracción rudimentario, pero atenúa la fuente del error en origen.
+    </div>
+
+    <h3>3.2 · Deslizamiento lateral (el derrape en curva)</h3>
+    <p>En una curva tomada rápido o con poco agarre, el coche <b>desliza de lado</b>: su rumbo real no coincide con el que marca la dirección. Aparece un <em>ángulo de deriva</em> <span class="var">β</span> entre hacia dónde apunta el coche y hacia dónde se mueve de verdad. Aquí el modelo de bicicleta <b>falla doblemente</b>: usa <span class="var">v</span> (contaminada por el deslizamiento longitudinal) y además <b>presupone</b> <span class="var">β</span> = 0. El <span class="var">ω</span> = <span class="var">v</span>·tan<span class="var">δ</span>/<span class="var">L</span> deja de describir el movimiento.</p>
+  </div>
+
+  <h2><span class="sn">4</span> Cómo responde cada fuente al deslizamiento</h2>
+  <div class="col"><p>La diferencia decisiva es <b>qué mide físicamente</b> cada sensor: si mira a la <em>rueda</em>, el deslizamiento lo engaña; si mira al <em>mundo</em> o al <em>movimiento inercial</em>, no.</p></div>
+
+  <div class="tbl">
+    <table>
+      <thead><tr><th>Fuente</th><th>Qué mide</th><th>Ante deslizamiento</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><b>Encoder</b> <span class="s">velocidad de rueda</span></td>
+          <td>vueltas de la rueda motriz</td>
+          <td><span class="pill vul">vulnerable</span><span class="s">Patinaje longitudinal → sobreestima distancia. Fuente directa del error de arranque.</span></td>
+        </tr>
+        <tr>
+          <td><b>Dirección</b> <span class="s">modelo bicicleta</span></td>
+          <td><span class="var">v</span> · tan <span class="var">δ</span> / <span class="var">L</span></td>
+          <td><span class="pill vul">vulnerable ×2</span><span class="s">Hereda el error de <span class="var">v</span> y además asume β = 0. En derrape puede <b>afirmar con confianza</b> un giro que no ocurre.</span></td>
+        </tr>
+        <tr>
+          <td><b>Giroscopio</b> <span class="s">IMU</span></td>
+          <td>velocidad angular real del chasis</td>
+          <td><span class="pill rob">robusto</span><span class="s">Mide la rotación de verdad, gire o no la rueda. Inmune al patinaje.</span></td>
+        </tr>
+        <tr>
+          <td><b>Acelerómetro</b> <span class="s">IMU</span></td>
+          <td>aceleración real del chasis</td>
+          <td><span class="pill rob">robusto*</span><span class="s">Ve la aceleración real (podría delatar el patinaje), pero ruidoso y con bias: poco fiable para integrar posición.</span></td>
+        </tr>
+        <tr>
+          <td><b>Odometría láser</b> <span class="s">scan-matching (rf2o)</span></td>
+          <td>desplazamiento respecto al entorno</td>
+          <td><span class="pill rob">robusto</span><span class="s">Mide el movimiento contra las paredes: el patinaje no lo engaña. Fuente de <b>traslación</b> independiente de las ruedas.</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout c-key">
+    <span class="lab">La idea central</span>
+    Ninguna fuente <b>basada en ruedas</b> sobrevive al deslizamiento (encoder y dirección caen juntos). Las que <b>miran al mundo o a la inercia</b> —giroscopio y láser— sí. Por eso el patinaje se combate <b>añadiendo una fuente independiente de las ruedas</b>, no refinando las que dependen de ellas.
+  </div>
+
+  <h2><span class="sn">5</span> Síntesis e implicaciones</h2>
+  <div class="col">
+    <p>El estudio ordena las dos mejoras candidatas según el problema que resuelven:</p>
+
+    <ul class="tick">
+      <li><b>El ángulo de dirección (mejora 66)</b> aporta <b>redundancia de yaw y consistencia cinemática en marcha normal</b>. Es útil cuando el giroscopio flojea (giros muy lentos, deriva de bias). Pero <b>no protege del deslizamiento</b>: comparte la vulnerabilidad del encoder y añade la hipótesis β = 0, de modo que en un derrape puede incluso <b>empeorar</b> la estimación al insistir en una trayectoria que no está ocurriendo. Conviene fusionarlo con <b>covarianza holgada</b>.</li>
+      <li><b>La odometría láser (mejora 67)</b> ataca directamente el problema del patinaje que planteabas: mide el movimiento <b>contra el entorno</b>, así que el resbalón de las ruedas al arrancar <b>no la engaña</b>. Es la fuente de traslación independiente que le falta a la fusión.</li>
+    </ul>
+
+    <div class="callout c-good">
+      <span class="lab">Estrategia de fusión (EKF)</span>
+      El EKF no <em>sabe</em> cuándo hay deslizamiento salvo que se lo indiquemos. Tres palancas: <b>(1)</b> reducir el patinaje en origen (rampa de tracción, ya presente); <b>(2)</b> <b>covarianza adaptativa</b> — inflar la incertidumbre del encoder cuando la aceleración comandada o la del IMU es alta (arranques); <b>(3)</b> <b>fuentes independientes</b> (láser, giroscopio) que discrepen del encoder durante el patinaje y "tiren" de la estimación hacia la realidad.
+    </div>
+  </div>
+
+  <div class="verdict">
+    <h3>Conclusión para la implementación</h3>
+    <p style="font-family:var(--sans);font-size:.92rem;color:var(--muted);margin:.2rem 0 0">Ordenadas por lo que aportan al problema del deslizamiento que motivó el estudio:</p>
+    <div class="rank">
+      <div class="r a"><span class="m">1º</span><span><b>Odometría láser (67).</b> Fuente de traslación inmune al patinaje; corrige el error sistemático del arranque. Mayor valor frente a los deslizamientos. Coste: CPU (convive con Cartographer) y compilar rf2o.</span></div>
+      <div class="r b"><span class="m">2º</span><span><b>Ángulo de dirección (66).</b> Redundancia de yaw y coherencia Ackermann en marcha normal; aporta poco frente al deslizamiento y hay que fusionarlo con prudencia (covarianza holgada, no fiarse en derrape).</span></div>
+    </div>
+    <p style="font-family:var(--sans);font-size:.86rem;color:var(--muted);margin:1rem 0 0">Ambas son mejoras reales del EKF; la diferencia es <b>qué debilidad cubren</b>. Si la prioridad es la robustez ante patinaje/derrape, empezar por la <b>67</b>.</p>
+  </div>
+
+  <footer>Robocar · estudio teórico · modelo de bicicleta y deslizamiento en odometría</footer>
+</div>
+
+</body>
+</html>
