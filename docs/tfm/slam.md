@@ -197,8 +197,54 @@ Dentro de la pila de software del TFM, la capa SLAM se sitúa entre el sensor de
 |---|---|---|
 | `/scan` | `sensor_msgs/LaserScan` | Entrada principal del SLAM |
 | `/map` | `nav_msgs/OccupancyGrid` | Mapa global para navegación |
+| `/odometry/filtered` | `nav_msgs/Odometry` | Odometría del EKF (encoder+IMU); prior del scan-matching |
 | `tf: map → odom → base_link` | `tf2` | Marco espacial completo del robot |
 | Trayectoria estimada | Mensajes internos/publicados por Cartographer | Seguimiento de pose y optimización global |
+
+### Integración con la odometría (EKF) y reparto del árbol TF
+
+Cartographer **no trabaja solo**: convive con la odometría por fusión encoder + IMU
+(EKF de `robot_localization`, ver [Odometría](odometria.md)). La clave es que **cada
+componente es dueño de un tramo distinto del árbol `tf2`**, para que ningún marco tenga
+dos padres:
+
+```mermaid
+flowchart LR
+    map["map"] -->|"map → odom<br/>Cartographer (corrige deriva)"| odom["odom"]
+    odom -->|"odom → base_link<br/>EKF (encoder + IMU)"| base["base_link"]
+    base -->|"fijo (URDF)"| laser["laser"]
+    ekf["/odometry/filtered<br/>(EKF)"] -.->|"prior de scan-matching"| map
+```
+
+- **El EKF** publica `odom → base_link` (el movimiento local, suave, que deriva).
+- **Cartographer** publica **solo** `map → odom` (la corrección global que cancela la
+  deriva), y **consume** `/odometry/filtered` como estimación previa que mejora el
+  scan-matching.
+
+!!! warning "Por qué importa la configuración"
+    Por defecto, Cartographer publica la cadena `map → odom → base_link` **entera**
+    (`provide_odom_frame = true`). Con una odometría externa eso provocaría que
+    `base_link` tuviera **dos padres** (Cartographer y el EKF) y el árbol TF entraría en
+    conflicto. La configuración correcta reparte la propiedad:
+
+    | Parámetro (`robocar_2d.lua`) | Valor | Efecto |
+    |---|---|---|
+    | `provide_odom_frame` | `false` | Cartographer no crea el marco `odom` |
+    | `published_frame` | `"odom"` | Cartographer publica `map → odom` (no `map → base_link`) |
+    | `use_odometry` | `true` | Consume `/odometry/filtered` como prior |
+
+    En el launch, el topic `odom` se remapea a `/odometry/filtered`. Con esto el árbol
+    queda `map → odom → base_link`, cada marco con un único padre, y Cartographer se
+    apoya en la odometría real para un mejor mapa. Esta es la materialización de la
+    **opción B de la decisión D2** (fusión de sensores) en la percepción.
+
+Otros ajustes relevantes del `robocar_2d.lua`, tuneados para la Raspberry Pi 4:
+
+- `min_range = 0.2` m — descarta los impactos del LIDAR contra el propio chasis (el
+  radiador de la Pi queda a ~10 cm), resolviendo la oclusión trasera por configuración.
+- `use_online_correlative_scan_matching = true` — robustez del emparejamiento.
+- Submaps contenidos y optimización global moderada (`num_range_data = 35`,
+  `optimize_every_n_nodes = 35`) para sostener tiempo real en la Pi.
 
 ## 6. Decisiones de implementación
 
