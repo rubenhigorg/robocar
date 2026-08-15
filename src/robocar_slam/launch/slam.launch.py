@@ -1,7 +1,7 @@
 """SLAM 2D del Robocar: Cartographer + publicador del mapa de ocupacion.
 
-Requiere: TF del modelo (description.launch.py) y /scan (rplidar) ya corriendo
-— launch-panel.sh levanta ambos.
+Requiere: TF del modelo (description.launch.py), /scan (rplidar) y la odometria
+del EKF (/odometry/filtered, ekf.launch.py) ya corriendo.
 
     ros2 launch robocar_slam slam.launch.py
 """
@@ -24,7 +24,7 @@ def generate_launch_description():
                 '-configuration_directory', config_dir,
                 '-configuration_basename', 'robocar_2d.lua',
             ],
-            remappings=[('scan', '/scan')],
+            remappings=[('scan', '/scan'), ('odom', '/odometry/filtered')],
         ),
         # Convierte los submaps en /map (nav_msgs/OccupancyGrid) para Nav2 y el panel
         Node(
