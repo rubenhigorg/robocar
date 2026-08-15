@@ -261,7 +261,7 @@
       <p class="q">«¿Cuánto y cómo me he movido?»</p>
       <ul>
         <li>Provee <b>odom→base_link</b>.</li>
-        <li>Fuentes: <b>encoder</b> (velocidad) + <b>IMU</b> (giro) + <b>láser</b>, fusionados por un <b>EKF</b>.</li>
+        <li>Fuentes: <b>encoder</b> (velocidad) + <b>IMU</b> (giro), fusionados por un <b>EKF</b> (láser y ángulo de dirección, como mejoras futuras).</li>
         <li>Suave y sin saltos, pero <b>acumula deriva</b>.</li>
       </ul>
     </div>
@@ -293,7 +293,7 @@
   <div class="loop">
     <div class="step s-nav"><span class="k">NAV</span><span class="b"><b>Nav2 planifica y controla</b><small>De la pose y el mapa saca una ruta y genera <span class="topic">/cmd_vel</span> (avanza a X m/s, gira a Y rad/s).</small></span></div>
     <div class="step s-act"><span class="k">ACT</span><span class="b"><b>car_control actúa (puente Ackermann)</b><small>Traduce <span class="topic">/cmd_vel</span> a ángulo de servo + throttle del ESC. El coche se mueve.</small></span></div>
-    <div class="step s-odom"><span class="k">ODO</span><span class="b"><b>Odometría mide el movimiento</b><small>EKF (encoder+IMU+láser) actualiza <span class="frame">odom→base_link</span>: cuánto se ha desplazado.</small></span></div>
+    <div class="step s-odom"><span class="k">ODO</span><span class="b"><b>Odometría mide el movimiento</b><small>EKF (encoder + IMU) actualiza <span class="frame">odom→base_link</span>: cuánto se ha desplazado.</small></span></div>
     <div class="step s-slam"><span class="k">SLAM</span><span class="b"><b>SLAM corrige contra el mapa</b><small>Cartographer casa el <span class="topic">/scan</span> y ajusta <span class="frame">map→odom</span>, cancelando la deriva → pose fiable.</small></span></div>
     <div class="loopback">↑ la pose corregida (<span class="frame">map→base_link</span>) vuelve a <b>Nav2</b>, que comprueba el avance, esquiva obstáculos y replanifica — y el ciclo se repite</div>
   </div>
