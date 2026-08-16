@@ -28,6 +28,7 @@ Estudio de diseño: en la fusión (EKF) el **peso de cada sensor es su covarianz
 
 ## Mapa de nodos ROS2
 
-Qué nodos corren en el robocar, qué **publica y consume** cada uno y cómo se encadenan (sensores → odometría → SLAM → control → web), con el árbol TF. Capturado del grafo real; se refresca con `tools/gen-node-map.sh`.
+Qué nodos corren en el robocar, qué **publica y consume** cada uno y cómo se encadenan (sensores → odometría → SLAM → control → web), con el árbol TF. Incluye un **grafo interactivo** (todos los nodos, arrastrables, con ficha de cada uno y sus topics de publicación/suscripción).
 
 [Abrir documento](nodos-ros2.html){ .md-button .md-button--primary target="_blank" }
+[Grafo interactivo](nodos-ros2-grafo.html){ .md-button target="_blank" }
