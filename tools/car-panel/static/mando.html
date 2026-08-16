@@ -140,7 +140,9 @@ function pubCmd(vx,wz){
 }
 /* ---- toggle de modo autonomo via /joy (boton X = indice 0) ---- */
 function pubJoyToggle(){
-  const axes=[0,0,0,0,0,0];
+  // CRITICO: los gatillos L2/R2 en reposo valen +1.0. Con axes a 0, car_control en
+  // modo manual lo lee como MEDIO GAS (throttle 59.4) y el motor gira latcheado.
+  const axes=[0.0, 0.0, 1.0, 0.0, 0.0, 1.0];
   const btn=Array(17).fill(0); btn[0]=1;
   const now=Date.now();
   send({op:"publish", topic:"/joy", msg:{
