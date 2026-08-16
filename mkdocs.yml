@@ -54,6 +54,7 @@ nav:
     - Resumen: tfm/README.md
     - "Fundamentos ROS2 (Capa 0)": tfm/fundamentos.md
     - "Odometría (encoder + IMU / EKF)": tfm/odometria.md
+    - "Actuación (/cmd_vel → car_control)": tfm/actuacion.md
     - "Capa de percepción: SLAM": tfm/slam.md
     - Capa de navegación: tfm/navegacion.md
     - "Capa de interfaz natural: LLM + MCP": tfm/llm-mcp.md
