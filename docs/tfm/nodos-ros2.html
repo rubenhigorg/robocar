@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mapa de nodos ROS2 — Robocar</title>
+<style>
+  :root{
+    --bg:#e9edf3; --surface:#fbfcfe; --raise:#f2f5f9;
+    --ink:#17212e; --muted:#586372; --faint:#8b97a6; --line:#d3dbe4; --line-2:#c0cad6;
+    --accent:#1f66c9;
+    --sensor:#0e7c86; --sensor-bg:#dcf0f2;
+    --odom:#1f66c9; --odom-bg:#dce9f8;
+    --slam:#2f8f5b; --slam-bg:#e0f0e6;
+    --ctrl:#b5651d; --ctrl-bg:#f7ead9;
+    --obs:#7a4fd0; --obs-bg:#ece4fa;
+    --shadow:0 1px 2px rgba(23,33,46,.05),0 8px 26px rgba(23,33,46,.07);
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --mono:ui-monospace,"SF Mono","Cascadia Code","JetBrains Mono",Menlo,Consolas,monospace;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --bg:#0c1017; --surface:#141c26; --raise:#0f1620;
+      --ink:#e6ecf3; --muted:#94a1b1; --faint:#657283; --line:#26323f; --line-2:#33414f;
+      --accent:#5b9bea;
+      --sensor:#3fb6c0; --sensor-bg:#0f2528; --odom:#5b9bea; --odom-bg:#12233a;
+      --slam:#4dc287; --slam-bg:#122a1e; --ctrl:#e0a24a; --ctrl-bg:#2b2011;
+      --obs:#b58bec; --obs-bg:#211732;
+      --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px rgba(0,0,0,.42);
+    }
+  }
+  :root[data-theme="light"]{--bg:#e9edf3;--surface:#fbfcfe;--raise:#f2f5f9;--ink:#17212e;--muted:#586372;--faint:#8b97a6;--line:#d3dbe4;--line-2:#c0cad6;--accent:#1f66c9;--sensor:#0e7c86;--sensor-bg:#dcf0f2;--odom:#1f66c9;--odom-bg:#dce9f8;--slam:#2f8f5b;--slam-bg:#e0f0e6;--ctrl:#b5651d;--ctrl-bg:#f7ead9;--obs:#7a4fd0;--obs-bg:#ece4fa;--shadow:0 1px 2px rgba(23,33,46,.05),0 8px 26px rgba(23,33,46,.07);}
+  :root[data-theme="dark"]{--bg:#0c1017;--surface:#141c26;--raise:#0f1620;--ink:#e6ecf3;--muted:#94a1b1;--faint:#657283;--line:#26323f;--line-2:#33414f;--accent:#5b9bea;--sensor:#3fb6c0;--sensor-bg:#0f2528;--odom:#5b9bea;--odom-bg:#12233a;--slam:#4dc287;--slam-bg:#122a1e;--ctrl:#e0a24a;--ctrl-bg:#2b2011;--obs:#b58bec;--obs-bg:#211732;--shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px rgba(0,0,0,.42);}
+
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.6;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1000px;margin:0 auto;padding:clamp(1.3rem,4vw,3rem) clamp(1rem,4vw,1.6rem)}
+  .col{max-width:70ch}
+  p{margin:0 0 1rem}
+  code,.mono{font-family:var(--mono)}
+  .eyebrow{font-family:var(--mono);font-size:.7rem;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin:0 0 .9rem;display:flex;align-items:center;gap:.6rem}
+  .eyebrow::before{content:"";width:26px;height:2px;background:var(--accent);display:inline-block}
+  h1{font-size:clamp(1.7rem,4vw,2.4rem);margin:0 0 .8rem;letter-spacing:-.02em;text-wrap:balance}
+  .lede{color:var(--muted);font-size:1.03rem;max-width:70ch}
+  h2{font-size:1.35rem;margin:2.8rem 0 .3rem;letter-spacing:-.01em;display:flex;align-items:center;gap:.6rem}
+  h2 .tag{font-family:var(--mono);font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;padding:.25em .6em;border-radius:6px;color:#fff}
+  .t-sensor{background:var(--sensor)} .t-odom{background:var(--odom)} .t-slam{background:var(--slam)} .t-ctrl{background:var(--ctrl)} .t-obs{background:var(--obs)}
+
+  /* topic pill */
+  .topic{font-family:var(--mono);font-size:.82em;color:var(--accent);background:color-mix(in srgb,var(--accent) 8%,transparent);padding:.05em .35em;border-radius:4px;white-space:nowrap}
+  .ty{font-family:var(--mono);font-size:.78em;color:var(--muted)}
+  .frame{font-family:var(--mono);font-weight:600;font-size:.82em;background:var(--raise);border:1px solid var(--line);border-radius:5px;padding:.05em .4em;white-space:nowrap}
+
+  /* ---- flow diagram (layered) ---- */
+  .flow{background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:1.2rem;margin:1.5rem 0;overflow-x:auto}
+  .flow-inner{min-width:820px;display:flex;flex-direction:column;gap:.5rem}
+  .lane{display:grid;grid-template-columns:120px 1fr;gap:.8rem;align-items:center}
+  .lane .lh{font-family:var(--mono);font-size:.66rem;text-transform:uppercase;letter-spacing:.06em;font-weight:700;color:var(--lc);text-align:right;padding-right:.3rem}
+  .lane .row{display:flex;align-items:center;gap:.4rem;flex-wrap:wrap}
+  .nd{border:1.5px solid var(--lc);background:var(--lbg);border-radius:9px;padding:.4rem .6rem;font-size:.8rem;font-weight:600;font-family:var(--mono);white-space:nowrap}
+  .arrow{color:var(--faint);font-family:var(--mono);font-size:.72rem;display:flex;flex-direction:column;align-items:center;line-height:1.1}
+  .arrow b{color:var(--accent);font-weight:600}
+  .ls-sensor{--lc:var(--sensor);--lbg:var(--sensor-bg)} .ls-odom{--lc:var(--odom);--lbg:var(--odom-bg)} .ls-slam{--lc:var(--slam);--lbg:var(--slam-bg)} .ls-ctrl{--lc:var(--ctrl);--lbg:var(--ctrl-bg)} .ls-obs{--lc:var(--obs);--lbg:var(--obs-bg)}
+  .flow-note{font-size:.78rem;color:var(--muted);margin-top:.8rem;font-family:var(--mono)}
+
+  /* ---- node tables ---- */
+  .ntbl{overflow-x:auto;margin:1rem 0}
+  table{border-collapse:collapse;width:100%;font-size:.86rem;min-width:560px}
+  th,td{text-align:left;padding:.5rem .7rem;border-bottom:1px solid var(--line);vertical-align:top}
+  th{font-size:.7rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:650}
+  td .node{font-family:var(--mono);font-weight:650}
+  td .src{color:var(--faint);font-size:.8rem;display:block}
+  .io{display:flex;flex-direction:column;gap:.2rem}
+  .io .in::before{content:"◀ ";color:var(--slam)}
+  .io .out::before{content:"▶ ";color:var(--ctrl)}
+  .io span{font-size:.82rem}
+  tbody tr:hover{background:color-mix(in srgb,var(--accent) 4%,transparent)}
+
+  .callout{margin:1.4rem 0;padding:.9rem 1.1rem;border-radius:0 10px 10px 0;font-size:.92rem;border-left:3px solid var(--c,var(--accent));background:var(--cbg,var(--raise))}
+  .callout .lab{font-family:var(--mono);font-size:.66rem;text-transform:uppercase;letter-spacing:.1em;font-weight:700;color:var(--c,var(--accent));display:block;margin-bottom:.3rem}
+  .callout b{color:var(--ink)}
+  .c-key{--c:var(--accent);--cbg:color-mix(in srgb,var(--accent) 7%,transparent)}
+  .c-warn{--c:var(--ctrl);--cbg:var(--ctrl-bg)}
+
+  /* TF tree */
+  .tf{font-family:var(--mono);font-size:.9rem;background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);padding:1.1rem 1.2rem;margin:1.2rem 0;line-height:1.9;overflow-x:auto}
+  .tf .n{font-weight:700;color:var(--ink)}
+  .tf .owner{color:var(--muted);font-size:.82em}
+  .tf .a{color:var(--faint)}
+
+  ul.legend{list-style:none;padding:0;margin:1rem 0;display:flex;flex-wrap:wrap;gap:.5rem 1.2rem;font-size:.82rem}
+  ul.legend li{display:flex;align-items:center;gap:.4rem;color:var(--muted)}
+  ul.legend i{width:11px;height:11px;border-radius:3px;display:inline-block}
+  footer{margin-top:2.5rem;color:var(--faint);font-family:var(--mono);font-size:.74rem;text-align:center}
+  hr{border:0;border-top:1px solid var(--line);margin:2.2rem 0}
+</style>
+
+</head>
+<body>
+<div class="wrap">
+  <header class="col">
+    <p class="eyebrow">Robocar · TFM · Arquitectura</p>
+    <h1>Mapa de nodos ROS2</h1>
+    <p class="lede">Qué nodos corren en el robocar, qué información publica y consume cada uno, y cómo se encadenan: de los sensores a la odometría, el SLAM, la navegación y la observación. Capturado del grafo real en marcha.</p>
+    <ul class="legend">
+      <li><i style="background:var(--sensor)"></i> Sensores / drivers</li>
+      <li><i style="background:var(--odom)"></i> Odometría (fusión)</li>
+      <li><i style="background:var(--slam)"></i> SLAM</li>
+      <li><i style="background:var(--ctrl)"></i> Teleop / control</li>
+      <li><i style="background:var(--obs)"></i> Observabilidad</li>
+    </ul>
+  </header>
+
+  <h2>Flujo de datos, de un vistazo</h2>
+  <div class="flow">
+    <div class="flow-inner">
+      <div class="lane ls-sensor"><div class="lh" style="color:var(--sensor)">Sensores</div><div class="row">
+        <span class="nd">rplidar_node</span><span class="nd">encoder_node</span><span class="nd">accelerometer_node</span><span class="nd">distance_node</span><span class="nd">energy_node</span>
+      </div></div>
+      <div class="lane"><div class="lh"></div><div class="row"><span class="arrow"><b>/scan</b>▼</span><span class="arrow"><b>/wheel_speed</b>▼</span><span class="arrow"><b>/imu</b>▼</span></div></div>
+
+      <div class="lane ls-odom"><div class="lh" style="color:var(--odom)">Odometría</div><div class="row">
+        <span class="nd">wheel_twistcov_node</span><span class="arrow">▶<b>/wheel_speed_cov</b></span>
+        <span class="nd">rf2o_laser_odometry</span><span class="arrow">▶<b>/odom_rf2o</b></span>
+        <span class="nd" style="border-width:2.5px">ekf_filter_node</span>
+      </div></div>
+      <div class="lane"><div class="lh"></div><div class="row"><span class="arrow"><b>/odometry/filtered</b> + TF <span class="frame">odom→base_link</span> ▼</span></div></div>
+
+      <div class="lane ls-slam"><div class="lh" style="color:var(--slam)">SLAM</div><div class="row">
+        <span class="nd">cartographer_node</span><span class="arrow">▶<b>/submap_list</b></span><span class="nd">occupancy_grid_node</span><span class="arrow">▶<b>/map</b></span>
+        <span style="font-size:.75rem;color:var(--muted)">+ TF <span class="frame">map→odom</span></span>
+      </div></div>
+
+      <div class="lane ls-ctrl"><div class="lh" style="color:var(--ctrl)">Teleop</div><div class="row">
+        <span class="nd">joy_node</span><span class="arrow">▶<b>/joy</b></span><span class="nd">teleop_twist_joy_node</span><span class="arrow">▶<b>/cmd_vel</b></span><span class="nd">car_control_node</span><span class="arrow">▶ PCA9685 (I2C)</span>
+      </div></div>
+
+      <div class="lane ls-obs"><div class="lh" style="color:var(--obs)">Web</div><div class="row">
+        <span class="nd">rosbridge_websocket</span><span class="arrow">◀ suscribe todo ▶ <b>ws:9090</b></span><span style="font-size:.75rem;color:var(--muted)">→ panel robocar.local:8080</span>
+      </div></div>
+
+      <div class="lane"><div class="lh" style="color:var(--muted)">Modelo</div><div class="row">
+        <span class="nd" style="border-color:var(--muted);background:var(--raise)">robot_state_publisher</span><span class="arrow">▶ <b>/robot_description</b> + TF <span class="frame">*_static</span> (URDF)</span>
+      </div></div>
+    </div>
+    <div class="flow-note">▼ = publica · ◀/▶ = consume/produce · las etiquetas son los topics</div>
+  </div>
+
+  <h2><span class="tag t-sensor">Sensores</span> Drivers de hardware → ROS</h2>
+  <div class="col"><p>Nodos que leen el hardware (I2C, GPIO, serie) y lo publican como topics. No consumen nada: son las fuentes.</p></div>
+  <div class="ntbl"><table>
+    <thead><tr><th>Nodo</th><th>Publica</th><th>Fuente HW</th></tr></thead>
+    <tbody>
+      <tr><td><span class="node">rplidar_node</span></td><td><span class="topic">/scan</span> <span class="ty">LaserScan</span></td><td class="ty">RPLidar C1 (serie /dev/ttyS0)</td></tr>
+      <tr><td><span class="node">encoder_node</span></td><td><span class="topic">/wheel_speed</span> <span class="ty">TwistStamped</span></td><td class="ty">Arduino I2C 0x08 (rueda dentada)</td></tr>
+      <tr><td><span class="node">accelerometer_node</span></td><td><span class="topic">/imu</span> <span class="ty">Imu</span></td><td class="ty">MPU6050 I2C 0x68</td></tr>
+      <tr><td><span class="node">distance_node</span></td><td><span class="topic">/ultrasound_data</span> <span class="ty">Distance</span></td><td class="ty">HC-SR04 ×3 (GPIO)</td></tr>
+      <tr><td><span class="node">energy_node</span></td><td><span class="topic">/energy</span> <span class="ty">Energy</span></td><td class="ty">INA3221/INA226 I2C</td></tr>
+    </tbody>
+  </table></div>
+
+  <h2><span class="tag t-odom">Odometría</span> Fusión de sensores (EKF)</h2>
+  <div class="col"><p>Convierten y fusionan las fuentes en una pose. El <span class="frame">ekf_filter_node</span> es el corazón: escucha tres fuentes y produce la pose + el TF <span class="frame">odom→base_link</span>.</p></div>
+  <div class="ntbl"><table>
+    <thead><tr><th>Nodo</th><th>Consume ◀ / Publica ▶</th></tr></thead>
+    <tbody>
+      <tr><td><span class="node">wheel_twistcov_node</span><span class="src">adaptador: añade covarianza</span></td><td class="io"><span class="in"><span class="topic">/wheel_speed</span> <span class="ty">TwistStamped</span></span><span class="out"><span class="topic">/wheel_speed_cov</span> <span class="ty">TwistWithCovarianceStamped</span></span></td></tr>
+      <tr><td><span class="node">rf2o_laser_odometry</span><span class="src">odometría láser (scan-matching)</span></td><td class="io"><span class="in"><span class="topic">/scan</span></span><span class="out"><span class="topic">/odom_rf2o</span> <span class="ty">Odometry</span></span></td></tr>
+      <tr><td><span class="node">ekf_filter_node</span><span class="src">robot_localization</span></td><td class="io"><span class="in"><span class="topic">/wheel_speed_cov</span> · <span class="topic">/imu</span> · <span class="topic">/odom_rf2o</span> · <span class="topic">/set_pose</span></span><span class="out"><span class="topic">/odometry/filtered</span> <span class="ty">Odometry</span> · TF <span class="frame">odom→base_link</span> · <span class="topic">/diagnostics</span></span></td></tr>
+    </tbody>
+  </table></div>
+  <div class="callout c-warn"><span class="lab">Matiz TF</span>rf2o anuncia un publisher de <span class="topic">/tf</span> pero <b>no emite transformaciones</b> (arranca con <span class="frame">publish_tf=false</span>): el dueño de <span class="frame">odom→base_link</span> es el EKF, sin conflicto.</div>
+
+  <h2><span class="tag t-slam">SLAM</span> Mapa y localización</h2>
+  <div class="col"><p>Cartographer casa el <span class="topic">/scan</span> con el mapa usando la odometría del EKF como apoyo, y publica la corrección global <span class="frame">map→odom</span>. El grid node convierte los submaps en un mapa navegable.</p></div>
+  <div class="ntbl"><table>
+    <thead><tr><th>Nodo</th><th>Consume ◀ / Publica ▶</th></tr></thead>
+    <tbody>
+      <tr><td><span class="node">cartographer_node</span></td><td class="io"><span class="in"><span class="topic">/scan</span> · <span class="topic">/odometry/filtered</span></span><span class="out">TF <span class="frame">map→odom</span> · <span class="topic">/submap_list</span> · <span class="topic">/scan_matched_points2</span> · <span class="topic">/trajectory_node_list</span> · <span class="topic">/constraint_list</span></span></td></tr>
+      <tr><td><span class="node">occupancy_grid_node</span></td><td class="io"><span class="in"><span class="topic">/submap_list</span></span><span class="out"><span class="topic">/map</span> <span class="ty">OccupancyGrid</span></span></td></tr>
+    </tbody>
+  </table></div>
+
+  <h2><span class="tag t-ctrl">Teleop / control</span> Del mando a los motores</h2>
+  <div class="col"><p>El mando produce <span class="topic">/joy</span>; teleop lo traduce a <span class="topic">/cmd_vel</span>; <span class="frame">car_control_node</span> convierte todo en señales al PCA9685 (dirección + tracción). No publica topics de salida: actúa sobre el hardware.</p></div>
+  <div class="ntbl"><table>
+    <thead><tr><th>Nodo</th><th>Consume ◀ / Publica ▶</th></tr></thead>
+    <tbody>
+      <tr><td><span class="node">joy_node</span></td><td class="io"><span class="out"><span class="topic">/joy</span> <span class="ty">Joy</span></span><span class="in"><span class="topic">/joy/set_feedback</span></span></td></tr>
+      <tr><td><span class="node">teleop_twist_joy_node</span></td><td class="io"><span class="in"><span class="topic">/joy</span></span><span class="out"><span class="topic">/cmd_vel</span> <span class="ty">Twist</span></span></td></tr>
+      <tr><td><span class="node">car_control_node</span><span class="src">puente Ackermann</span></td><td class="io"><span class="in"><span class="topic">/joy</span> · <span class="topic">/cmd_vel</span> · <span class="topic">/lane_info</span></span><span class="out">PCA9685 (I2C): servo dirección + ESC tracción</span></td></tr>
+    </tbody>
+  </table></div>
+
+  <h2><span class="tag t-obs">Observabilidad</span> + modelo del robot</h2>
+  <div class="ntbl"><table>
+    <thead><tr><th>Nodo</th><th>Consume ◀ / Publica ▶</th></tr></thead>
+    <tbody>
+      <tr><td><span class="node">robot_state_publisher</span><span class="src">URDF → árbol TF</span></td><td class="io"><span class="in"><span class="topic">/joint_states</span></span><span class="out"><span class="topic">/robot_description</span> · TF <span class="frame">*_static</span> (base_link→laser/imu/us…)</span></td></tr>
+      <tr><td><span class="node">rosbridge_websocket</span> + <span class="node">rosapi</span><span class="src">puente web (panel)</span></td><td class="io"><span class="in">se suscribe a los topics del panel (imu, scan, odom, map, energía…)</span><span class="out"><span class="frame">ws://…:9090</span> → panel <span class="frame">robocar.local:8080</span></span></td></tr>
+    </tbody>
+  </table></div>
+
+  <h2>El árbol TF: quién publica cada tramo</h2>
+  <div class="tf">
+    <span class="n">map</span> <span class="a">──▶</span> <span class="n">odom</span> <span class="owner">· lo publica <b>cartographer_node</b> (corrige la deriva)</span><br>
+    <span class="n">odom</span> <span class="a">──▶</span> <span class="n">base_link</span> <span class="owner">· lo publica <b>ekf_filter_node</b> (encoder+IMU+láser)</span><br>
+    <span class="n">base_link</span> <span class="a">──▶</span> <span class="n">laser / imu_link / us_* </span> <span class="owner">· fijo, <b>robot_state_publisher</b> (URDF)</span>
+  </div>
+
+  <div class="callout c-key"><span class="lab">Nodos opcionales (no siempre activos)</span><b>camera_node</b> y <b>processing_node</b> (detección de carril → <span class="topic">/lane_info</span>) son del pipeline de lane-following y no corren en el arranque estándar. <b>car_control_node</b> se lanza aparte del panel (mueve motores).</div>
+
+  <hr>
+  <div class="col">
+    <p style="font-size:.9rem;color:var(--muted)"><b>Mantener este mapa al día.</b> Es una foto del grafo real. Cuando cambien los nodos o los topics, se refresca ejecutando el generador <span class="frame">tools/gen-node-map.sh</span> (con el stack en marcha), que introspecciona el grafo vivo (<span class="mono">ros2 node info</span>) y vuelca un snapshot para actualizar este documento.</p>
+  </div>
+
+  <footer>Robocar · mapa de nodos ROS2 · capturado del grafo en marcha</footer>
+</div>
+
+</body>
+</html>

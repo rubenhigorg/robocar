@@ -25,3 +25,9 @@ Estudio teórico: qué aporta el **modelo de bicicleta** (usar el ángulo de dir
 Estudio de diseño: en la fusión (EKF) el **peso de cada sensor es su covarianza**. Ajustándola por sensor —y por eje— se definen **perfiles de odometría** adaptados a cada ambiente (sala, pasillo, espacio abierto, suelo resbaladizo). Incluye el mecanismo de `robot_localization`, la fuerza de cada sensor por entorno y recetas de pesos.
 
 [Abrir documento](perfiles-odometria.html){ .md-button .md-button--primary target="_blank" }
+
+## Mapa de nodos ROS2
+
+Qué nodos corren en el robocar, qué **publica y consume** cada uno y cómo se encadenan (sensores → odometría → SLAM → control → web), con el árbol TF. Capturado del grafo real; se refresca con `tools/gen-node-map.sh`.
+
+[Abrir documento](nodos-ros2.html){ .md-button .md-button--primary target="_blank" }
