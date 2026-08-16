@@ -34,6 +34,14 @@ def generate_launch_description():
             name='wheel_twistcov_node',
             output='screen',
         ),
+        # Adaptador: pone covarianza sana a la odometria del laser (rf2o la
+        # publica a ceros -> el EKF divergiria). /odom_rf2o -> /odom_rf2o_cov
+        Node(
+            package='robocar_pkg',
+            executable='odom_cov_node',
+            name='odom_cov_node',
+            output='screen',
+        ),
         # EKF: fusiona encoder (vx) + IMU (yaw rate) -> odom -> base_link
         Node(
             package='robot_localization',

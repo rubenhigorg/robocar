@@ -32,6 +32,7 @@ setup(
             'processing_node = robocar_pkg.processing_node:main',
             'encoder_node = robocar_pkg.encoder_node:main',
             'wheel_twistcov_node = robocar_pkg.wheel_twistcov_node:main',
+            'odom_cov_node = robocar_pkg.odom_cov_node:main',
         ],
     },
 )
