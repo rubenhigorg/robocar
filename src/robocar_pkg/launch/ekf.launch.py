@@ -41,6 +41,10 @@ def generate_launch_description():
             executable='odom_cov_node',
             name='odom_cov_node',
             output='screen',
+            # rf2o es saltarina al conducir: se le da BAJA confianza (covarianza
+            # alta) para que no domine ni desvie el EKF. Encoder+IMU mandan;
+            # rf2o solo aporta suave. Subir la confianza (bajar var) al tunear.
+            parameters=[{'xy_variance': 0.5, 'yaw_variance': 0.2}],
         ),
         # EKF: fusiona encoder (vx) + IMU (yaw rate) -> odom -> base_link
         Node(
