@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Robocar · Mando</title>
+<style>
+  :root{
+    --bg:#0b0f16; --surface:#141c26; --raise:#1b2634; --ink:#e6ecf3; --muted:#93a1b2; --faint:#5c6a7c;
+    --line:#26323f; --accent:#3f8ae0; --good:#39c07f; --warn:#e0a24a; --bad:#e05a5a;
+    --pad:#0e1520; --knob:#3f8ae0;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --mono:ui-monospace,"SF Mono","Cascadia Code",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--ink);
+    font-family:var(--sans);overscroll-behavior:none;touch-action:none;-webkit-user-select:none;user-select:none}
+  .app{height:100%;display:flex;flex-direction:column;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+
+  header{display:flex;align-items:center;gap:.6rem;padding:.7rem 1rem;border-bottom:1px solid var(--line)}
+  header .title{font-family:var(--mono);font-weight:700;letter-spacing:.02em}
+  header .title span{color:var(--accent)}
+  .conn{margin-left:auto;display:flex;align-items:center;gap:.4rem;font-size:.78rem;color:var(--muted);font-family:var(--mono)}
+  .conn .dot{width:9px;height:9px;border-radius:50%;background:var(--bad)}
+  .conn.ok .dot{background:var(--good)} .conn.ok{color:var(--good)}
+
+  .arm{display:flex;gap:.6rem;align-items:center;padding:.7rem 1rem}
+  .arm button{flex:1;font:inherit;font-weight:700;font-size:.95rem;padding:.85rem;border-radius:12px;border:1px solid var(--line);
+    background:var(--surface);color:var(--ink);cursor:pointer}
+  .arm .toggle.on{background:var(--good);border-color:var(--good);color:#04160d}
+  .arm .stop{background:var(--bad);border-color:var(--bad);color:#fff;flex:0 0 34%}
+
+  .stage{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem;padding:.5rem 1rem}
+  .readout{display:flex;gap:1.6rem;font-family:var(--mono);font-variant-numeric:tabular-nums}
+  .readout .r{text-align:center}
+  .readout .r b{display:block;font-size:1.5rem;font-weight:700}
+  .readout .r small{color:var(--muted);font-size:.68rem;text-transform:uppercase;letter-spacing:.08em}
+  .readout .r.v b{color:var(--accent)} .readout .r.w b{color:var(--warn)}
+
+  .pad{position:relative;width:min(74vw,320px);height:min(74vw,320px);border-radius:50%;
+    background:radial-gradient(circle at 50% 45%, var(--raise), var(--pad));
+    border:2px solid var(--line);touch-action:none;flex:none}
+  .pad .cross{position:absolute;inset:0;pointer-events:none}
+  .pad .cross::before,.pad .cross::after{content:"";position:absolute;background:var(--line)}
+  .pad .cross::before{left:50%;top:8%;bottom:8%;width:1px;transform:translateX(-.5px)}
+  .pad .cross::after{top:50%;left:8%;right:8%;height:1px;transform:translateY(-.5px)}
+  .pad .fwd{position:absolute;top:8px;left:50%;transform:translateX(-50%);font-size:.66rem;color:var(--faint);font-family:var(--mono)}
+  .knob{position:absolute;width:34%;height:34%;border-radius:50%;left:33%;top:33%;
+    background:radial-gradient(circle at 40% 35%, #5b9bea, var(--knob));
+    box-shadow:0 6px 20px rgba(0,0,0,.5), inset 0 2px 4px rgba(255,255,255,.25);
+    transition:transform .04s linear;will-change:transform}
+  .pad.idle .knob{transition:transform .18s cubic-bezier(.2,.8,.3,1)}
+  .hint{color:var(--faint);font-size:.8rem;text-align:center;max-width:30ch}
+
+  .foot{padding:.6rem 1rem 1rem;display:flex;flex-direction:column;gap:.5rem}
+  .cap{display:flex;align-items:center;gap:.7rem;font-size:.82rem;color:var(--muted)}
+  .cap input[type=range]{flex:1;accent-color:var(--accent)}
+  .cap .val{font-family:var(--mono);color:var(--ink);min-width:3.2em;text-align:right}
+  .note{font-size:.72rem;color:var(--faint);text-align:center;line-height:1.4}
+  .banner{display:none;background:var(--warn);color:#1a1206;font-size:.8rem;font-weight:600;text-align:center;padding:.5rem}
+  .banner.show{display:block}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="title">robo<span>car</span> · mando</div>
+    <div class="conn" id="conn"><span class="dot"></span><span id="connTxt">conectando…</span></div>
+  </header>
+
+  <div class="banner" id="banner"></div>
+
+  <div class="arm">
+    <button class="toggle" id="arm">Activar control</button>
+    <button class="stop" id="stop">STOP</button>
+  </div>
+
+  <div class="stage">
+    <div class="readout">
+      <div class="r v"><b id="vVal">0.00</b><small>m/s</small></div>
+      <div class="r w"><b id="wVal">0.00</b><small>rad/s</small></div>
+    </div>
+    <div class="pad idle" id="pad">
+      <div class="cross"></div>
+      <div class="fwd">▲ adelante</div>
+      <div class="knob" id="knob"></div>
+    </div>
+    <div class="hint" id="hint">Activa el control y <b>arrastra</b> el joystick. Suelta para parar.</div>
+  </div>
+
+  <div class="foot">
+    <div class="cap">
+      <span>Máx.</span>
+      <input type="range" id="cap" min="10" max="100" value="30">
+      <span class="val" id="capVal">30%</span>
+    </div>
+    <div class="note">Solo se mueve mientras arrastras (hombre-muerto). Si sueltas o se corta la conexión, el coche frena solo (watchdog 0.5&nbsp;s).</div>
+  </div>
+</div>
+
+<script>
+/* ---- config (coincide con car_control_node) ---- */
+const MAX_LIN = 0.7;      // m/s a fondo
+const MAX_ANG = 0.4;      // rad/s a tope de giro
+const RATE_MS = 60;       // ~16 Hz de publicación
+const HOST = location.hostname || "robocar.local";
+
+const $ = s => document.querySelector(s);
+let ws=null, connected=false, advertised=false;
+let armed=false;                 // modo autonomo activado
+let active=false;                // el dedo esta sobre el joystick
+let lin=0, ang=0;                // comando actual
+let cap=0.30;                    // limitador de velocidad (0..1)
+
+/* ---- rosbridge ---- */
+function connect(){
+  try{ ws = new WebSocket(`ws://${HOST}:9090`); }catch(e){ retry(); return; }
+  ws.onopen = ()=>{
+    connected=true; setConn(true);
+    send({op:"advertise", topic:"/cmd_vel", type:"geometry_msgs/msg/Twist"});
+    send({op:"advertise", topic:"/joy",     type:"sensor_msgs/msg/Joy"});
+    advertised=true;
+  };
+  ws.onclose = ()=>{ connected=false; advertised=false; setConn(false); retry(); };
+  ws.onerror = ()=>{ try{ws.close();}catch(e){} };
+}
+function retry(){ setTimeout(connect, 1500); }
+function send(o){ if(ws && ws.readyState===1) ws.send(JSON.stringify(o)); }
+function setConn(ok){
+  const c=$("#conn"); c.classList.toggle("ok",ok);
+  $("#connTxt").textContent = ok ? "conectado" : "desconectado";
+  if(!ok){ armed=false; updateArm(); }
+}
+
+/* ---- publicar /cmd_vel ---- */
+function pubCmd(vx,wz){
+  send({op:"publish", topic:"/cmd_vel", msg:{
+    linear:{x:vx,y:0,z:0}, angular:{x:0,y:0,z:wz}
+  }});
+}
+/* ---- toggle de modo autonomo via /joy (boton X = indice 0) ---- */
+function pubJoyToggle(){
+  const axes=[0,0,0,0,0,0];
+  const btn=Array(17).fill(0); btn[0]=1;
+  const now=Date.now();
+  send({op:"publish", topic:"/joy", msg:{
+    header:{stamp:{sec:Math.floor(now/1000),nanosec:0}, frame_id:""},
+    axes:axes, buttons:btn
+  }});
+}
+
+/* ---- bucle de publicacion (deadman) ---- */
+setInterval(()=>{
+  if(!connected || !armed) return;
+  if(active){ pubCmd(lin, ang); }
+  else { pubCmd(0,0); }          // en reposo pero armado: manda ceros (mantiene vivo el watchdog)
+}, RATE_MS);
+
+/* ---- joystick ---- */
+const pad=$("#pad"), knob=$("#knob");
+let padRect=null, pid=null;
+
+function setKnob(nx,ny){ // nx,ny en [-1,1]
+  const R=pad.clientWidth*0.33;  // radio de desplazamiento del knob
+  knob.style.transform = `translate(${nx*R}px, ${ny*R}px)`;
+}
+function computeCmd(nx,ny){
+  // adelante = arrastrar hacia arriba (ny<0). Sin marcha atras via cmd_vel.
+  const fwd = Math.max(0, -ny);          // 0..1
+  lin = fwd * MAX_LIN * cap;
+  ang = -nx * MAX_ANG;                    // stick izq (nx<0) -> giro izq (ang>0)
+  $("#vVal").textContent = lin.toFixed(2);
+  $("#wVal").textContent = ang.toFixed(2);
+}
+function fromEvent(e){
+  padRect = pad.getBoundingClientRect();
+  const cx=padRect.left+padRect.width/2, cy=padRect.top+padRect.height/2;
+  let dx=(e.clientX-cx)/(padRect.width/2), dy=(e.clientY-cy)/(padRect.height/2);
+  const m=Math.hypot(dx,dy); if(m>1){ dx/=m; dy/=m; }
+  return [dx,dy];
+}
+pad.addEventListener("pointerdown", e=>{
+  if(!armed){ flash("Pulsa «Activar control» primero"); return; }
+  pid=e.pointerId; pad.setPointerCapture(pid); pad.classList.remove("idle"); active=true;
+  const [nx,ny]=fromEvent(e); setKnob(nx,ny); computeCmd(nx,ny);
+});
+pad.addEventListener("pointermove", e=>{
+  if(!active || e.pointerId!==pid) return;
+  const [nx,ny]=fromEvent(e); setKnob(nx,ny); computeCmd(nx,ny);
+});
+function release(e){
+  if(e && pid!==null && e.pointerId!==pid) return;
+  active=false; pid=null; pad.classList.add("idle");
+  setKnob(0,0); lin=0; ang=0; $("#vVal").textContent="0.00"; $("#wVal").textContent="0.00";
+  if(connected && armed){ pubCmd(0,0); }   // frenar de inmediato
+}
+pad.addEventListener("pointerup", release);
+pad.addEventListener("pointercancel", release);
+pad.addEventListener("lostpointercapture", release);
+
+/* ---- armar / desarmar ---- */
+function updateArm(){
+  const b=$("#arm");
+  b.classList.toggle("on",armed);
+  b.textContent = armed ? "Control activo — desactivar" : "Activar control";
+  $("#hint").innerHTML = armed
+    ? "<b>Arrastra</b> el joystick para conducir. Suelta para parar."
+    : "Activa el control y <b>arrastra</b> el joystick. Suelta para parar.";
+}
+$("#arm").addEventListener("click", ()=>{
+  if(!connected){ flash("Sin conexión con el robot"); return; }
+  pubJoyToggle();            // conmuta el modo autonomo en car_control
+  armed=!armed; updateArm();
+  if(!armed){ pubCmd(0,0); }
+});
+$("#stop").addEventListener("click", ()=>{
+  active=false; setKnob(0,0); lin=0; ang=0;
+  $("#vVal").textContent="0.00"; $("#wVal").textContent="0.00";
+  if(connected){ pubCmd(0,0); }
+  if(armed){ pubJoyToggle(); armed=false; updateArm(); }  // y sale de modo autonomo
+  flash("STOP — coche a neutro");
+});
+
+/* ---- limitador ---- */
+const capEl=$("#cap");
+capEl.addEventListener("input", ()=>{ cap=capEl.value/100; $("#capVal").textContent=capEl.value+"%"; });
+cap = capEl.value/100; $("#capVal").textContent=capEl.value+"%";
+
+/* ---- banner efimero ---- */
+let bt=null;
+function flash(msg){ const b=$("#banner"); b.textContent=msg; b.classList.add("show");
+  clearTimeout(bt); bt=setTimeout(()=>b.classList.remove("show"),2200); }
+
+/* frenar si la pestaña pierde foco */
+document.addEventListener("visibilitychange", ()=>{ if(document.hidden) release(); });
+window.addEventListener("blur", ()=>release());
+
+connect(); updateArm();
+</script>
+</body>
+</html>
