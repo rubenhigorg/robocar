@@ -12,6 +12,8 @@ class CarControlNode(Node):
     # REGLA DURA (Ruben): nunca superar el 50% de gas. Rango ESC: 91.8 (reposo)
     # -> 27 (a fondo); el 50% es 59.4. Ningun parametro puede saltarse este limite.
     THROTTLE_HARD_FLOOR = 59.4
+    # Tope duro simetrico para la MARCHA ATRAS (mismo 50% por encima del neutro).
+    THROTTLE_HARD_CEIL = 124.0
 
     def __init__(self):
         super().__init__('car_control_node')
@@ -47,6 +49,9 @@ class CarControlNode(Node):
         self.declare_parameter('steer_span', 65.0)         # desviacion max de direccion (grados)
         self.declare_parameter('cmd_vel_timeout', 0.5)     # s sin /cmd_vel -> throttle a neutro
         self.declare_parameter('max_throttle_step', 0.5)   # grados/comando al DAR gas (rampa anti-pico)
+        self.declare_parameter('throttle_rev_start', 97.0)  # umbral de reversa (angulo sobre neutro)
+        self.declare_parameter('throttle_rev_full', 108.0)  # reversa a max_linear (conservador)
+        self.declare_parameter('max_linear_rev', 0.5)  # m/s que mapea a throttle_rev_full (reversa mas lenta)
 
         self.kit = ServoKit(channels=16)
         self.autonomous_mode = False
@@ -116,21 +121,36 @@ class CarControlNode(Node):
         steer = self.clamp(steer, 40.0, 170.0)
         self.kit.servo[2].angle = float(steer)
 
-        # Traccion: linear.x (m/s) -> canales 0 y 1. El ESC avanza BAJANDO el
-        # angulo desde throttle_start; lin<=0 -> reposo (sin marcha atras aun).
+        # Traccion: linear.x (m/s) -> canales 0 y 1. ESC bidireccional (verificado):
+        # ADELANTE = bajar el angulo desde el neutro (93.6 -> 27); ATRAS = subir
+        # el angulo (93.6 -> ~108).
         lin = msg.linear.x
-        if lin <= 0.0 or max_lin <= 0.0:
+        rev_start = self.get_parameter('throttle_rev_start').value
+        rev_full = self.get_parameter('throttle_rev_full').value
+        max_lin_rev = self.get_parameter('max_linear_rev').value
+        if max_lin <= 0.0:
             throttle = stop
-        else:
+        elif lin > 0.0:
             frac = min(lin / max_lin, 1.0)
             throttle = start - frac * (start - full)
-        throttle = self.clamp(throttle, self.THROTTLE_HARD_FLOOR, stop)
-        # Rampa anti-pico (incidentes jul 2026): DAR gas (bajar angulo) se limita
-        # a max_throttle_step por comando; QUITAR gas (subir) es instantaneo.
+            throttle = self.clamp(throttle, self.THROTTLE_HARD_FLOOR, stop)
+        elif lin < 0.0:
+            frac = min(-lin / max_lin_rev, 1.0)
+            throttle = rev_start + frac * (rev_full - rev_start)
+            throttle = self.clamp(throttle, stop, self.THROTTLE_HARD_CEIL)
+        else:
+            throttle = stop
+        # Rampa anti-pico: DAR gas (alejarse del neutro, en cualquier sentido) se
+        # limita a max_throttle_step por comando; QUITAR gas (hacia el neutro) es
+        # instantaneo (freno inmediato).
         step = self.get_parameter('max_throttle_step').value
         prev = self.current_throttle if self.current_throttle is not None else stop
-        if throttle < prev - step:
-            throttle = prev - step
+        if throttle < stop:            # zona ADELANTE
+            base = prev if prev < stop else stop
+            throttle = max(throttle, base - step)
+        elif throttle > stop:          # zona ATRAS
+            base = prev if prev > stop else stop
+            throttle = min(throttle, base + step)
         self.write_throttle(throttle)
 
         self.get_logger().info(

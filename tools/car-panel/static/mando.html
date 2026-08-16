@@ -45,6 +45,7 @@
   .pad .cross::before{left:50%;top:8%;bottom:8%;width:1px;transform:translateX(-.5px)}
   .pad .cross::after{top:50%;left:8%;right:8%;height:1px;transform:translateY(-.5px)}
   .pad .fwd{position:absolute;top:8px;left:50%;transform:translateX(-50%);font-size:.66rem;color:var(--faint);font-family:var(--mono)}
+  .pad .rev{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);font-size:.66rem;color:var(--faint);font-family:var(--mono)}
   .knob{position:absolute;width:34%;height:34%;border-radius:50%;left:33%;top:33%;
     background:radial-gradient(circle at 40% 35%, #5b9bea, var(--knob));
     box-shadow:0 6px 20px rgba(0,0,0,.5), inset 0 2px 4px rgba(255,255,255,.25);
@@ -83,6 +84,7 @@
     <div class="pad idle" id="pad">
       <div class="cross"></div>
       <div class="fwd">▲ adelante</div>
+      <div class="rev">▼ atras</div>
       <div class="knob" id="knob"></div>
     </div>
     <div class="hint" id="hint">Activa el control y <b>arrastra</b> el joystick. Suelta para parar.</div>
@@ -100,7 +102,8 @@
 
 <script>
 /* ---- config (coincide con car_control_node) ---- */
-const MAX_LIN = 0.7;      // m/s a fondo
+const MAX_LIN = 0.7;      // m/s a fondo (adelante)
+const MAX_LIN_REV = 0.5;  // m/s a fondo (marcha atras, algo mas lenta)
 const MAX_ANG = 0.4;      // rad/s a tope de giro
 const RATE_MS = 60;       // ~16 Hz de publicación
 const HOST = location.hostname || "robocar.local";
@@ -167,9 +170,10 @@ function setKnob(nx,ny){ // nx,ny en [-1,1]
   knob.style.transform = `translate(${nx*R}px, ${ny*R}px)`;
 }
 function computeCmd(nx,ny){
-  // adelante = arrastrar hacia arriba (ny<0). Sin marcha atras via cmd_vel.
-  const fwd = Math.max(0, -ny);          // 0..1
-  lin = fwd * MAX_LIN * cap;
+  // adelante = arriba (ny<0, drive>0); marcha atras = abajo (ny>0, drive<0).
+  const drive = -ny;                      // -1..1
+  const scale = drive >= 0 ? MAX_LIN : MAX_LIN_REV;
+  lin = drive * scale * cap;              // >0 adelante, <0 atras
   ang = -nx * MAX_ANG;                    // stick izq (nx<0) -> giro izq (ang>0)
   $("#vVal").textContent = lin.toFixed(2);
   $("#wVal").textContent = ang.toFixed(2);
