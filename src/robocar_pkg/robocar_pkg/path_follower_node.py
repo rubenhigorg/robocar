@@ -58,7 +58,10 @@ class PathFollowerNode(Node):
         self.declare_parameter('dist_tol', 0.05)         # m para dar por hecho un lado
         self.declare_parameter('yaw_tol_deg', 6.0)       # grados para dar por hecho un giro
         self.declare_parameter('kturn_seg_max', 0.35)    # m max por fase del vaiven
-        self.declare_parameter('phase_time_max', 3.5)    # s max por fase (anti-atasco)
+        self.declare_parameter('phase_time_max', 4.5)    # s max por fase (anti-atasco)
+        self.declare_parameter('neutral_dwell', 0.9)     # s en neutro antes de invertir sentido
+        #   (el ESC BLHeli NO reversa desde movimiento: frena. Hay que pasar por
+        #    neutro y parar antes de aplicar el sentido contrario.)
         self.declare_parameter('max_run_time', 120.0)    # s corte de seguridad global
         self.declare_parameter('rate_hz', 15.0)
         self.declare_parameter('odom_topic', '/odometry/filtered')
@@ -83,6 +86,9 @@ class PathFollowerNode(Node):
         self.turn_phase = 'FWD'
         self.phase_start = None      # (x,y)
         self.phase_t0 = None
+        # guardia de inversion de sentido (pausa en neutro)
+        self.last_move_dir = 0       # -1, 0, +1
+        self.neutral_until = None    # instante (s) hasta el que se mantiene neutro
         self.corners_done = 0
         self.t_start = None
         self._log_div = 0
@@ -127,6 +133,27 @@ class PathFollowerNode(Node):
         t.linear.x = float(lin)
         t.angular.z = float(ang)
         self.pub.publish(t)
+
+    def _now_s(self):
+        return self.get_clock().now().nanoseconds / 1e9
+
+    def _drive(self, v, ang):
+        """Publica velocidad respetando una PAUSA EN NEUTRO al invertir el sentido.
+        El ESC no reversa desde movimiento; hay que parar antes. Mientras dura la
+        pausa se publica neutro (manteniendo la direccion del servo para preorientar)."""
+        d = 0 if abs(v) < 1e-3 else (1 if v > 0 else -1)
+        now = self._now_s()
+        if d != 0 and self.last_move_dir != 0 and d != self.last_move_dir and self.neutral_until is None:
+            self.neutral_until = now + self.get_parameter('neutral_dwell').value
+        if self.neutral_until is not None:
+            if now < self.neutral_until:
+                self._publish(0.0, ang)   # neutro (servo libre para preorientar)
+                return False              # aun en pausa
+            self.neutral_until = None
+        if d != 0:
+            self.last_move_dir = d
+        self._publish(v, ang)
+        return True                       # comando aplicado
 
     def _now(self):
         return self.get_clock().now()
@@ -192,7 +219,7 @@ class PathFollowerNode(Node):
             self.turn_target = wrap(self.target_heading + self.turn_sign * ca)
             self.turn_phase = 'FWD'
             self.phase_start = (x, y)
-            self.phase_t0 = self._now()
+            self.phase_t0 = None
             self.state = 'TURN'
             self.get_logger().info('Esquina %d: girando %.0f deg...'
                                    % (self.corners_done + 1, math.degrees(self.turn_sign * ca)))
@@ -200,7 +227,7 @@ class PathFollowerNode(Node):
         # avanzar recto manteniendo rumbo
         err = wrap(self.target_heading - yaw)
         ang = max(-self.max_ang, min(self.max_ang, self.get_parameter('heading_kp').value * err))
-        self._publish(self.get_parameter('fwd_speed').value, ang)
+        self._drive(self.get_parameter('fwd_speed').value, ang)
         self._trace('RECTO', d, err)
 
     def _turn(self):
@@ -217,11 +244,11 @@ class PathFollowerNode(Node):
             return
         # ¿cambiar de fase? (por distancia o por tiempo)
         pd = math.hypot(x - self.phase_start[0], y - self.phase_start[1])
-        pt = (self._now() - self.phase_t0).nanoseconds / 1e9
+        pt = (self._now_s() - self.phase_t0) if self.phase_t0 is not None else 0.0
         if pd > self.get_parameter('kturn_seg_max').value or pt > self.get_parameter('phase_time_max').value:
             self.turn_phase = 'REV' if self.turn_phase == 'FWD' else 'FWD'
             self.phase_start = (x, y)
-            self.phase_t0 = self._now()
+            self.phase_t0 = None
         # aplicar la fase: ambas hacen avanzar el yaw en turn_sign
         if self.turn_phase == 'FWD':
             ang = self.turn_sign * self.max_ang           # direccion hacia el giro
@@ -229,7 +256,9 @@ class PathFollowerNode(Node):
         else:  # REV: contra-direccion, marcha atras -> mismo sentido de giro
             ang = -self.turn_sign * self.max_ang
             v = -self.get_parameter('rev_speed').value
-        self._publish(v, ang)
+        applied = self._drive(v, ang)
+        if applied and self.phase_t0 is None:
+            self.phase_t0 = self._now_s()   # contar la fase solo cuando se mueve (no en la pausa)
         self._trace('GIRO-' + self.turn_phase, pd, rem)
 
     def _trace(self, tag, d, err):

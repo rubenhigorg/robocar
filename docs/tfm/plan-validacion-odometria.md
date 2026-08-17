@@ -32,10 +32,23 @@ trayectorias desde la web.
 - [x] Deadman del mando (no publica en reposo → no compite con rutas autónomas).
 - [x] Este plan en el repo.
 
-### Fase 1 — Encoder con sentido *(desbloquea la validación con reversa)* — **EN CURSO**
-- [ ] `encoder_node` firma `/wheel_speed` según el signo del último `/cmd_vel`.
-- [ ] Validación out-and-back: recto **+1 m y luego −1 m** → la odometría vuelve a ~0
-  (hoy daría ~2 m). Objetivo: |error| pocos cm.
+### Fase 1 — Encoder con sentido + reversa fiable + tiempo real — **EN CURSO**
+- [x] `encoder_node` firma `/wheel_speed` con el signo del último `/cmd_vel` (`use_cmd_direction`).
+- [x] **Pausa en neutro antes de invertir el sentido** (el ESC BLHeli no reversa desde
+  movimiento: frena). Implementado en `path_follower` (`_drive` + `neutral_dwell`) y en las
+  maniobras. **Validado en suelo: la marcha atrás ya funciona de verdad.**
+- [ ] **Encoder en TIEMPO REAL (bloqueante para todo lo demás).** El Arduino (I2C 0x08) solo
+  expone la cuenta de la última ventana de **1 s** (1 Hz, ~1 s de latencia); no hay contador
+  acumulativo (registros 2–15 = 0xFF). Con eso la odometría no sirve para control en tiempo
+  real ni para medir maniobras rápidas. Opciones:
+  - **(A) Reprogramar el Arduino** (0x08, exclusivo del encoder): contar pulsos por interrupción
+    y exponer un **contador acumulativo de 32 bits**; `encoder_node` lo lee a 20–50 Hz y deriva
+    la velocidad (baja latencia). Requiere el tipo de placa + pin del encoder y **flasheo por USB
+    desde un portátil** (el Arduino no está por USB a la Pi).
+  - **(B) Llevar la señal del encoder a un GPIO de la Pi** y contar en la Pi (p.ej. `pigpio`,
+    flancos con marca de tiempo hardware) a alta frecuencia. Requiere recableado y comprobar
+    niveles 5 V/3.3 V.
+- [ ] Revalidar el signo/latencia con un out-and-back **largo** una vez arreglado el rate.
 
 ### Fase 2 — Protocolo de validación de odometría *(el corazón)*
 - [ ] Trayectorias patrón **solo hacia delante** (recto N m, rectángulo grande, círculo):
