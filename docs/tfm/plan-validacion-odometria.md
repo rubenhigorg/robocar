@@ -61,8 +61,16 @@ trayectorias desde la web.
   real; estimador combinado **`meters_per_pulse = 0.001432`** (fijado). El residual ~1.5% es
   **ruido de medir a mano** (cinta ±5-10 mm, inercia del ESC en neutro, alineación), no del
   sensor. Odometría a 30 Hz, en tiempo real.
-- [ ] Ground-truth del **cuadrado k-turn**: comparar cierre físico (cinta) vs cierre odometría.
-- [ ] Más patrones (rectángulo, círculo) si se quiere apurar el promedio.
+- [x] **Ground-truth cerrado CON reversa validado**: out-and-back (ida 0.98 m + pausa neutro +
+  vuelta) → cierre odometría 0.608 m vs real 0.63 m → **~2 cm de error** (~1.6% del recorrido
+  total, igual que la escala en recto). La odometría rastrea bien incluso con cambio de sentido.
+- [x] Cuadrado k-turn 0.8 m ejecutado y trazado fielmente (cierre odom ~0.25–0.34 m). Nota: el
+  k-turn necesita **más área que el lado nominal** (la reversa sobresale) — en 1.2×1.2 m topa la
+  pared; usar out-and-back o cuadrado más pequeño / `kturn_seg_max` menor.
+- [ ] (Opcional) más patrones (rectángulo, círculo) para apurar el promedio.
+
+**Conclusión Fase 2: odometría validada a ~±1.5% / ~2 cm, en tiempo real (30 Hz), en recto y
+en trayectoria cerrada con reversa.**
 - [ ] Con encoder firmado, validar trayectorias **con reversa** (cuadrado k-turn): cierre real vs odometría.
 - [ ] Métricas registradas (cierre, deriva/m, error de rumbo) + gráficas planificado-vs-real.
 
