@@ -154,11 +154,15 @@ function pubJoyToggle(){
   }});
 }
 
-/* ---- bucle de publicacion (deadman) ---- */
+/* ---- bucle de publicacion (deadman REAL) ---- */
 setInterval(()=>{
   if(!connected || !armed) return;
   if(active){ pubCmd(lin, ang); }
-  else { pubCmd(0,0); }          // en reposo pero armado: manda ceros (mantiene vivo el watchdog)
+  // En reposo NO se publica nada: asi el mando puede quedar abierto (armado)
+  // como parada de emergencia SIN competir con una ruta autonoma que publique
+  // /cmd_vel. En reposo car_control deja neutro solo (watchdog). Al soltar el
+  // joystick se manda un unico 0 (ver release()). Para PARAR una ruta autonoma:
+  // pulsa «desactivar»/STOP (saca del modo autonomo -> car_control ignora /cmd_vel).
 }, RATE_MS);
 
 /* ---- joystick ---- */
@@ -210,7 +214,7 @@ function updateArm(){
   b.classList.toggle("on",armed);
   b.textContent = armed ? "Control activo — desactivar" : "Activar control";
   $("#hint").innerHTML = armed
-    ? "<b>Arrastra</b> el joystick para conducir. Suelta para parar."
+    ? "Armado. En reposo <b>no interfiere</b> con rutas autónomas. <b>Arrastra</b> para conducir tú; <b>STOP</b> o «desactivar» = parada."
     : "Activa el control y <b>arrastra</b> el joystick. Suelta para parar.";
 }
 $("#arm").addEventListener("click", ()=>{

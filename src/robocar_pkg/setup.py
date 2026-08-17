@@ -33,6 +33,7 @@ setup(
             'encoder_node = robocar_pkg.encoder_node:main',
             'wheel_twistcov_node = robocar_pkg.wheel_twistcov_node:main',
             'odom_cov_node = robocar_pkg.odom_cov_node:main',
+            'path_follower_node = robocar_pkg.path_follower_node:main',
         ],
     },
 )
