@@ -56,8 +56,11 @@ trayectorias desde la web.
 - [ ] Revalidar el signo/latencia con un out-and-back **largo** y **calibrar m/pulso por distancia**.
 
 ### Fase 2 — Protocolo de validación de odometría *(el corazón)*
-- [ ] Trayectorias patrón **solo hacia delante** (recto N m, rectángulo grande, círculo):
-  medir con cinta el resultado real vs odometría → error absoluto y **por metro (%)**.
+- [x] **Escala en recto validada**: recto ~1.9 m, odometría 1.908 m vs real ~1.875 m →
+  **error ≈ +1.8%** (a 30 Hz, en tiempo real). Corregido `meters_per_pulse` a **0.001421**
+  (era 0.001446). Nota: al cortar gas el ESC no frena → rueda por inercia; la odometría lo
+  rastrea bien.
+- [ ] Más trayectorias patrón (rectángulo grande, círculo) y repetir para promediar el error.
 - [ ] Con encoder firmado, validar trayectorias **con reversa** (cuadrado k-turn): cierre real vs odometría.
 - [ ] Métricas registradas (cierre, deriva/m, error de rumbo) + gráficas planificado-vs-real.
 
