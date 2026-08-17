@@ -74,9 +74,15 @@ en trayectoria cerrada con reversa.**
 - [ ] Con encoder firmado, validar trayectorias **con reversa** (cuadrado k-turn): cierre real vs odometría.
 - [ ] Métricas registradas (cierre, deriva/m, error de rumbo) + gráficas planificado-vs-real.
 
-### Fase 3 — Velocidad lenta por pulsos *(mejora de observación)*
-- [ ] Modo "crawl" a pulsos (micro-impulsos + inercia) para bajar del umbral del ESC.
-- [ ] Calibrar duty/periodo para una velocidad media baja estable.
+### Fase 3 — Velocidad lenta *(cerrada: límite de hardware)*
+- [x] **Veredicto: no se puede hacer crawl fino con este drivetrain.** El brushless + ESC BLHeli
+  tiene velocidad mínima alta (~0.3+ m/s), el neutro **no frena** (rueda por inercia) y la rampa
+  de seguridad de `car_control` tarda ~1 s en enganchar el throttle. Probado un crawl por saltos
+  controlados por odometría: cada "salto de 8 cm" acaba en ~0.3 m (acelera y rueda). El freno por
+  micro-reversa ayuda poco (la rampa también lo retrasa ~0.5 s).
+- Lo viable: **modo "a tirones"** (~0.3 m por salto + pausa), más lento/observable que el continuo.
+- Crawl fino de verdad = **hardware** (motor/ESC brushed, reductora, o ESC sensored). Fuera de alcance
+  ahora. `crawl_test.py` queda como demo del modo a tirones.
 
 ### Fase 4 — Evitación de obstáculos (reactiva)
 - [ ] Verificar sensores: 3 ultrasonidos (`/ultrasound_data`) + **aclarar los IR** (pin 6 = `emergency_stop`;
