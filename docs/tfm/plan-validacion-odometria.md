@@ -84,11 +84,18 @@ en trayectoria cerrada con reversa.**
 - Crawl fino de verdad = **hardware** (motor/ESC brushed, reductora, o ESC sensored). Fuera de alcance
   ahora. `crawl_test.py` queda como demo del modo a tirones.
 
-### Fase 4 — Evitación de obstáculos (reactiva)
-- [ ] Verificar sensores: 3 ultrasonidos (`/ultrasound_data`) + **aclarar los IR** (pin 6 = `emergency_stop`;
-  ¿otros IR? ¿integrarlos?).
-- [ ] Capa de seguridad con prioridad: obstáculo < umbral → frenar/pausar; reanudar al despejar.
-- [ ] Evitación activa: sesgar dirección hacia el lado libre (ultrasonido izq/centro/der) y retomar.
+### Fase 4 — Evitación de obstáculos (reactiva) — **núcleo hecho**
+- [x] Sensores: 3 ultrasonidos `/ultrasound_data` (msg `Distance`: left/center/right en **cm** +
+  `emergency_stop` bool GPIO6). Los 3 funcionan (~10 Hz). El "IR" no está integrado como topic
+  aparte (GPIO6 = emergency_stop, idle=True). Ruido ultrasónico moderado (pendiente filtro).
+- [x] **`obstacle_avoid_node`**: evitación reactiva pura. Libre→avanza; center<slow→esquiva hacia el
+  lado más libre (compara left/right); center<stop o encajonado→para/gira. `dry_run` para probar la
+  lógica sin mover. Validado (objeto a 11 cm→GIRA correcto; en marcha esquiva ampliamente).
+- [x] **`goto_avoid_node`**: navegación reactiva = **global (go-to-goal absoluto) + local (evitación
+  con prioridad)**. Va a un objetivo recto; si aparece obstáculo lo rodea y **se re-apunta al objetivo
+  → vuelve a la trayectoria**. Validado: NAV→ESQUIVA→NAV→OBJETIVO alcanzado (2 m). Patrón Nav2 mínimo.
+- [ ] (Siguiente) filtro a los ultrasonidos; extender a **lista de waypoints** (trayectoria completa)
+  con evitación; unificar con `path_follower`.
 
 ### Fase 5 — Soporte web (generar + validar trayectorias)
 - [ ] Generalizar `path_follower` a una **lista de waypoints** por topic/servicio (no solo cuadrado);

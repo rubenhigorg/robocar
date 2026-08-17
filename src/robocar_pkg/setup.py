@@ -34,6 +34,8 @@ setup(
             'wheel_twistcov_node = robocar_pkg.wheel_twistcov_node:main',
             'odom_cov_node = robocar_pkg.odom_cov_node:main',
             'path_follower_node = robocar_pkg.path_follower_node:main',
+            'obstacle_avoid_node = robocar_pkg.obstacle_avoid_node:main',
+            'goto_avoid_node = robocar_pkg.goto_avoid_node:main',
         ],
     },
 )
