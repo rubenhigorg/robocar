@@ -48,7 +48,12 @@ trayectorias desde la web.
   - **(B) Llevar la señal del encoder a un GPIO de la Pi** y contar en la Pi (p.ej. `pigpio`,
     flancos con marca de tiempo hardware) a alta frecuencia. Requiere recableado y comprobar
     niveles 5 V/3.3 V.
-- [ ] Revalidar el signo/latencia con un out-and-back **largo** una vez arreglado el rate.
+- [x] **RESUELTO (opción A)**: firmware nuevo del Nano (`firmware/nano_encoder/enc_fw.ino`):
+  contador acumulativo de 16 bits por interrupción (D2/INT0), leído por I2C 0x08. `encoder_node`
+  v2 lo lee a **30 Hz** y deriva la velocidad (delta/dt) → `/wheel_speed` a 30 Hz (antes 1 Hz).
+  Flasheado desde la Pi con `arduino-cli` por USB. Se usa transacción de 2 bytes (fiable con el
+  I2C de la Pi). Calibración provisional 143.8 pulsos/vuelta (afinar por distancia en Fase 2).
+- [ ] Revalidar el signo/latencia con un out-and-back **largo** y **calibrar m/pulso por distancia**.
 
 ### Fase 2 — Protocolo de validación de odometría *(el corazón)*
 - [ ] Trayectorias patrón **solo hacia delante** (recto N m, rectángulo grande, círculo):
