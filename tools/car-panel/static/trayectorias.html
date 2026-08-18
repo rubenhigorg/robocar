@@ -78,6 +78,7 @@
   <div class="row">
     <button id="arm">Activar control</button>
     <button id="stop" class="danger">■ STOP</button>
+    <button id="reset">⟲ Origen</button>
   </div>
   <div class="status" id="status">Sin conexión…</div>
   <p class="hint"><b>Modo Mapa · habitación</b>: arrastra en diagonal y sale una caja cerrada de 4 paredes. <b>· pared</b>: arrastra una pared suelta. Luego «Enviar mapa». La rejilla es 0.5 m.</p>
@@ -164,6 +165,7 @@ function connect(){
   ws.onopen=()=>{ connected=true; setConn();
     send({op:'advertise',topic:'/plan_waypoints',type:'geometry_msgs/msg/PoseArray'});
     send({op:'advertise',topic:'/sim_map',type:'std_msgs/msg/String'});
+    send({op:'advertise',topic:'/set_pose',type:'geometry_msgs/msg/PoseWithCovarianceStamped'});
     send({op:'advertise',topic:'/joy',type:'sensor_msgs/msg/Joy'});
     send({op:'subscribe',topic:'/trajectory_nav/status',type:'std_msgs/msg/String'});
     send({op:'subscribe',topic:'/odometry/filtered',type:'nav_msgs/msg/Odometry'});
@@ -181,6 +183,7 @@ function relPose(p,q){ const yaw=Math.atan2(2*(q.w*q.z+q.x*q.y),1-2*(q.y*q.y+q.z
   const dx=p.x-odom0.x,dy=p.y-odom0.y,c=Math.cos(-odom0.yaw),s=Math.sin(-odom0.yaw); return {x:dx*c-dy*s,y:dx*s+dy*c,yaw:yaw-odom0.yaw}; }
 function onOdom(m){ const p=m.pose.pose.position,q=m.pose.pose.orientation;
   const yaw=Math.atan2(2*(q.w*q.z+q.x*q.y),1-2*(q.y*q.y+q.z*q.z)); odom0_last={x:p.x,y:p.y,yaw:yaw};
+  if(!odom0){ odom0={x:p.x,y:p.y,yaw:yaw}; real=[]; }   // fija el origen al recibir odometria (robot en el origen)
   const rp=relPose(p,q); if(rp){ carRel=rp; real.push({x:rp.x,y:rp.y}); if(real.length>4000)real.shift(); draw(); } }
 function onScan(m){ if(!carRel) return; const pts=[]; const n=m.ranges.length;
   for(let i=0;i<n;i+=2){ const r=m.ranges[i]; if(!isFinite(r)||r<=0.02)continue;
@@ -196,6 +199,10 @@ $('#send').onclick=()=>{ if(!connected){flash('Sin conexión');return;} if(!wps.
   send({op:'publish',topic:'/plan_waypoints',msg:{header:{frame_id:'base_link'},poses}}); flash('Ruta enviada ('+wps.length+' wp)'); };
 $('#stop').onclick=()=>{ send({op:'publish',topic:'/plan_waypoints',msg:{header:{frame_id:'base_link'},poses:[]}}); flash('STOP'); };
 function pubJoyToggle(){ const now=Date.now(); send({op:'publish',topic:'/joy',msg:{header:{stamp:{sec:Math.floor(now/1000),nanosec:0},frame_id:''},axes:[0,0,1,0,0,1],buttons:[1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]}}); }
+function cov0(){ const c=Array(36).fill(0); [0,7,14,21,28,35].forEach(i=>c[i]=0.01); return c; }
+$('#reset').onclick=()=>{ if(!connected){flash('Sin conexión');return;}
+  send({op:'publish',topic:'/set_pose',msg:{header:{frame_id:'odom'},pose:{pose:{position:{x:0,y:0,z:0},orientation:{x:0,y:0,z:0,w:1}},covariance:cov0()}}});
+  odom0=null; real=[]; scanPts=[]; carRel=null; flash('Odometría a 0 — reenvía mapa y ruta'); };
 $('#arm').onclick=()=>{ if(!connected){flash('Sin conexión');return;} pubJoyToggle(); armed=!armed; updArm(); };
 function updArm(){ const b=$('#arm'); b.textContent=armed?'Control activo':'Activar control'; b.className=armed?'armed':''; }
 let bt=null; function flash(t){ const b=$('#banner'); b.textContent=t; b.classList.add('show'); clearTimeout(bt); bt=setTimeout(()=>b.classList.remove('show'),2000); }
