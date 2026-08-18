@@ -67,13 +67,77 @@ El **panel de control web** (`tools/car-panel/`, servido desde el propio vehícu
 mapa, navegación y chat LLM conforme avancen las capas). Actúa como mecanismo de observación
 y pruebas de todo el sistema.
 
+## Banco de simulación — preparatoria de la Capa 2 (Navegación)
+
+Antes de cablear Nav2 + Cartographer sobre el hardware real, validamos la lógica de navegación
+(seguimiento de trayectoria, evitación de obstáculos, maniobras Ackermann) en un **banco de
+simulación** que corre en el propio vehículo, con las ruedas al aire. La **clave de diseño**:
+el banco **habla exactamente las mismas interfaces que Nav** — mismos *topics*, tipos, *frames*
+y restricciones cinemáticas — de modo que sustituir el banco por la pila real (mapa de
+Cartographer + planificador/controlador de Nav2) sea un **_drop-in_**, sin reescribir nada
+aguas arriba ni aguas abajo. Dicho de otro modo: **el banco tiene que responder a lo que Nav
+va a ser**, no a un simulador ad-hoc que luego haya que tirar.
+
+Componentes actuales del banco y a qué corresponden en la pila real:
+
+| Banco (hoy) | Sustituye a (Capa 1-2) | Interfaz — **idéntica** en banco y en real |
+|---|---|---|
+| Mapa dibujado en web (**plantas de piso 100-200 m² con muebles**) → `sim_sensors_node` | El **`/map`** (OccupancyGrid) que producirá **Cartographer** (Capa 1) | el "mundo" que percibe el robot |
+| `sim_sensors_node` (ray-cast del mapa desde la pose) | El **RPLidar C1** real (`rplidar_ros`) | **`/scan`** (`sensor_msgs/LaserScan`, frame `laser`/`base_link`) — lo consume la capa de obstáculos del *costmap* |
+| `/odometry/filtered` (EKF encoder + IMU + dirección) | **el mismo** en real | **`/odometry/filtered`** + TF `odom→base_link` |
+| Waypoints dibujados en web (`/plan_waypoints`) | El **objetivo** (`NavigateToPose` / `/goal_pose`) que fija Nav2 / el LLM | pose(s) objetivo |
+| `trajectory_nav_node` (go-to-goal + evitación + k-turn) | El **planner global + controlador local (TEB)** de Nav2 | **`/cmd_vel`** (`geometry_msgs/Twist`) → `car_control` |
+
+Por eso las **plantas de piso** de la web no son decorativas: son el *stand-in* del mapa que
+mañana dará el SLAM, con geometría realista para pisos de 100-200 m² (pasillos, puertas ~0.8 m,
+muebles como obstáculos). Validar aquí que el coche recorre trayectorias correctas y esquiva
+**respetando su radio de giro mínimo real (R_min ≈ 0.93 m → _k-turn_ en giros cerrados)**
+de-risquea directamente el *tuning* de TEB en la Capa 2, porque el controlador de Nav2 tendrá
+que respetar esa misma restricción Ackermann.
+
+```mermaid
+flowchart TB
+    subgraph IFACE["Contrato Nav — mismas interfaces hoy (banco) y mañana (real)"]
+      direction LR
+      scanT["/scan"]
+      odomT["/odometry/filtered + TF"]
+      goalT["objetivo · waypoints / NavigateToPose"]
+      cmdT["/cmd_vel"]
+    end
+
+    ss["sim_sensors_node<br/><i>banco (hoy)</i>"] -.->|hoy| scanT
+    lidar["RPLidar + Cartographer<br/><i>real (mañana)</i>"] -.->|mañana| scanT
+
+    scanT --> tn & nav2
+    goalT --> tn & nav2
+    odomT --> tn & nav2
+
+    tn["trajectory_nav_node<br/><i>banco (hoy)</i>"] -.->|hoy| cmdT
+    nav2["Nav2 · planner + TEB<br/><i>real (mañana)</i>"] -.->|mañana| cmdT
+
+    cmdT --> cc["car_control → hardware"]
+```
+
+**Para que el banco sea un _drop-in_ fiel de Nav (convergencia pendiente):**
+
+1. Publicar el mapa dibujado también como **`/map` (`nav_msgs/OccupancyGrid`)** — hoy viaja como
+   segmentos (`/sim_map`) que `sim_sensors` ray-castea; añadir la rejilla de ocupación permite
+   alimentar la **capa estática del _costmap_** de Nav2 con el mismo mapa de banco.
+2. Exponer el objetivo como **`NavigateToPose` / `/goal_pose`** (además de `/plan_waypoints`),
+   que es lo que emitirá el MCP/LLM de la Capa 3.
+3. Cerrar el **árbol TF** que espera Nav2: `map→odom` (lo dará AMCL/SLAM; en banco, identidad o
+   desde `/set_pose`), `odom→base_link` (odometría) y `base_link→laser`.
+4. Con esas tres piezas, el `trajectory_nav_node` se **sustituye por Nav2** (BT Navigator +
+   planner + TEB) **sin tocar** ni la web, ni `sim_sensors`, ni `car_control`. Ese es el criterio
+   de "banco bien hecho".
+
 ## Decisiones de diseño
 
 | ID | Decisión | Resolución |
 |---|---|---|
 | **D1** | Distro ROS2 | **Humble** (LTS hasta 2027, alineada con la memoria). Migración realizada. |
-| **D2** | Odometría/localización | **Opción A**: pose por *scan-matching* de Cartographer. Plan B preparado (fusión encoder+IMU → odometría modelo-bicicleta) si no se cumple OE1 (<10 cm). |
-| **D3** | Controlador local Nav2 | **TEB** (o RPP/MPPI) por la cinemática Ackermann — no el DWB diferencial. Datos ya disponibles: L=0.175 m, radio de giro mín. 0.175 m, velocidad operativa 0.18 m/s. |
+| **D2** | Odometría/localización | **Opción A**: pose por *scan-matching* de Cartographer. Plan B (fusión encoder+IMU+dirección → odometría modelo-bicicleta) **implementado y validado** en Capa 0 (~±1.5 % / ~2 cm a 30 Hz), disponible si no se cumple OE1 (<10 cm) y como base para el banco. |
+| **D3** | Controlador local Nav2 | **TEB** (o RPP/MPPI) por la cinemática Ackermann — no el DWB diferencial. Datos **medidos**: L=0.175 m, **radio de giro mín. R_min ≈ 0.93 m** (tan_max=0.188, ~10.6° de rueda a tope), velocidad mínima conducible **~0.3 m/s** (el ESC/BLHeli no hace *crawl* fino). **Marcha atrás disponible** (con pausa en neutro) → **maniobras en 3 puntos (k-turn)** para giros por debajo de R_min. TEB deberá respetar esta misma restricción y, idealmente, permitir reversa. |
 | **D4** | Puente de actuación | `car_control_node` extendido (único dueño del bus I2C): `/cmd_vel` → servo dirección + ESC, con rampa anti-pico, watchdog y neutro garantizado. |
 
 ## Correspondencia fases ↔ capas ↔ objetivos
@@ -86,12 +150,22 @@ y pruebas de todo el sistema.
 | Fase 4 · Integración con LLM | Capa 3 | OE4 | Interpretación NL > 85 % |
 | Fase 5 · Pruebas y evaluación | Capa 4 | OE1-OE4 | + latencia mediana < 5 s |
 
+> **Trabajo actual** (banco de simulación con plantas de piso + `trajectory_nav`) es
+> **preparatoria de la Fase 2 / Capa 2**: valida el seguimiento de trayectoria y la evitación
+> contra las **mismas interfaces** que consumirá Nav2 (ver sección *Banco de simulación*). La
+> Capa 0 (odometría, actuación, TF) ya está validada y es la base sobre la que se monta.
+
 ## Riesgos estructurales
 
 - **Capa 0 como cuello de botella**: TF, odometría y actuación Ackermann son el trabajo
   "invisible" del que depende todo lo demás (ver [Fundamentos ROS2](fundamentos.md)).
+  *Estado:* odometría y actuación **validadas**; queda cerrar el árbol TF completo para Nav2.
 - **Cómputo en la Raspberry Pi 4**: LIDAR + Cartographer + panel comparten CPU; el tuning
   de Cartographer (submaps y optimización contenidos) es parte del diseño.
 - **Alimentación única** (batería → ESC + BUCK 5V compartido): las entradas de acelerador
   en escalón provocan caídas de tensión; se gestiona con rampas por software y protocolo
   operativo (el hardware no se modifica, por decisión de proyecto).
+- **Fidelidad del banco**: el banco simulado sólo es útil si mantiene el **contrato de
+  interfaces** con Nav2 (topics/tipos/frames/cinemática). Cualquier atajo que rompa ese
+  contrato (p. ej. lógica de control que no salga por `/cmd_vel`, o sensores que no salgan por
+  `/scan`) invalida la preparación. Ver checklist de convergencia arriba.
