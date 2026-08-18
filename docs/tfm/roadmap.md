@@ -84,9 +84,20 @@ Componentes actuales del banco y a qué corresponden en la pila real:
 |---|---|---|
 | Mapa dibujado en web (**plantas de piso 100-200 m² con muebles**) → `sim_sensors_node` | El **`/map`** (OccupancyGrid) que producirá **Cartographer** (Capa 1) | el "mundo" que percibe el robot |
 | `sim_sensors_node` (ray-cast del mapa desde la pose) | El **RPLidar C1** real (`rplidar_ros`) | **`/scan`** (`sensor_msgs/LaserScan`, frame `laser`/`base_link`) — lo consume la capa de obstáculos del *costmap* |
-| `/odometry/filtered` (EKF encoder + IMU + dirección) | **el mismo** en real | **`/odometry/filtered`** + TF `odom→base_link` |
+| **`sim_motion_node`** (integra `/cmd_vel` con el modelo de bicicleta) | El **robot físico + su odometría** (EKF encoder+IMU+dirección) en el suelo | **`/odometry/filtered`** + TF `odom→base_link` |
 | Waypoints dibujados en web (`/plan_waypoints`) | El **objetivo** (`NavigateToPose` / `/goal_pose`) que fija Nav2 / el LLM | pose(s) objetivo |
 | `trajectory_nav_node` (go-to-goal + evitación + k-turn) | El **planner global + controlador local (TEB)** de Nav2 | **`/cmd_vel`** (`geometry_msgs/Twist`) → `car_control` |
+
+**La "planta" del banco (cómo se mueve el robot).** El banco corre en modo **simulación cinemática
+pura**: `sim_motion_node` integra `/cmd_vel` con el modelo de bicicleta Ackermann
+(ω = v·tan δ/L, con los **mismos** `L`, `tan_max`, `max_angular` que la odometría de dirección)
+y publica `/odometry/filtered` + TF `odom→base_link` **sin depender de ruedas/encoder/IMU/EKF**.
+Así el robot simulado gira con el **mismo radio mínimo real (R_min ≈ 0.93 m)** y dispara el
+**k-turn** igual que en el suelo, pero de forma **reproducible y sin hardware** (validado: recto
+0.3 m/s→0.61 m; arco a tope→37.7°, radio 0.93 m; lazo completo con `trajectory_nav`). El modo
+alternativo **hardware-in-the-loop** (ruedas al aire + encoder/IMU/EKF reales, `bringupF`) queda
+para validar la **cadena real de actuación y odometría** antes de bajar al suelo. En ambos, todo
+lo demás (mapa, sensores, navegador, web) es idéntico.
 
 Por eso las **plantas de piso** de la web no son decorativas: son el *stand-in* del mapa que
 mañana dará el SLAM, con geometría realista para pisos de 100-200 m² (pasillos, puertas ~0.8 m,
@@ -130,8 +141,14 @@ flowchart TB
    identidad estática en banco; en real lo dará AMCL/SLAM), `odom→base_link` (odometría, ✅) y
    `base_link→laser` (pendiente de comprobar en el URDF).
 4. Con esas tres piezas, el `trajectory_nav_node` se **sustituye por Nav2** (BT Navigator +
-   planner + TEB) **sin tocar** ni la web, ni `sim_sensors`, ni `car_control`. Ese es el criterio
-   de "banco bien hecho".
+   planner + TEB) **sin tocar** ni la web, ni `sim_sensors`, ni `sim_motion`. Ese es el criterio
+   de "banco bien hecho". Recordatorio de reparto: **Nav2 hace la ruta** (planner global sobre el
+   `/map`) **y la conduce** (controller TEB); nosotros solo damos el **destino** — hoy la ruta la
+   dibujamos a mano en la web con `trajectory_nav`, que es el andamio a retirar.
+
+> **Estado del banco (sim puro):** ✅ `sim_motion` (planta cinemática), ✅ `/scan` (sim_sensors),
+> ✅ `/map` + TF `map→odom` (sim_map_grid), ✅ TF `odom→base_link` (sim_motion). **Falta** para
+> Nav2: comprobar `base_link→laser` en el URDF, exponer `/goal_pose`, e instalar+configurar Nav2.
 
 ## Decisiones de diseño
 
