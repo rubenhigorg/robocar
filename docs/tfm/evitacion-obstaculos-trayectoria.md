@@ -68,6 +68,56 @@ versión mínima y sin mapa.
 - **Validado en suelo**: `NAV → ESQUIVA` (rodea el obstáculo por el lado libre) `→ NAV` (se re-apunta
   al objetivo, vuelve a la línea) `→ OBJETIVO alcanzado`.
 
+## Seguidor de waypoints con k-turn de reserva — `trajectory_nav_node`
+
+Generaliza `goto_avoid` a una **lista de waypoints** (`/plan_waypoints`, `PoseArray` relativos a la
+pose de arranque) y añade el **giro en 3 puntos (k-turn) como reserva** para giros que el go-to-goal
+no puede tomar arqueando. Es la base de la web de trayectorias. Prioridad: **emergencia IR > evitación
+ultrasónica > trayectoria**.
+
+### ¿Cuándo se activa el k-turn?
+
+El robot Ackermann no puede arquear más cerrado que su **radio de giro mínimo** `R_min` (≈ 0.93 m
+calibrado; se usa `r_min = 0.95 m` con margen). Si el waypoint objetivo cae **dentro del círculo de
+giro mínimo**, el go-to-goal **no puede alcanzarlo arqueando** → **orbita** alrededor sin llegar.
+
+Chequeo geométrico de **alcanzabilidad** (`reachable()`), en cada ciclo antes de conducir:
+1. Se determina a qué lado está el waypoint (producto vectorial rumbo × dirección-al-waypoint).
+2. El centro del **círculo de giro** de ese lado está a `R_min` perpendicular al rumbo
+   (izq: `centro = pos + R·(−sinθ, cosθ)`; der: el simétrico).
+3. Si `dist(waypoint, centro) < R_min` → el waypoint está **dentro del círculo** → **inalcanzable** →
+   se activa el **k-turn**. Si está fuera → **go-to-goal** normal.
+
+Es decir: **giros suaves → go-to-goal; giros cerrados (o waypoints casi encima/al lado) → k-turn.**
+No se usa el k-turn en todas las situaciones, solo cuando hace falta.
+
+### ¿Cómo funciona el k-turn?
+
+Maniobra de **vaivén** para reorientarse ~en el sitio hacia el waypoint (como un conductor en un
+callejón), usando el **yaw** como realimentación:
+- Se gira hacia el lado del waypoint (`turn_sign`).
+- **Fase FWD**: adelante con dirección al máximo hacia el giro → el yaw avanza.
+- **Fase REV**: marcha atrás con **contra-dirección** → el yaw avanza en el **mismo** sentido
+  (`yaw_rate = v·tan(δ)/L`: con `v<0` y `δ` contrario, el producto mantiene el signo).
+- Cada fase se limita a `kturn_seg_max` (≈ 0.30 m) para caber en poco espacio; al invertir el sentido
+  hay una **pausa en neutro** (`neutral_dwell`, el ESC no reversa desde movimiento).
+- **Fin del k-turn**: cuando el waypoint vuelve a ser **alcanzable** (`reachable()` = true) → vuelve a
+  **go-to-goal**, que arquea el resto. Hay un `kturn_time_max` de seguridad.
+
+En **banco** funciona igual: con el perfil de odometría de **dirección dominante**, el yaw gira por la
+dirección + velocidad de rueda (incluso en la reversa), así que las esquinas se completan sin sacar el
+coche. Validado en sim (cuadrado 0.8 m: `NAV → K-TURN → … → COMPLETA`, cierre 0.19 m; antes orbitaba).
+
+### Pendiente de optimizar (futuro)
+
+La **activación** del k-turn es mejorable:
+- **Histéresis / anti-rebote**: a veces se re-dispara justo tras completar (NAV muy corto entre esquinas).
+- **Backstop reactivo**: detectar orbitando (distancia que no converge) como disparo adicional al geométrico.
+- **Tuning de `r_min`** y del margen (evitar k-turns innecesarios en giros que sí se pueden arquear).
+- Elegir el **sentido de giro** de forma más lista (mínimo nº de maniobras) y decidir *cuánto* girar
+  (no solo hasta "alcanzable", sino hasta alinear bien) para reducir el nº de fases.
+- Integrar con la **evitación** durante el k-turn (ahora solo la emergencia IR interrumpe el vaivén).
+
 ## Aprendizajes / gotchas
 
 - El **go-to-goal absoluto** es lo que permite "volver a la trayectoria" tras el rodeo.
@@ -81,9 +131,9 @@ versión mínima y sin mapa.
 
 ## Camino a la navegación completa (cuando implementemos nav)
 
-1. **Extender `goto_avoid` a lista de waypoints** (trayectoria completa) con evitación en cada tramo.
-2. **Unificar con `path_follower`** en un solo nodo: sigue waypoints + esquiva (y usa **giros en 3
-   puntos** para maniobras cerradas si hiciera falta).
+1. ~~Extender a lista de waypoints~~ **HECHO** (`trajectory_nav_node`).
+2. ~~Unificar go-to-goal + k-turn~~ **HECHO** (`trajectory_nav` = go-to-goal + k-turn de reserva +
+   evitación + emergencia). Pendiente: **optimizar la activación del k-turn** (ver sección arriba).
 3. **Filtro** a los ultrasonidos (mediana / EMA) + **histéresis** para no oscilar al esquivar.
 4. Añadir el **LIDAR** al costmap (evitación 360°, obstáculos laterales y dinámicos).
 5. Cuando se quiera navegación **con mapa**, migrar a **Nav2** (global planner + local planner +
