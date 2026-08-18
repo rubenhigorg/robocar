@@ -99,8 +99,12 @@ en trayectoria cerrada con reversa.**
 
 ### Fase 5 — Soporte web (generar + validar trayectorias)
 - [x] **`trajectory_nav_node`**: seguidor de **lista de waypoints** (`/plan_waypoints`, `PoseArray`,
-  relativos a la pose de arranque) con go-to-goal + evitación (generaliza `goto_avoid`). Publica
-  estado en `/trajectory_nav/status`. Validado en simulación (cuadrado de 4 waypoints, cierre 0.19 m).
+  relativos a la pose de arranque) con go-to-goal + evitación (generaliza `goto_avoid`). Prioridad:
+  emergencia IR > evitación ultrasónica > trayectoria. Publica estado en `/trajectory_nav/status`.
+- [x] **K-turn de reserva (híbrido)**: go-to-goal por defecto; si un waypoint es INALCANZABLE arqueando
+  (dentro del círculo de giro mínimo `r_min≈0.95 m` → orbitaría), hace un **giro en 3 puntos** para
+  reorientarse y luego vuelve a go-to-goal. Validado en sim (cuadrado 0.8 m: NAV→K-TURN→…→completa, cierre
+  0.19 m; antes orbitaba). Sirve también en banco (el yaw gira por la dirección, incluso en la reversa).
 - [ ] Web: lienzo para **dibujar waypoints / elegir forma** + parámetros → publicar el PoseArray por rosbridge.
 - [ ] Tras ejecutar: **planificado vs real** + resultado de validación en la web; estado en vivo (topic status).
 
