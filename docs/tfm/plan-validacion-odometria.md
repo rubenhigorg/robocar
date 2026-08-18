@@ -104,6 +104,19 @@ en trayectoria cerrada con reversa.**
 - [ ] Web: lienzo para **dibujar waypoints / elegir forma** + parámetros → publicar el PoseArray por rosbridge.
 - [ ] Tras ejecutar: **planificado vs real** + resultado de validación en la web; estado en vivo (topic status).
 
+## Odometría por ángulo de dirección + perfiles (modelo bicicleta)
+
+- **`steer_yaw_node`**: de `/wheel_speed` (v) y `/cmd_vel` (δ desde `angular.z`) calcula
+  `yaw_rate = v·tan(δ)/L` (modelo bicicleta) → `/steer_yaw_cov` (TwistWithCovariance, solo vyaw).
+  Fusionado en el EKF como **`twist1`**, compite con la IMU (`imu0`). `tan_max = L/R_min ≈ 0.233`
+  (de R_min ~0.75 m; afinable contra la IMU en suelo).
+- **Perfiles = la covarianza `yaw_variance`** (el peso). IMU tiene var 0.0004:
+  - **Suelo**: `yaw_variance` alta (p.ej. 0.5) → peso despreciable, manda la IMU (odometría validada intacta).
+  - **Banco**: `yaw_variance` baja (p.ej. 0.00002) → **la dirección domina** → la odometría GIRA aunque la
+    IMU esté plana (el robot no se mueve). Validado: yaw +166° en 4 s conduciendo con giro en el banco.
+- **Uso**: para probar giros/recorridos EN BANCO sin sacar el coche. Nota: el go-to-goal sigue sin poder
+  cerrar esquinas más cerradas que R_min (0.75 m) — orbita; para cuadrados cerrados, k-turn (`path_follower`).
+
 ## Dependencias
 
 - Fase 1 antes de validar nada con reversa (2.2 y la parte k-turn de la web).

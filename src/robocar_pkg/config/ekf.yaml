@@ -36,6 +36,18 @@ ekf_filter_node:
     imu0_queue_size: 20
     imu0_remove_gravitational_acceleration: true
 
+    # --- Direccion (modelo bicicleta): yaw rate del angulo de giro (steer_yaw_node) ---
+    # Compite con la IMU. La covarianza (peso) la pone el nodo: banco=baja (domina),
+    # suelo=alta (poco peso). Clave para probar giros EN BANCO (la IMU no rota alli).
+    twist1: steer_yaw_cov
+    twist1_config: [false, false, false,
+                    false, false, false,
+                    false, false, false,
+                    false, false, true,
+                    false, false, false]
+    twist1_queue_size: 10
+    twist1_nodelay: true
+
     # === rf2o DESACTIVADO temporalmente ===
     # rf2o es demasiado saltarina al conducir (saltos de metros que
     # desvian el EKF, incluso con baja confianza). Se deja el EKF en

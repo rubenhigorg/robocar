@@ -46,6 +46,14 @@ def generate_launch_description():
             # rf2o solo aporta suave. Subir la confianza (bajar var) al tunear.
             parameters=[{'xy_variance': 0.5, 'yaw_variance': 0.2}],
         ),
+        Node(
+            package='robocar_pkg',
+            executable='steer_yaw_node',
+            name='steer_yaw_node',
+            output='screen',
+            # Perfil SUELO (yaw_variance alta -> manda la IMU). BANCO: relanzar con 0.00002.
+            parameters=[{'yaw_variance': 0.5}],
+        ),
         # EKF: fusiona encoder (vx) + IMU (yaw rate) -> odom -> base_link
         Node(
             package='robot_localization',

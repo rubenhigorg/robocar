@@ -37,6 +37,7 @@ setup(
             'obstacle_avoid_node = robocar_pkg.obstacle_avoid_node:main',
             'goto_avoid_node = robocar_pkg.goto_avoid_node:main',
             'trajectory_nav_node = robocar_pkg.trajectory_nav_node:main',
+            'steer_yaw_node = robocar_pkg.steer_yaw_node:main',
         ],
     },
 )
