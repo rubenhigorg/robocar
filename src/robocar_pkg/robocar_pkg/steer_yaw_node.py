@@ -11,9 +11,9 @@
 #   - banco / IMU no fiable: yaw_variance BAJA (manda la direccion; gira aunque
 #     la IMU este plana porque el robot no se mueve de verdad).
 #
-# Calibracion: tan_max = tan(delta a tope) = L / R_min. De R_min ~0.75 m medido
-# y L=0.175 -> tan_max ~0.233 (afinar comparando la integral del yaw contra la
-# IMU en suelo).
+# Calibracion: tan_max = tan(delta a tope) = L / R_min. CALIBRADO contra la IMU
+# en suelo (calib_tan.py, dir a tope, tan_max=|yaw_rate_IMU|*L/|v|): tan_max=0.188
+# -> R_min ~0.93 m, angulo de rueda a tope ~10.6 deg.
 import math, rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import Twist, TwistStamped, TwistWithCovarianceStamped
@@ -22,7 +22,7 @@ class SteerYaw(Node):
     def __init__(self):
         super().__init__('steer_yaw_node')
         self.declare_parameter('wheelbase', 0.175)       # L (m)
-        self.declare_parameter('tan_max', 0.233)         # tan(delta_max) = L/R_min (calibrar)
+        self.declare_parameter('tan_max', 0.188)         # tan(delta_max)=L/R_min. Calibrado vs IMU en suelo: R_min~0.93 m
         self.declare_parameter('max_angular', 0.4)       # angular.z a tope de giro (= car_control)
         self.declare_parameter('yaw_variance', 0.5)      # covarianza vyaw = PESO (bajo=mas peso)
         self.declare_parameter('rate_hz', 30.0)

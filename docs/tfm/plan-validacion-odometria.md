@@ -108,8 +108,9 @@ en trayectoria cerrada con reversa.**
 
 - **`steer_yaw_node`**: de `/wheel_speed` (v) y `/cmd_vel` (δ desde `angular.z`) calcula
   `yaw_rate = v·tan(δ)/L` (modelo bicicleta) → `/steer_yaw_cov` (TwistWithCovariance, solo vyaw).
-  Fusionado en el EKF como **`twist1`**, compite con la IMU (`imu0`). `tan_max = L/R_min ≈ 0.233`
-  (de R_min ~0.75 m; afinable contra la IMU en suelo).
+  Fusionado en el EKF como **`twist1`**, compite con la IMU (`imu0`). **`tan_max = 0.188`
+  calibrado** contra la IMU en suelo (`scripts/calib_tan.py`: dir a tope, `tan_max=|yaw_IMU|·L/|v|`,
+  65 muestras) → **R_min ≈ 0.93 m**, ~10.6° de rueda a tope.
 - **Perfiles = la covarianza `yaw_variance`** (el peso). IMU tiene var 0.0004:
   - **Suelo**: `yaw_variance` alta (p.ej. 0.5) → peso despreciable, manda la IMU (odometría validada intacta).
   - **Banco**: `yaw_variance` baja (p.ej. 0.00002) → **la dirección domina** → la odometría GIRA aunque la
