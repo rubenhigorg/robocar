@@ -29,7 +29,9 @@ versión mínima y sin mapa.
   **no sirve** aquí porque un desvío le descuadra la cuenta de distancia.
 - **Local**: evitación reactiva **con prioridad**. Si hay obstáculo cerca, sobreescribe el mando
   (gira al lado libre / frena / para). Si no, pasa el mando del go-to-goal.
-- **Prioridad**: seguridad (evitación) > trayectoria.
+- **Prioridad** (de mayor a menor): **emergencia IR (parada inmediata)** > evitación ultrasónica
+  (esquivar) > trayectoria (go-to-goal). El IR es un "último recurso" de proximidad; los ultrasonidos
+  esquivan con antelación; la trayectoria manda cuando todo está despejado.
 
 ## Sensores
 
@@ -39,8 +41,10 @@ versión mínima y sin mapa.
 - Rango útil ~2 cm – 3 m; **lectura inválida = −1** (sin eco). Ruido moderado → conviene **filtrar**
   (mediana / EMA) y usar histéresis para no oscilar.
 - **Cono estrecho**: un obstáculo fuera del cono no se ve (limitación clave del ultrasonido).
-- **IR**: no está integrado como topic aparte (`distance_node` lee **GPIO6** como `emergency_stop`,
-  idle=True; a aclarar/integrar si hay sensores IR físicos).
+- **IR de proximidad** (GPIO6 → campo `emergency_stop` del msg `Distance`): **parada de emergencia**.
+  **Polaridad: `emergency_stop == False` → objeto MUY cerca delante → parar en seco** (idle = True).
+  Integrado como **máxima prioridad** en `trajectory_nav_node`/`obstacle_avoid_node` (param
+  `emergency_enabled`): si se dispara → `/cmd_vel` a cero inmediato; reanuda al despejarse. Validado.
 - **Futuro**: el **LIDAR** (`/scan`) daría evitación 360° y un costmap mucho mejor (obstáculos
   laterales y dinámicos).
 

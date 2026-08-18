@@ -27,10 +27,12 @@ class TrajectoryNav(Node):
         self.declare_parameter('stop_cm', 33.0)
         self.declare_parameter('side_cm', 25.0)
         self.declare_parameter('avoid_enabled', True)
+        self.declare_parameter('emergency_enabled', True)   # IR (emergency_stop) = parada inmediata
         self.declare_parameter('max_run_time', 120.0)
 
         self.pose = None
         self.c = self.l = self.r = FAR
+        self.emergency = False       # IR: True cuando emergency_stop==False (objeto muy cerca)
         self.wps = []          # waypoints en odom [(x,y),...]
         self.idx = 0
         self.state = 'IDLE'    # IDLE | RUN | DONE
@@ -53,6 +55,7 @@ class TrajectoryNav(Node):
     def dcb(self, m):
         cl = lambda d: FAR if (d is None or d < 2.0) else d
         self.c, self.l, self.r = cl(m.center_distance), cl(m.left_distance), cl(m.right_distance)
+        self.emergency = (not bool(m.emergency_stop))   # emergency_stop==False -> objeto muy cerca (IR)
 
     def wcb(self, msg):
         # PoseArray con waypoints RELATIVOS a la pose actual (x adelante, y izq)
@@ -93,6 +96,15 @@ class TrajectoryNav(Node):
         el = (self.get_clock().now() - self.t_start).nanoseconds/1e9
         if el > self.get_parameter('max_run_time').value:
             self._stop('timeout'); return
+        # PRIORIDAD MAXIMA: parada de emergencia por IR (objeto muy cerca) -> stop inmediato,
+        # reanuda al despejarse (no cambia de estado).
+        if self.get_parameter('emergency_enabled').value and self.emergency:
+            self.pub.publish(Twist())
+            self._n = (self._n + 1) % 15
+            if self._n == 0:
+                self.get_logger().warn('EMERGENCIA (IR): objeto muy cerca -> STOP inmediato')
+                m = String(); m.data = 'state=EMERGENCIA wp=%d/%d' % (self.idx, len(self.wps)); self.stpub.publish(m)
+            return
         x, y, yaw = self.pose
         gx, gy = self.wps[self.idx]
         dist = math.hypot(gx-x, gy-y)

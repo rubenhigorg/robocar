@@ -23,6 +23,7 @@ class Avoider(Node):
         self.declare_parameter('stop_cm', 25.0)     # < esto delante: critico
         self.declare_parameter('slow_cm', 55.0)     # < esto delante: esquivar
         self.declare_parameter('side_cm', 22.0)     # < esto a un lado: lado bloqueado
+        self.declare_parameter('emergency_enabled', True)  # IR (emergency_stop): parada inmediata
         self.dry = bool(self.get_parameter('dry_run').value)
         self.pub = self.create_publisher(Twist, '/cmd_vel', 10)
         self.create_subscription(Distance, '/ultrasound_data', self.cb, 10)
@@ -43,7 +44,9 @@ class Avoider(Node):
         slow = self.get_parameter('slow_cm').value
         side = self.get_parameter('side_cm').value
 
-        if c > slow and l > side and r > side:
+        if self.get_parameter('emergency_enabled').value and (not msg.emergency_stop):
+            v, w, act = 0.0, 0.0, 'EMERGENCIA (IR)'     # prioridad maxima: objeto muy cerca
+        elif c > slow and l > side and r > side:
             v, w, act = drive, 0.0, 'AVANZA'
         elif c <= stop or (l < side and r < side and c < slow):
             # critico / encajonado
