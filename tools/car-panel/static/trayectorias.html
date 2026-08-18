@@ -29,6 +29,8 @@
   button.map{background:var(--wall);border-color:var(--wall);color:#1a0808;font-weight:700}
   button.danger{border-color:var(--bad);color:var(--bad)}
   button.armed{background:var(--ok);border-color:var(--ok);color:#062015;font-weight:700}
+  select{font-family:var(--mono);font-size:.72rem;border:1.5px solid var(--line2);background:var(--panel);color:var(--ink);border-radius:9px;padding:.35rem .4rem;cursor:pointer}
+  select:hover{border-color:var(--accent)}
   .seg{display:inline-flex;border:1.5px solid var(--line2);border-radius:9px;overflow:hidden}
   .seg button{border:0;border-radius:0;background:var(--panel)}
   .seg button.act{background:var(--accent);color:#08131f;font-weight:700}
@@ -66,6 +68,7 @@
   </div>
 
   <div class="row" id="rowMapa" style="display:none"><span class="lbl">MAPA</span>
+    <select id="planta" title="Cargar planta de piso con muebles"><option value="">🏠 Plantas…</option><option value="0">Piso 100 m² · 2 dorm</option><option value="1">Piso 130 m² · 3 dorm</option><option value="2">Piso 160 m² · 4 hab</option><option value="3">Ático 200 m² · 4 hab</option></select>
     <span class="seg" id="mtool"><button data-t="rect" class="act">▭ habitación</button><button data-t="wall">─ pared</button></span>
     <button id="mundo">↶</button><button id="mclear">limpiar</button>
     <button id="sendmap" class="map">▦ Enviar mapa</button>
@@ -157,6 +160,70 @@ $('#undo').onclick=()=>{wps.pop();draw();}; $('#clear').onclick=()=>{wps=[];real
 $('#sq').onclick=()=>{wps=[{x:0.8,y:0},{x:0.8,y:0.8},{x:0,y:0.8},{x:0,y:0}];draw();};
 $('#ln').onclick=()=>{wps=[{x:1.5,y:0}];draw();};
 $('#mundo').onclick=()=>{walls.splice(-4);draw();}; $('#mclear').onclick=()=>{walls=[];scanPts=[];draw();};
+
+// ---- plantas de piso (mapas realistas con muebles) ----
+// frame del coche: x adelante, y izquierda; entrada al sur (x menor), robot en el origen.
+const R=(x1,y1,x2,y2)=>[[x1,y1,x2,y1],[x2,y1,x2,y2],[x2,y2,x1,y2],[x1,y2,x1,y1]];   // caja cerrada (mueble)
+function spans(a,b,gaps){ gaps=(gaps||[]).slice().sort((p,q)=>p[0]-q[0]); let o=[],c=a;
+  for(const[s,e]of gaps){ if(s>c)o.push([c,Math.min(s,b)]); c=Math.max(c,e); } if(c<b)o.push([c,b]);
+  return o.filter(([s,e])=>e-s>0.01); }
+const wallX=(X,a,b,g)=>spans(a,b,g).map(([s,e])=>[X,s,X,e]);   // pared a x=X (const), varia y; huecos en y
+const wallY=(Y,a,b,g)=>spans(a,b,g).map(([s,e])=>[s,Y,e,Y]);   // pared a y=Y (const), varia x; huecos en x
+const cat=(...a)=>[].concat(...a);
+
+function planA(){ return cat(   // 100 m2 · 2 dorm  (10 x 10)
+  wallX(-0.4,-5,5,[[-0.6,0.6]]), wallX(9.6,-5,5), wallY(5,-0.4,9.6), wallY(-5,-0.4,9.6),
+  wallY(0.7,-0.4,9.6,[[1.5,2.4],[6.0,6.9]]), wallY(-0.7,-0.4,9.6,[[1.5,2.4],[6.0,6.9]]),
+  wallX(4.6,0.7,5), wallX(4.6,-5,-0.7),
+  R(0.0,3.1,0.8,4.8), R(1.6,2.4,2.7,3.6), R(4.2,1.1,4.5,2.9),                 // salon
+  R(8.9,0.9,9.5,4.8), R(6.4,3.1,7.7,4.3), R(4.7,4.0,5.4,4.8),                 // cocina
+  R(-0.2,-4.6,1.8,-3.1), R(3.7,-4.8,4.4,-2.6),                               // dorm1
+  R(7.4,-4.6,9.4,-3.1), R(4.8,-4.8,5.5,-2.4), R(8.8,-1.5,9.3,-0.9), R(8.0,-1.5,8.5,-0.9)); } // dorm2+aseo
+
+function planB(){ return cat(   // 130 m2 · 3 dorm  (12 x 10.8)
+  wallX(-0.4,-5.4,5.4,[[-0.6,0.6]]), wallX(11.6,-5.4,5.4), wallY(5.4,-0.4,11.6), wallY(-5.4,-0.4,11.6),
+  wallY(0.7,-0.4,11.6,[[1.4,2.3],[7.0,7.9]]), wallY(-0.7,-0.4,11.6,[[1.2,2.1],[5.0,5.9],[8.8,9.7]]),
+  wallX(6.0,0.7,5.4,[[1.6,2.5]]), wallX(3.7,-5.4,-0.7), wallX(7.7,-5.4,-0.7),
+  R(0.0,3.4,0.9,5.2), R(1.8,3.6,3.0,5.0), R(1.6,1.0,3.2,2.0), R(5.6,1.2,5.9,3.2),   // salon
+  R(10.9,0.9,11.5,5.2), R(6.3,3.6,7.7,4.9), R(6.2,1.0,8.0,1.9),                     // cocina
+  R(-0.2,-5.0,1.8,-3.5), R(2.9,-5.2,3.5,-2.8),                                     // dorm1
+  R(4.0,-5.0,6.0,-3.5), R(6.9,-5.2,7.5,-2.8),                                     // dorm2
+  R(9.6,-5.0,11.4,-3.5), R(7.9,-5.2,8.5,-2.8),                                     // dorm3
+  R(10.6,-2.2,11.4,-1.4), R(9.6,-2.2,10.2,-1.5)); }                               // baño
+
+function planC(){ return cat(   // 160 m2 · 4 hab  (13 x 12.3)
+  wallX(-0.4,-6.15,6.15,[[-0.6,0.6]]), wallX(12.6,-6.15,6.15), wallY(6.15,-0.4,12.6), wallY(-6.15,-0.4,12.6),
+  wallY(0.8,-0.4,12.6,[[1.6,2.5],[8.0,8.9]]), wallY(-0.8,-0.4,12.6,[[1.2,2.1],[4.2,5.1],[7.4,8.3],[10.0,10.9]]),
+  wallX(6.5,0.8,6.15,[[2.4,3.3]]), wallX(3.2,-6.15,-0.8), wallX(6.4,-6.15,-0.8), wallX(9.6,-6.15,-0.8),
+  R(0.0,3.8,0.9,6.0), R(2.0,4.2,3.4,5.8), R(1.8,1.2,3.6,2.3), R(6.1,1.4,6.4,3.6), R(4.6,4.4,5.6,5.6),  // salon
+  R(11.9,0.9,12.5,6.0), R(7.0,4.2,8.6,5.6), R(7.0,1.0,9.2,2.0), R(6.6,5.2,7.2,6.0),                    // cocina
+  R(-0.2,-5.9,1.8,-4.4), R(2.4,-6.0,3.0,-3.6),                                                        // dorm1
+  R(3.5,-5.9,5.5,-4.4), R(5.8,-6.0,6.2,-3.6),                                                        // dorm2
+  R(6.7,-5.9,8.7,-4.4), R(9.0,-6.0,9.4,-3.6),                                                        // dorm3
+  R(11.6,-5.9,12.4,-4.0), R(9.9,-6.0,10.5,-4.2), R(11.9,-1.6,12.4,-1.0), R(11.0,-1.6,11.5,-1.0)); }   // master+baño
+
+function planD(){ return cat(   // 200 m2 · 4 hab  (14 x 14.3)
+  wallX(-0.4,-7.15,7.15,[[-0.6,0.6]]), wallX(13.6,-7.15,7.15), wallY(7.15,-0.4,13.6), wallY(-7.15,-0.4,13.6),
+  wallY(0.9,-0.4,13.6,[[1.8,2.8],[9.0,9.9]]), wallY(-0.9,-0.4,13.6,[[1.4,2.3],[5.0,5.9],[8.6,9.5],[11.4,12.3]]),
+  wallX(7.5,0.9,7.15,[[3.0,3.9]]), wallX(3.6,-7.15,-0.9), wallX(7.2,-7.15,-0.9), wallX(10.5,-7.15,-0.9),
+  R(0.0,4.6,1.0,7.0), R(2.2,5.0,3.8,6.8), R(2.0,1.4,4.0,2.6), R(4.6,5.2,5.8,6.6), R(7.0,1.6,7.4,4.2), R(0.2,1.2,1.4,3.0), // salon-comedor
+  R(12.9,0.9,13.5,7.0), R(8.0,5.0,9.8,6.6), R(8.0,1.2,10.4,2.3), R(7.6,6.0,8.4,7.0),                  // cocina
+  R(-0.2,-6.9,1.9,-5.3), R(2.7,-7.0,3.4,-4.6),                                                        // dorm1
+  R(4.0,-6.9,6.1,-5.3), R(6.4,-7.0,7.0,-4.6),                                                        // dorm2
+  R(7.6,-6.9,9.7,-5.3), R(10.0,-7.0,10.3,-4.6),                                                       // dorm3
+  R(12.6,-6.9,13.4,-4.8), R(10.8,-7.0,11.5,-4.8), R(12.9,-2.0,13.4,-1.2), R(11.8,-2.0,12.4,-1.2)); }   // master+baño
+
+const PLANS=[
+  {n:'Piso 100 m² · 2 dorm', depth:9.6,  halfW:5.0,  f:planA},
+  {n:'Piso 130 m² · 3 dorm', depth:11.6, halfW:5.4,  f:planB},
+  {n:'Piso 160 m² · 4 hab',  depth:12.6, halfW:6.15, f:planC},
+  {n:'Ático 200 m² · 4 hab', depth:13.6, halfW:7.15, f:planD}];
+function loadPlan(i){ const p=PLANS[i], segs=p.f();
+  walls=segs.map(s=>({x1:s[0],y1:s[1],x2:s[2],y2:s[3]})); scanPts=[]; temp=null;
+  oy=H*0.90;                                             // robot abajo: espacio hacia delante
+  setZoom(Math.min((oy-16)/p.depth,(W/2-16)/p.halfW));   // encuadra la planta; hace draw()
+  flash(p.n+' — pulsa «Enviar mapa»'); }
+$('#planta').addEventListener('change',e=>{ if(e.target.value==='')return; loadPlan(+e.target.value); e.target.selectedIndex=0; });
 
 // ---- rosbridge ----
 let ws=null;
