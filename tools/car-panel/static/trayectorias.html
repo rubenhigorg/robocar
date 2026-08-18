@@ -14,15 +14,16 @@
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased}
   .wrap{max-width:560px;margin:0 auto;padding:12px}
-  h1{font-size:1.12rem;margin:.2rem 0 .1rem}
-  .sub{color:var(--muted);font-size:.8rem;margin:0 0 .5rem}
+  h1{font-size:1.1rem;margin:.2rem 0 .1rem}
+  .sub{color:var(--muted);font-size:.78rem;margin:0 0 .5rem}
   .conn{font-family:var(--mono);font-size:.72rem;padding:.12rem .5rem;border-radius:20px;border:1px solid var(--line2)}
   .conn.on{color:var(--ok);border-color:var(--ok)} .conn.off{color:var(--bad);border-color:var(--bad)}
   .canvas-wrap{position:relative;background:var(--raise);border:1px solid var(--line);border-radius:14px;overflow:hidden;margin:.5rem 0}
   canvas{display:block;width:100%;height:auto;touch-action:none;cursor:crosshair}
-  .row{display:flex;flex-wrap:wrap;gap:.4rem;margin:.4rem 0;align-items:center}
-  button{font-family:var(--mono);font-size:.78rem;border:1.5px solid var(--line2);background:var(--panel);color:var(--ink);
-    border-radius:9px;padding:.42rem .65rem;cursor:pointer}
+  .row{display:flex;flex-wrap:wrap;gap:.35rem;margin:.35rem 0;align-items:center}
+  .lbl{font-size:.7rem;color:var(--faint);font-family:var(--mono);min-width:3.2em}
+  button{font-family:var(--mono);font-size:.76rem;border:1.5px solid var(--line2);background:var(--panel);color:var(--ink);
+    border-radius:9px;padding:.4rem .6rem;cursor:pointer}
   button:hover{border-color:var(--accent)}
   button.primary{background:var(--accent);border-color:var(--accent);color:#08131f;font-weight:700}
   button.map{background:var(--wall);border-color:var(--wall);color:#1a0808;font-weight:700}
@@ -31,13 +32,11 @@
   .seg{display:inline-flex;border:1.5px solid var(--line2);border-radius:9px;overflow:hidden}
   .seg button{border:0;border-radius:0;background:var(--panel)}
   .seg button.act{background:var(--accent);color:#08131f;font-weight:700}
-  .status{font-family:var(--mono);font-size:.78rem;background:var(--panel);border:1px solid var(--line);border-radius:9px;
-    padding:.5rem .7rem;color:var(--muted);min-height:1.2rem}
+  .status{font-family:var(--mono);font-size:.78rem;background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:.5rem .7rem;color:var(--muted);min-height:1.2rem}
   .status b{color:var(--ink)}
-  .legend{display:flex;flex-wrap:wrap;gap:.5rem .9rem;font-family:var(--mono);font-size:.7rem;color:var(--muted);margin:.2rem 0}
-  .hint{font-family:var(--mono);font-size:.7rem;color:var(--faint);margin:.3rem 0}
-  .banner{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);background:var(--panel);border:1px solid var(--line2);
-    color:var(--ink);font-family:var(--mono);font-size:.8rem;padding:.4rem .8rem;border-radius:10px;opacity:0;transition:.2s;pointer-events:none}
+  .legend{display:flex;flex-wrap:wrap;gap:.5rem .9rem;font-family:var(--mono);font-size:.68rem;color:var(--muted);margin:.2rem 0}
+  .hint{font-family:var(--mono);font-size:.68rem;color:var(--faint);margin:.3rem 0}
+  .banner{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);background:var(--panel);border:1px solid var(--line2);color:var(--ink);font-family:var(--mono);font-size:.8rem;padding:.4rem .8rem;border-radius:10px;opacity:0;transition:.2s;pointer-events:none}
   .banner.show{opacity:1}
 </style>
 </head>
@@ -47,99 +46,114 @@
     <h1>Robocar · Trayectorias y Mapa</h1>
     <span class="conn off" id="conn">desconectado</span>
   </div>
-  <p class="sub">Dibuja <b>obstáculos</b> (modo Mapa) y <b>waypoints</b> (modo Ruta). El robot está abajo, apunta arriba = adelante. En banco: el coche navega el mapa dibujado con sensores simulados.</p>
+  <p class="sub">Simulación de banco: dibuja un <b>mapa</b> (habitaciones/paredes) y una <b>ruta</b>; el coche lo navega con sensores simulados. El robot está abajo-centro, apunta arriba = adelante.</p>
 
   <div class="row">
     <span class="seg" id="mode">
-      <button data-m="wp" class="act">◦ Ruta (waypoints)</button>
-      <button data-m="obs">▦ Mapa (obstáculos)</button>
+      <button data-m="wp" class="act">◦ Ruta</button>
+      <button data-m="obs">▦ Mapa</button>
     </span>
+    <span class="lbl" style="margin-left:auto">zoom</span>
+    <button id="zin">＋</button><button id="zout">－</button>
+    <span class="lbl" id="zlbl">—</span>
   </div>
 
-  <div class="canvas-wrap"><canvas id="c" width="520" height="520"></canvas></div>
+  <div class="canvas-wrap"><canvas id="c" width="560" height="560"></canvas></div>
   <div class="legend">
-    <span>● robot</span><span style="color:var(--accent)">● wp</span><span style="color:var(--ok)">─ plan</span>
+    <span>▲ robot</span><span style="color:var(--accent)">● wp</span><span style="color:var(--ok)">─ plan</span>
     <span style="color:var(--warn)">─ real</span><span style="color:var(--wall)">▬ pared</span>
-    <span style="color:#6cc">· láser</span><span id="coords" style="margin-left:auto;color:var(--faint)"></span>
+    <span style="color:#4bd0d0">· láser</span><span id="coords" style="margin-left:auto;color:var(--faint)"></span>
   </div>
 
-  <div class="row"><b style="font-size:.72rem;color:var(--faint);font-family:var(--mono)">RUTA:</b>
-    <button id="undo">↶ deshacer</button><button id="clear">limpiar</button>
-    <button id="sq">□ cuadrado</button><button id="ln">— línea</button>
-  </div>
-  <div class="row"><b style="font-size:.72rem;color:var(--faint);font-family:var(--mono)">MAPA:</b>
-    <button id="mundo">↶ deshacer</button><button id="mclear">limpiar</button>
-    <button id="box">▭ caja</button><button id="corr">) pasillo</button>
+  <div class="row"><span class="lbl">MAPA</span>
+    <span class="seg" id="mtool"><button data-t="rect" class="act">▭ habitación</button><button data-t="wall">─ pared</button></span>
+    <button id="mundo">↶</button><button id="mclear">limpiar</button>
     <button id="sendmap" class="map">▦ Enviar mapa</button>
+  </div>
+  <div class="row"><span class="lbl">RUTA</span>
+    <button id="undo">↶</button><button id="clear">limpiar</button>
+    <button id="sq">□ cuadrado</button><button id="ln">— línea</button>
+    <button id="send" class="primary">▶ Enviar ruta</button>
   </div>
   <div class="row">
     <button id="arm">Activar control</button>
-    <button id="send" class="primary">▶ Enviar ruta</button>
     <button id="stop" class="danger">■ STOP</button>
   </div>
   <div class="status" id="status">Sin conexión…</div>
-  <p class="hint">1 cuadro = 0.5 m. Modo Mapa: arrastra para trazar una pared. Envía el mapa (banco: los sensores se simulan de él).</p>
+  <p class="hint"><b>Modo Mapa · habitación</b>: arrastra en diagonal y sale una caja cerrada de 4 paredes. <b>· pared</b>: arrastra una pared suelta. Luego «Enviar mapa». La rejilla es 0.5 m.</p>
 </div>
 <div class="banner" id="banner"></div>
 
 <script>
 const $=s=>document.querySelector(s);
 const host=location.hostname||'192.168.1.102';
-const PPM=90, GRID=0.5, W=520, H=520; let ox=W/2, oy=H-46;
+const GRID=0.5, W=560, H=560;
+let PPM=45;                       // px/m (zoom); mas bajo = mas espacio
+let ox=W/2, oy=H*0.62;           // origen (robot) abajo-centro, con sitio detras
 const cv=$('#c'), g=cv.getContext('2d');
 let wps=[], walls=[], real=[], scanPts=[], carRel=null, temp=null;
-let mode='wp', armed=false, connected=false, odom0=null, odom0_last=null;
+let mode='wp', mapTool='rect', armed=false, connected=false, odom0=null, odom0_last=null;
 
 function toM(px,py){ return {x:(oy-py)/PPM, y:(ox-px)/PPM}; }
 function toPx(m){ return {x:ox-m.y*PPM, y:oy-m.x*PPM}; }
+function setZoom(v){ PPM=Math.max(20,Math.min(140,v)); $('#zlbl').textContent=(W/PPM).toFixed(1)+'m'; draw(); }
 
 function draw(){
   g.clearRect(0,0,W,H);
+  // rejilla dentro de los limites visibles
+  const tl=toM(0,0), br=toM(W,H);
   g.strokeStyle='#1e2a38'; g.lineWidth=1; g.font='10px monospace'; g.fillStyle='#3a4a5a';
-  for(let m=-3;m<=3;m+=GRID){ let p=toPx({x:0,y:m}); g.beginPath();g.moveTo(p.x,0);g.lineTo(p.x,H);g.stroke(); }
-  for(let m=0;m<=5;m+=GRID){ let p=toPx({x:m,y:0}); g.beginPath();g.moveTo(0,p.y);g.lineTo(W,p.y);g.stroke();
-    if(m>0)g.fillText(m.toFixed(1)+'m',4,p.y-2); }
-  // laser (puntos que "ve" el coche)
-  g.fillStyle='#4bd0d0';
-  scanPts.forEach(m=>{ let p=toPx(m); g.fillRect(p.x-1,p.y-1,2,2); });
+  for(let m=Math.floor(br.y/GRID)*GRID; m<=tl.y; m+=GRID){ let p=toPx({x:0,y:m}); g.beginPath();g.moveTo(p.x,0);g.lineTo(p.x,H);g.stroke(); }
+  for(let m=Math.floor(br.x/GRID)*GRID; m<=tl.x; m+=GRID){ let p=toPx({x:m,y:0}); g.beginPath();g.moveTo(0,p.y);g.lineTo(W,p.y);g.stroke();
+    if(Math.abs(m%1)<0.01 && m!==0) g.fillText(m.toFixed(0)+'m',4,p.y-2); }
+  // laser
+  g.fillStyle='#4bd0d0'; scanPts.forEach(m=>{ let p=toPx(m); g.fillRect(p.x-1,p.y-1,2,2); });
   // paredes
-  g.strokeStyle='#c05a5a'; g.lineWidth=4; g.lineCap='round';
+  g.strokeStyle='#c05a5a'; g.lineWidth=3.5; g.lineCap='round';
   walls.forEach(w=>{ let a=toPx({x:w.x1,y:w.y1}),b=toPx({x:w.x2,y:w.y2}); g.beginPath();g.moveTo(a.x,a.y);g.lineTo(b.x,b.y);g.stroke(); });
-  if(temp){ g.strokeStyle='#e0a24a'; let a=toPx({x:temp.x1,y:temp.y1}),b=toPx({x:temp.x2,y:temp.y2}); g.beginPath();g.moveTo(a.x,a.y);g.lineTo(b.x,b.y);g.stroke(); }
+  if(temp){ g.strokeStyle='#e0a24a'; let a=toPx({x:temp.x1,y:temp.y1}),b=toPx({x:temp.x2,y:temp.y2});
+    if(mapTool==='rect') g.strokeRect(Math.min(a.x,b.x),Math.min(a.y,b.y),Math.abs(b.x-a.x),Math.abs(b.y-a.y));
+    else { g.beginPath();g.moveTo(a.x,a.y);g.lineTo(b.x,b.y);g.stroke(); } }
   g.lineCap='butt';
   // real
   if(real.length>1){ g.strokeStyle='#e0a24a'; g.lineWidth=2.5; g.beginPath(); real.forEach((m,i)=>{let p=toPx(m);i?g.lineTo(p.x,p.y):g.moveTo(p.x,p.y);}); g.stroke(); }
   // plan
   if(wps.length){ g.strokeStyle='#2fae6a'; g.lineWidth=2; g.beginPath(); let o=toPx({x:0,y:0}); g.moveTo(o.x,o.y); wps.forEach(m=>{let p=toPx(m);g.lineTo(p.x,p.y);}); g.stroke(); }
-  wps.forEach((m,i)=>{ let p=toPx(m); g.fillStyle='#5b9bea'; g.beginPath();g.arc(p.x,p.y,8,0,7);g.fill();
-    g.fillStyle='#08131f';g.font='bold 11px monospace';g.textAlign='center';g.textBaseline='middle';g.fillText(i+1,p.x,p.y); });
+  wps.forEach((m,i)=>{ let p=toPx(m); g.fillStyle='#5b9bea'; g.beginPath();g.arc(p.x,p.y,7,0,7);g.fill();
+    g.fillStyle='#08131f';g.font='bold 10px monospace';g.textAlign='center';g.textBaseline='middle';g.fillText(i+1,p.x,p.y); });
   g.textAlign='start';g.textBaseline='alphabetic';
-  // coche: en (crx,cry,cryaw) si hay pose relativa, si no en el origen
-  let cp = carRel || {x:0,y:0,yaw:0}, o=toPx(cp);
-  g.save(); g.translate(o.x,o.y); g.rotate(-(cp.yaw)+0); g.fillStyle='#e6ecf3';
-  g.beginPath();g.moveTo(0,-11);g.lineTo(-8,7);g.lineTo(8,7);g.closePath();g.fill(); g.restore();
+  // coche
+  let cp=carRel||{x:0,y:0,yaw:0}, o=toPx(cp);
+  g.save(); g.translate(o.x,o.y); g.rotate(-cp.yaw); g.fillStyle='#e6ecf3';
+  g.beginPath();g.moveTo(0,-10);g.lineTo(-7,7);g.lineTo(7,7);g.closePath();g.fill(); g.restore();
 }
-draw();
+setZoom(45);
 
 function evPx(e){ const r=cv.getBoundingClientRect(),sx=W/r.width,sy=H/r.height;
   const cx=(e.touches?e.touches[0].clientX:e.clientX)-r.left, cy=(e.touches?e.touches[0].clientY:e.clientY)-r.top;
   return {x:cx*sx, y:cy*sy}; }
 cv.addEventListener('pointerdown', e=>{ const p=evPx(e), m=toM(p.x,p.y);
-  if(mode==='wp'){ if(m.x<-0.15)return; wps.push({x:+m.x.toFixed(2),y:+m.y.toFixed(2)}); draw(); }
+  if(mode==='wp'){ if(m.x<-0.2)return; wps.push({x:+m.x.toFixed(2),y:+m.y.toFixed(2)}); draw(); }
   else { temp={x1:+m.x.toFixed(2),y1:+m.y.toFixed(2),x2:+m.x.toFixed(2),y2:+m.y.toFixed(2)}; cv.setPointerCapture(e.pointerId); } });
-cv.addEventListener('pointermove', e=>{ const p=evPx(e), m=toM(p.x,p.y); $('#coords').textContent='x='+m.x.toFixed(2)+' y='+m.y.toFixed(2)+'m';
-  if(mode==='obs' && temp){ temp.x2=+m.x.toFixed(2); temp.y2=+m.y.toFixed(2); draw(); } });
-function endWall(e){ if(mode==='obs'&&temp){ const d=Math.hypot(temp.x2-temp.x1,temp.y2-temp.y1); if(d>0.05) walls.push(temp); temp=null; draw(); } }
+cv.addEventListener('pointermove', e=>{ const p=evPx(e), m=toM(p.x,p.y); $('#coords').textContent='x='+m.x.toFixed(2)+' y='+m.y.toFixed(2);
+  if(mode==='obs'&&temp){ temp.x2=+m.x.toFixed(2); temp.y2=+m.y.toFixed(2); draw(); } });
+function endWall(){ if(mode==='obs'&&temp){
+    const {x1,y1,x2,y2}=temp;
+    if(mapTool==='rect'){ if(Math.abs(x2-x1)>0.1&&Math.abs(y2-y1)>0.1)
+        walls.push({x1,y1,x2,y2:y1},{x1:x2,y1,x2,y2},{x1:x2,y1:y2,x2:x1,y2},{x1,y1:y2,x2:x1,y2:y1}); }
+    else { if(Math.hypot(x2-x1,y2-y1)>0.05) walls.push({x1,y1,x2,y2}); }
+    temp=null; draw(); } }
 cv.addEventListener('pointerup', endWall); cv.addEventListener('pointercancel', endWall);
 
 $('#mode').addEventListener('click', e=>{ const b=e.target.closest('button'); if(!b)return; mode=b.dataset.m;
   $('#mode').querySelectorAll('button').forEach(x=>x.classList.toggle('act',x===b)); });
+$('#mtool').addEventListener('click', e=>{ const b=e.target.closest('button'); if(!b)return; mapTool=b.dataset.t;
+  $('#mtool').querySelectorAll('button').forEach(x=>x.classList.toggle('act',x===b)); });
+$('#zin').onclick=()=>setZoom(PPM*1.3); $('#zout').onclick=()=>setZoom(PPM/1.3);
 $('#undo').onclick=()=>{wps.pop();draw();}; $('#clear').onclick=()=>{wps=[];real=[];draw();};
 $('#sq').onclick=()=>{wps=[{x:0.8,y:0},{x:0.8,y:0.8},{x:0,y:0.8},{x:0,y:0}];draw();};
 $('#ln').onclick=()=>{wps=[{x:1.5,y:0}];draw();};
-$('#mundo').onclick=()=>{walls.pop();draw();}; $('#mclear').onclick=()=>{walls=[];scanPts=[];draw();};
-$('#box').onclick=()=>{ walls=[{x1:1.5,y1:1,x2:1.5,y2:-1},{x1:1.5,y1:-1,x2:-0.5,y2:-1},{x1:-0.5,y1:-1,x2:-0.5,y2:1},{x1:-0.5,y1:1,x2:1.5,y2:1}]; draw(); };
-$('#corr').onclick=()=>{ walls=[{x1:0,y1:0.5,x2:2.5,y2:0.5},{x1:0,y1:-0.5,x2:2.5,y2:-0.5}]; draw(); };
+$('#mundo').onclick=()=>{walls.splice(-4);draw();}; $('#mclear').onclick=()=>{walls=[];scanPts=[];draw();};
 
 // ---- rosbridge ----
 let ws=null;
@@ -151,8 +165,7 @@ function connect(){
     send({op:'advertise',topic:'/joy',type:'sensor_msgs/msg/Joy'});
     send({op:'subscribe',topic:'/trajectory_nav/status',type:'std_msgs/msg/String'});
     send({op:'subscribe',topic:'/odometry/filtered',type:'nav_msgs/msg/Odometry'});
-    send({op:'subscribe',topic:'/scan',type:'sensor_msgs/msg/LaserScan'});
-  };
+    send({op:'subscribe',topic:'/scan',type:'sensor_msgs/msg/LaserScan'}); };
   ws.onclose=()=>{connected=false;setConn();setTimeout(connect,1500);};
   ws.onerror=()=>ws.close();
   ws.onmessage=ev=>{ const d=JSON.parse(ev.data); if(d.op!=='publish')return;
@@ -162,28 +175,22 @@ function connect(){
 }
 function send(o){ if(ws&&ws.readyState===1) ws.send(JSON.stringify(o)); }
 function setConn(){ const e=$('#conn'); e.textContent=connected?'conectado':'desconectado'; e.className='conn '+(connected?'on':'off'); if(!connected){armed=false;updArm();} }
-
-function relPose(p,q){ const yaw=Math.atan2(2*(q.w*q.z+q.x*q.y),1-2*(q.y*q.y+q.z*q.z));
-  if(!odom0) return null; const dx=p.x-odom0.x, dy=p.y-odom0.y, c=Math.cos(-odom0.yaw), s=Math.sin(-odom0.yaw);
-  return {x:dx*c-dy*s, y:dx*s+dy*c, yaw:yaw-odom0.yaw}; }
+function relPose(p,q){ const yaw=Math.atan2(2*(q.w*q.z+q.x*q.y),1-2*(q.y*q.y+q.z*q.z)); if(!odom0)return null;
+  const dx=p.x-odom0.x,dy=p.y-odom0.y,c=Math.cos(-odom0.yaw),s=Math.sin(-odom0.yaw); return {x:dx*c-dy*s,y:dx*s+dy*c,yaw:yaw-odom0.yaw}; }
 function onOdom(m){ const p=m.pose.pose.position,q=m.pose.pose.orientation;
   const yaw=Math.atan2(2*(q.w*q.z+q.x*q.y),1-2*(q.y*q.y+q.z*q.z)); odom0_last={x:p.x,y:p.y,yaw:yaw};
-  const rp=relPose(p,q); if(rp){ carRel=rp; real.push({x:rp.x,y:rp.y}); if(real.length>3000)real.shift(); draw(); } }
-function onScan(m){ if(!carRel||!odom0) return; const pts=[]; const n=m.ranges.length;
-  for(let i=0;i<n;i+=2){ const r=m.ranges[i]; if(!isFinite(r)||r<=0.02) continue;
-    const a=m.angle_min+i*m.angle_increment; const lx=r*Math.cos(a), ly=r*Math.sin(a);
-    const c=Math.cos(carRel.yaw), s=Math.sin(carRel.yaw);
+  const rp=relPose(p,q); if(rp){ carRel=rp; real.push({x:rp.x,y:rp.y}); if(real.length>4000)real.shift(); draw(); } }
+function onScan(m){ if(!carRel) return; const pts=[]; const n=m.ranges.length;
+  for(let i=0;i<n;i+=2){ const r=m.ranges[i]; if(!isFinite(r)||r<=0.02)continue;
+    const a=m.angle_min+i*m.angle_increment, lx=r*Math.cos(a), ly=r*Math.sin(a), c=Math.cos(carRel.yaw), s=Math.sin(carRel.yaw);
     pts.push({x:carRel.x+lx*c-ly*s, y:carRel.y+lx*s+ly*c}); }
   scanPts=pts; }
-
 function ensureOrigin(){ if(!odom0){ if(!odom0_last){flash('Aún sin odometría');return false;} odom0={...odom0_last}; real=[]; } return true; }
-$('#sendmap').onclick=()=>{ if(!connected){flash('Sin conexión');return;} if(!walls.length){flash('Dibuja alguna pared');return;}
-  if(!ensureOrigin())return;
-  const segs=walls.map(w=>[w.x1,w.y1,w.x2,w.y2]);
+$('#sendmap').onclick=()=>{ if(!connected){flash('Sin conexión');return;} if(!walls.length){flash('Dibuja paredes (arrastra)');return;}
+  if(!ensureOrigin())return; const segs=walls.map(w=>[w.x1,w.y1,w.x2,w.y2]);
   send({op:'publish',topic:'/sim_map',msg:{data:JSON.stringify({segments:segs})}}); flash('Mapa enviado ('+walls.length+' paredes)'); };
 $('#send').onclick=()=>{ if(!connected){flash('Sin conexión');return;} if(!wps.length){flash('Pon waypoints');return;} if(!armed){flash('Activa control primero');return;}
-  if(!ensureOrigin())return;
-  const poses=wps.map(m=>({position:{x:m.x,y:m.y,z:0},orientation:{x:0,y:0,z:0,w:1}}));
+  if(!ensureOrigin())return; const poses=wps.map(m=>({position:{x:m.x,y:m.y,z:0},orientation:{x:0,y:0,z:0,w:1}}));
   send({op:'publish',topic:'/plan_waypoints',msg:{header:{frame_id:'base_link'},poses}}); flash('Ruta enviada ('+wps.length+' wp)'); };
 $('#stop').onclick=()=>{ send({op:'publish',topic:'/plan_waypoints',msg:{header:{frame_id:'base_link'},poses:[]}}); flash('STOP'); };
 function pubJoyToggle(){ const now=Date.now(); send({op:'publish',topic:'/joy',msg:{header:{stamp:{sec:Math.floor(now/1000),nanosec:0},frame_id:''},axes:[0,0,1,0,0,1],buttons:[1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]}}); }
