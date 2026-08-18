@@ -167,7 +167,8 @@ const TYPES = {
   joy:'sensor_msgs/Joy', cmd_vel:'geometry_msgs/Twist',
   robot_description:'std_msgs/String', diagnostics:'diagnostic_msgs/DiagnosticArray',
   'tf odom→base_link':'tf2_msgs/TFMessage', 'tf map→odom':'tf2_msgs/TFMessage',
-  tf_static:'tf2_msgs/TFMessage', 'servo+ESC':'I2C (PCA9685)', ws:'WebSocket 9090'
+  tf_static:'tf2_msgs/TFMessage', 'servo+ESC':'I2C (PCA9685)', ws:'WebSocket 9090',
+  'plan_waypoints':'geometry_msgs/PoseArray', 'trajectory_nav/status':'std_msgs/String'
 };
 const NODES = [
   {id:'rplidar_node', cat:'sensor', col:0, tier:'core', live:1, pkg:'rplidar_ros',
@@ -224,7 +225,7 @@ const NODES = [
 
   {id:'rosbridge_websocket', cat:'web', col:5, tier:'core', live:1, pkg:'rosbridge_server',
    desc:'Puente ROS ↔ WebSocket (ws:9090). Expone la telemetría al panel y al mando web, y reinyecta en ROS los comandos del mando web (/cmd_vel y /joy). Es bidireccional.',
-   pub:['cmd_vel','joy'], sub:['imu','scan','odometry/filtered','map','energy','ultrasound_data']},
+   pub:['cmd_vel','joy','plan_waypoints'], sub:['imu','scan','odometry/filtered','map','energy','ultrasound_data','trajectory_nav/status']},
   {id:'rosapi_node', cat:'web', col:5, tier:'core', live:1, pkg:'rosapi',
    desc:'Compañero de rosbridge: API de introspección (listar nodos, topics y servicios) que usa el panel web para descubrir el grafo.',
    pub:[], sub:[]},
@@ -238,6 +239,19 @@ const NODES = [
   {id:'PCA9685', cat:'hw', col:4, tier:'core', live:1, ext:1, pkg:'I2C',
    desc:'Controlador PWM de 16 canales por I2C. Recibe de car_control el ángulo del servo de dirección y la señal PWM al ESC de tracción (bidireccional).',
    pub:[], sub:[], hwin:'car_control_node'},
+
+  {id:'path_follower_node', cat:'ctrl', col:4, tier:'opt', live:0, pkg:'robocar_pkg',
+   desc:'Seguidor de trayectoria (waypoints) con giros en 3 puntos (marcha atras) para esquinas cerradas. Servicios start/stop. Consume la pose del EKF y manda /cmd_vel.',
+   pub:['cmd_vel'], sub:['odometry/filtered']},
+  {id:'obstacle_avoid_node', cat:'ctrl', col:4, tier:'opt', live:0, pkg:'robocar_pkg',
+   desc:'Evitacion reactiva con los 3 ultrasonidos: esquiva hacia el lado mas libre / para. Parada de emergencia por IR (emergency_stop). dry_run para probar sin mover.',
+   pub:['cmd_vel'], sub:['ultrasound_data']},
+  {id:'goto_avoid_node', cat:'ctrl', col:4, tier:'opt', live:0, pkg:'robocar_pkg',
+   desc:'Navegacion reactiva a un objetivo: go-to-goal absoluto + evitacion local con prioridad; rodea el obstaculo y vuelve a la trayectoria (patron Nav2 minimo).',
+   pub:['cmd_vel'], sub:['odometry/filtered','ultrasound_data']},
+  {id:'trajectory_nav_node', cat:'ctrl', col:4, tier:'opt', live:0, pkg:'robocar_pkg',
+   desc:'Sigue una LISTA de waypoints (/plan_waypoints, relativos) con evitacion y parada de emergencia IR. Publica estado en /trajectory_nav/status. Base de la web de trayectorias.',
+   pub:['cmd_vel','trajectory_nav/status'], sub:['odometry/filtered','ultrasound_data','plan_waypoints']},
 ];
 const CATLABEL = {sensor:'Sensores',odom:'Odometría',slam:'SLAM',ctrl:'Teleop/control',web:'Web',hw:'Hardware'};
 // topics que NO se dibujan como arista (ruido visual); sí aparecen en la ficha
