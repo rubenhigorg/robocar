@@ -98,10 +98,11 @@ en trayectoria cerrada con reversa.**
   con evitación; unificar con `path_follower`.
 
 ### Fase 5 — Soporte web (generar + validar trayectorias)
-- [ ] Generalizar `path_follower` a una **lista de waypoints** por topic/servicio (no solo cuadrado);
-  elegir por tramo giro suave (arco) o cerrado (k-turn) según el ángulo.
-- [ ] Web: lienzo para **dibujar waypoints / elegir forma** + parámetros → enviar por rosbridge.
-- [ ] Tras ejecutar: **planificado vs real** + resultado de validación en la web; estado en vivo.
+- [x] **`trajectory_nav_node`**: seguidor de **lista de waypoints** (`/plan_waypoints`, `PoseArray`,
+  relativos a la pose de arranque) con go-to-goal + evitación (generaliza `goto_avoid`). Publica
+  estado en `/trajectory_nav/status`. Validado en simulación (cuadrado de 4 waypoints, cierre 0.19 m).
+- [ ] Web: lienzo para **dibujar waypoints / elegir forma** + parámetros → publicar el PoseArray por rosbridge.
+- [ ] Tras ejecutar: **planificado vs real** + resultado de validación en la web; estado en vivo (topic status).
 
 ## Dependencias
 

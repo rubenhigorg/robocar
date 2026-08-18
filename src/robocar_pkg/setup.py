@@ -36,6 +36,7 @@ setup(
             'path_follower_node = robocar_pkg.path_follower_node:main',
             'obstacle_avoid_node = robocar_pkg.obstacle_avoid_node:main',
             'goto_avoid_node = robocar_pkg.goto_avoid_node:main',
+            'trajectory_nav_node = robocar_pkg.trajectory_nav_node:main',
         ],
     },
 )
