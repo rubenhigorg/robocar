@@ -46,12 +46,12 @@
     <h1>Robocar · Trayectorias y Mapa</h1>
     <span class="conn off" id="conn">desconectado</span>
   </div>
-  <p class="sub">Simulación de banco: dibuja un <b>mapa</b> (habitaciones/paredes) y una <b>ruta</b>; el coche lo navega con sensores simulados. El robot está abajo-centro, apunta arriba = adelante.</p>
+  <p class="sub"><b>Mapa</b> = las paredes (el mundo) · <b>Ruta</b> = los waypoints (el camino). El coche recorre la ruta <b>esquivando</b> el mapa; en banco los sensores se <b>simulan</b> del mapa dibujado. Elige abajo qué dibujas (el lienzo muestra ambos).</p>
 
   <div class="row">
     <span class="seg" id="mode">
-      <button data-m="wp" class="act">◦ Ruta</button>
-      <button data-m="obs">▦ Mapa</button>
+      <button data-m="wp" class="act">◦ Dibujar RUTA</button>
+      <button data-m="obs">▦ Dibujar MAPA</button>
     </span>
     <span class="lbl" style="margin-left:auto">zoom</span>
     <button id="zin">＋</button><button id="zout">－</button>
@@ -65,12 +65,12 @@
     <span style="color:#4bd0d0">· láser</span><span id="coords" style="margin-left:auto;color:var(--faint)"></span>
   </div>
 
-  <div class="row"><span class="lbl">MAPA</span>
+  <div class="row" id="rowMapa" style="display:none"><span class="lbl">MAPA</span>
     <span class="seg" id="mtool"><button data-t="rect" class="act">▭ habitación</button><button data-t="wall">─ pared</button></span>
     <button id="mundo">↶</button><button id="mclear">limpiar</button>
     <button id="sendmap" class="map">▦ Enviar mapa</button>
   </div>
-  <div class="row"><span class="lbl">RUTA</span>
+  <div class="row" id="rowRuta"><span class="lbl">RUTA</span>
     <button id="undo">↶</button><button id="clear">limpiar</button>
     <button id="sq">□ cuadrado</button><button id="ln">— línea</button>
     <button id="send" class="primary">▶ Enviar ruta</button>
@@ -145,8 +145,10 @@ function endWall(){ if(mode==='obs'&&temp){
     temp=null; draw(); } }
 cv.addEventListener('pointerup', endWall); cv.addEventListener('pointercancel', endWall);
 
+function updateMode(){ $('#rowRuta').style.display = mode==='wp'?'flex':'none'; $('#rowMapa').style.display = mode==='obs'?'flex':'none'; }
 $('#mode').addEventListener('click', e=>{ const b=e.target.closest('button'); if(!b)return; mode=b.dataset.m;
-  $('#mode').querySelectorAll('button').forEach(x=>x.classList.toggle('act',x===b)); });
+  $('#mode').querySelectorAll('button').forEach(x=>x.classList.toggle('act',x===b)); updateMode(); });
+updateMode();
 $('#mtool').addEventListener('click', e=>{ const b=e.target.closest('button'); if(!b)return; mapTool=b.dataset.t;
   $('#mtool').querySelectorAll('button').forEach(x=>x.classList.toggle('act',x===b)); });
 $('#zin').onclick=()=>setZoom(PPM*1.3); $('#zout').onclick=()=>setZoom(PPM/1.3);
