@@ -64,7 +64,7 @@
   <div class="legend">
     <span>▲ robot</span><span style="color:var(--accent)">● wp</span><span style="color:var(--ok)">─ plan</span>
     <span style="color:var(--warn)">─ real</span><span style="color:var(--wall)">▬ pared</span>
-    <span style="color:#4bd0d0">· láser</span><span id="coords" style="margin-left:auto;color:var(--faint)"></span>
+    <span style="color:#4bd0d0">· láser</span><span style="color:#6e8cae">▨ /map</span><span id="coords" style="margin-left:auto;color:var(--faint)"></span>
   </div>
 
   <div class="row" id="rowMapa" style="display:none"><span class="lbl">MAPA</span>
@@ -95,7 +95,7 @@ const GRID=0.5, W=560, H=560;
 let PPM=45;                       // px/m (zoom); mas bajo = mas espacio
 let ox=W/2, oy=H*0.62;           // origen (robot) abajo-centro, con sitio detras
 const cv=$('#c'), g=cv.getContext('2d');
-let wps=[], walls=[], real=[], scanPts=[], carRel=null, temp=null;
+let wps=[], walls=[], real=[], scanPts=[], carRel=null, temp=null, mapImg=null;
 let mode='wp', mapTool='rect', armed=false, connected=false, odom0=null, odom0_last=null;
 
 function toM(px,py){ return {x:(oy-py)/PPM, y:(ox-px)/PPM}; }
@@ -110,6 +110,12 @@ function draw(){
   for(let m=Math.floor(br.y/GRID)*GRID; m<=tl.y; m+=GRID){ let p=toPx({x:0,y:m}); g.beginPath();g.moveTo(p.x,0);g.lineTo(p.x,H);g.stroke(); }
   for(let m=Math.floor(br.x/GRID)*GRID; m<=tl.x; m+=GRID){ let p=toPx({x:m,y:0}); g.beginPath();g.moveTo(0,p.y);g.lineTo(W,p.y);g.stroke();
     if(Math.abs(m%1)<0.01 && m!==0) g.fillText(m.toFixed(0)+'m',4,p.y-2); }
+  // /map (OccupancyGrid) por debajo del resto — afin celda->pantalla via odom0
+  if(mapImg && odom0){ const A=-odom0.yaw, ca=Math.cos(A), sa=Math.sin(A), res=mapImg.res, Hc=mapImg.H;
+    const a=-PPM*res*sa, b=-PPM*res*ca, cc=PPM*res*ca, dd=-PPM*res*sa;
+    const wx0=mapImg.ox+0.5*res, wy0=mapImg.oy+(Hc-0.5)*res, dx0=wx0-odom0.x, dy0=wy0-odom0.y;
+    const rx0=dx0*ca-dy0*sa, ry0=dx0*sa+dy0*ca, e=ox-ry0*PPM, f=oy-rx0*PPM;
+    g.save(); g.imageSmoothingEnabled=false; g.setTransform(a,b,cc,dd,e,f); g.drawImage(mapImg.canvas,0,0); g.restore(); }
   // laser
   g.fillStyle='#4bd0d0'; scanPts.forEach(m=>{ let p=toPx(m); g.fillRect(p.x-1,p.y-1,2,2); });
   // paredes
@@ -159,7 +165,7 @@ $('#zin').onclick=()=>setZoom(PPM*1.3); $('#zout').onclick=()=>setZoom(PPM/1.3);
 $('#undo').onclick=()=>{wps.pop();draw();}; $('#clear').onclick=()=>{wps=[];real=[];draw();};
 $('#sq').onclick=()=>{wps=[{x:0.8,y:0},{x:0.8,y:0.8},{x:0,y:0.8},{x:0,y:0}];draw();};
 $('#ln').onclick=()=>{wps=[{x:1.5,y:0}];draw();};
-$('#mundo').onclick=()=>{walls.splice(-4);draw();}; $('#mclear').onclick=()=>{walls=[];scanPts=[];draw();};
+$('#mundo').onclick=()=>{walls.splice(-4);draw();}; $('#mclear').onclick=()=>{walls=[];scanPts=[];mapImg=null;draw();};
 
 // ---- plantas de piso (mapas realistas con muebles) ----
 // frame del coche: x adelante, y izquierda; entrada al sur (x menor), robot en el origen.
@@ -236,13 +242,15 @@ function connect(){
     send({op:'advertise',topic:'/joy',type:'sensor_msgs/msg/Joy'});
     send({op:'subscribe',topic:'/trajectory_nav/status',type:'std_msgs/msg/String'});
     send({op:'subscribe',topic:'/odometry/filtered',type:'nav_msgs/msg/Odometry'});
-    send({op:'subscribe',topic:'/scan',type:'sensor_msgs/msg/LaserScan'}); };
+    send({op:'subscribe',topic:'/scan',type:'sensor_msgs/msg/LaserScan'});
+    send({op:'subscribe',topic:'/map',type:'nav_msgs/msg/OccupancyGrid'}); };
   ws.onclose=()=>{connected=false;setConn();setTimeout(connect,1500);};
   ws.onerror=()=>ws.close();
   ws.onmessage=ev=>{ const d=JSON.parse(ev.data); if(d.op!=='publish')return;
     if(d.topic==='/trajectory_nav/status') $('#status').innerHTML='estado: <b>'+d.msg.data+'</b>';
     else if(d.topic==='/odometry/filtered') onOdom(d.msg);
-    else if(d.topic==='/scan') onScan(d.msg); };
+    else if(d.topic==='/scan') onScan(d.msg);
+    else if(d.topic==='/map') onMap(d.msg); };
 }
 function send(o){ if(ws&&ws.readyState===1) ws.send(JSON.stringify(o)); }
 function setConn(){ const e=$('#conn'); e.textContent=connected?'conectado':'desconectado'; e.className='conn '+(connected?'on':'off'); if(!connected){armed=false;updArm();} }
@@ -252,6 +260,13 @@ function onOdom(m){ const p=m.pose.pose.position,q=m.pose.pose.orientation;
   const yaw=Math.atan2(2*(q.w*q.z+q.x*q.y),1-2*(q.y*q.y+q.z*q.z)); odom0_last={x:p.x,y:p.y,yaw:yaw};
   if(!odom0){ odom0={x:p.x,y:p.y,yaw:yaw}; real=[]; }   // fija el origen al recibir odometria (robot en el origen)
   const rp=relPose(p,q); if(rp){ carRel=rp; real.push({x:rp.x,y:rp.y}); if(real.length>4000)real.shift(); draw(); } }
+function onMap(m){ const W=m.info.width,H=m.info.height,res=m.info.resolution,d=m.data;
+  if(!W||!H) return; const oc=document.createElement('canvas'); oc.width=W; oc.height=H;
+  const g2=oc.getContext('2d'), img=g2.createImageData(W,H);
+  for(let r=0;r<H;r++)for(let c=0;c<W;c++){ if(d[r*W+c]>=50){        // ocupado -> pixel (fila 0 abajo -> flip)
+    const idx=((H-1-r)*W+c)*4; img.data[idx]=110; img.data[idx+1]=140; img.data[idx+2]=170; img.data[idx+3]=150; } }
+  g2.putImageData(img,0,0);
+  mapImg={canvas:oc,ox:m.info.origin.position.x,oy:m.info.origin.position.y,res,W,H}; draw(); }
 function onScan(m){ if(!carRel) return; const pts=[]; const n=m.ranges.length;
   for(let i=0;i<n;i+=2){ const r=m.ranges[i]; if(!isFinite(r)||r<=0.02)continue;
     const a=m.angle_min+i*m.angle_increment, lx=r*Math.cos(a), ly=r*Math.sin(a), c=Math.cos(carRel.yaw), s=Math.sin(carRel.yaw);
@@ -269,7 +284,7 @@ function pubJoyToggle(){ const now=Date.now(); send({op:'publish',topic:'/joy',m
 function cov0(){ const c=Array(36).fill(0); [0,7,14,21,28,35].forEach(i=>c[i]=0.01); return c; }
 $('#reset').onclick=()=>{ if(!connected){flash('Sin conexión');return;}
   send({op:'publish',topic:'/set_pose',msg:{header:{frame_id:'odom'},pose:{pose:{position:{x:0,y:0,z:0},orientation:{x:0,y:0,z:0,w:1}},covariance:cov0()}}});
-  odom0=null; real=[]; scanPts=[]; carRel=null; flash('Odometría a 0 — reenvía mapa y ruta'); };
+  odom0=null; real=[]; scanPts=[]; carRel=null; mapImg=null; flash('Odometría a 0 — reenvía mapa y ruta'); };
 $('#arm').onclick=()=>{ if(!connected){flash('Sin conexión');return;} pubJoyToggle(); armed=!armed; updArm(); };
 function updArm(){ const b=$('#arm'); b.textContent=armed?'Control activo':'Activar control'; b.className=armed?'armed':''; }
 let bt=null; function flash(t){ const b=$('#banner'); b.textContent=t; b.classList.add('show'); clearTimeout(bt); bt=setTimeout(()=>b.classList.remove('show'),2000); }

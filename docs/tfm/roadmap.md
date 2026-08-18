@@ -120,13 +120,15 @@ flowchart TB
 
 **Para que el banco sea un _drop-in_ fiel de Nav (convergencia pendiente):**
 
-1. Publicar el mapa dibujado también como **`/map` (`nav_msgs/OccupancyGrid`)** — hoy viaja como
-   segmentos (`/sim_map`) que `sim_sensors` ray-castea; añadir la rejilla de ocupación permite
-   alimentar la **capa estática del _costmap_** de Nav2 con el mismo mapa de banco.
+1. ✅ **HECHO** — Publicar el mapa dibujado también como **`/map` (`nav_msgs/OccupancyGrid`)**:
+   `sim_map_grid_node` rasteriza los segmentos (`/sim_map`) a rejilla de ocupación (celdas
+   pared=100, libre=0, 0.05 m/celda), QoS `transient_local` (latched) + republish 1 Hz. Alimenta
+   la **capa estática del _costmap_** de Nav2 con el mismo mapa de banco. Pintado también en la web.
 2. Exponer el objetivo como **`NavigateToPose` / `/goal_pose`** (además de `/plan_waypoints`),
    que es lo que emitirá el MCP/LLM de la Capa 3.
-3. Cerrar el **árbol TF** que espera Nav2: `map→odom` (lo dará AMCL/SLAM; en banco, identidad o
-   desde `/set_pose`), `odom→base_link` (odometría) y `base_link→laser`.
+3. Cerrar el **árbol TF** que espera Nav2: `map→odom` (**ya emitido** por `sim_map_grid` como
+   identidad estática en banco; en real lo dará AMCL/SLAM), `odom→base_link` (odometría, ✅) y
+   `base_link→laser` (pendiente de comprobar en el URDF).
 4. Con esas tres piezas, el `trajectory_nav_node` se **sustituye por Nav2** (BT Navigator +
    planner + TEB) **sin tocar** ni la web, ni `sim_sensors`, ni `car_control`. Ese es el criterio
    de "banco bien hecho".
