@@ -29,6 +29,10 @@ class SimMotion(Node):
         self.declare_parameter('max_angular', 0.4)     # angular.z que satura la direccion
         self.declare_parameter('rate_hz', 50.0)
         self.declare_parameter('cmd_timeout', 0.5)     # sin /cmd_vel -> para (watchdog)
+        # como interpretar angular.z de /cmd_vel:
+        #   'twist'      = velocidad de giro deseada en rad/s (ESTANDAR ROS / Nav2)
+        #   'steer_norm' = mando de direccion normalizado, +-max_angular = tope (trajectory_nav/car_control)
+        self.declare_parameter('cmd_mode', 'steer_norm')
         self.declare_parameter('odom_frame', 'odom')
         self.declare_parameter('base_frame', 'base_link')
 
@@ -53,11 +57,19 @@ class SimMotion(Node):
         self.v = m.linear.x
         L = self.get_parameter('wheelbase').value
         tmax = self.get_parameter('tan_max').value
-        maxa = self.get_parameter('max_angular').value
-        ratio = (m.angular.z / maxa) if maxa > 0 else 0.0
-        ratio = max(-1.0, min(1.0, ratio))
-        tand = tmax * ratio
-        self.wz = self.v * tand / L
+        if self.get_parameter('cmd_mode').value == 'twist':
+            # ESTANDAR ROS/Nav2: angular.z = velocidad de giro deseada (rad/s).
+            # Ackermann: tan(delta) = omega*L/v, limitado por el tope de direccion.
+            if abs(self.v) > 1e-3:
+                tand = max(-tmax, min(tmax, m.angular.z * L / self.v))
+                self.wz = self.v * tand / L
+            else:
+                self.wz = 0.0     # sin avance no hay giro (Ackermann no rota en el sitio)
+        else:
+            # 'steer_norm': angular.z normalizado, +-max_angular = tope de direccion.
+            maxa = self.get_parameter('max_angular').value
+            ratio = max(-1.0, min(1.0, (m.angular.z / maxa) if maxa > 0 else 0.0))
+            self.wz = self.v * (tmax * ratio) / L
         self.last_cmd = self.now_s()
 
     def rcb(self, m):
