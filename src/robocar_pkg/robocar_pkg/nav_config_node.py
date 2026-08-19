@@ -38,6 +38,17 @@ PARAMS = [
     {"key": "margen_seguridad", "label": "Margen de seguridad", "unit": "m",
      "min": 0.05, "max": 0.4, "step": 0.05, "default": 0.15, "restart": False,
      "desc": "Distancia de seguridad a paredes (inflado). Mayor = mas seguro pero puede CERRAR puertas. (en caliente)"},
+    {"key": "orientacion_final", "label": "Orientacion final", "type": "bool", "default": False, "restart": False,
+     "desc": "Si el robot debe LLEGAR mirando a la orientacion pedida (util para aparcar/apuntar a algo). "
+             "Off = solo importa el punto, llega mirando a cualquier lado. (en caliente)"},
+    {"key": "distancia_paredes", "label": "Tendencia al centro", "unit": "",
+     "min": 1.5, "max": 6.0, "step": 0.5, "default": 3.0, "restart": False,
+     "desc": "Bajo = el robot va mas por el CENTRO de los pasillos (mas holgura); alto = puede ir mas "
+             "PEGADO a las paredes (pasa por sitios mas justos). (en caliente)"},
+    {"key": "suavidad", "label": "Suavidad de conduccion", "unit": "m",
+     "min": 0.3, "max": 1.2, "step": 0.1, "default": 0.6, "restart": False,
+     "desc": "Mayor = conduccion mas SUAVE (corta curvas, comoda); menor = mas CENIDA a la ruta "
+             "(precisa pero brusca). (en caliente)"},
 ]
 
 
@@ -71,7 +82,11 @@ class NavConfig(Node):
 
     def _set(self, server, name, value):
         cl = self.cli.get(server)
-        if cl is None or not cl.service_is_ready():
+        if cl is None:
+            return
+        if not cl.service_is_ready():
+            cl.wait_for_service(timeout_sec=1.5)   # por si aun no se descubrio (arranque en frio)
+        if not cl.service_is_ready():
             self.get_logger().warn('%s no listo' % server); return
         req = SetParameters.Request(); req.parameters = [Parameter(name=name, value=self._pv(value))]
         cl.call_async(req)   # fire-and-forget
@@ -84,6 +99,13 @@ class NavConfig(Node):
         elif key == 'margen_seguridad':
             self._set('global_costmap/global_costmap', 'inflation_layer.inflation_radius', float(value))
             self._set('local_costmap/local_costmap', 'inflation_layer.inflation_radius', float(value))
+        elif key == 'orientacion_final':
+            self._set('controller_server', 'general_goal_checker.yaw_goal_tolerance', 0.5 if value else 3.15)
+        elif key == 'distancia_paredes':
+            self._set('global_costmap/global_costmap', 'inflation_layer.cost_scaling_factor', float(value))
+            self._set('local_costmap/local_costmap', 'inflation_layer.cost_scaling_factor', float(value))
+        elif key == 'suavidad':
+            self._set('controller_server', 'FollowPath.lookahead_dist', float(value))
 
     def rewrite_yaml(self):
         try:
@@ -98,6 +120,11 @@ class NavConfig(Node):
         s = re.sub(r'desired_linear_vel:\s*[0-9.]+', 'desired_linear_vel: %.3f' % float(self.vals['velocidad']), s)
         s = re.sub(r'xy_goal_tolerance:\s*[0-9.]+', 'xy_goal_tolerance: %.3f' % float(self.vals['tolerancia_objetivo']), s)
         s = re.sub(r'inflation_radius:\s*[0-9.]+', 'inflation_radius: %.3f' % float(self.vals['margen_seguridad']), s)
+        yt = '0.5' if self.vals['orientacion_final'] else '3.15'
+        s = re.sub(r'yaw_goal_tolerance:\s*[0-9.]+', 'yaw_goal_tolerance: %s' % yt, s)
+        s = re.sub(r'cost_scaling_factor:\s*[0-9.]+', 'cost_scaling_factor: %.2f' % float(self.vals['distancia_paredes']), s)
+        s = re.sub(r'(?m)^(\s*)lookahead_dist:\s*[0-9.]+',
+                   lambda m: m.group(1) + ('lookahead_dist: %.2f' % float(self.vals['suavidad'])), s)
         open(YAML, 'w').write(s)
 
     def restart_nav2(self):
