@@ -50,6 +50,8 @@ class SimSensors(Node):
                        (0.24, -0.0525, -0.436, 'ultrasound_right')]
         self.pub_range = {n: self.create_publisher(Range, '/us_' + n.split('_')[1], 10)
                           for _, _, _, n in self.us_cfg}
+        self.pub_ir = self.create_publisher(Range, '/ir_range', 10)   # IR de proximidad (emergencia)
+        self.ir_max = 0.5
         self.create_subscription(Odometry, '/odometry/filtered', self.ocb, 20)
         self.create_subscription(String, '/sim_map', self.mcb, 10)
         self.create_subscription(String, '/sim_obstacles', self.obcb, 10)
@@ -128,6 +130,12 @@ class SimSensors(Node):
         d.center_distance = cen*100.0; d.left_distance = lef*100.0; d.right_distance = rig*100.0
         d.emergency_stop = (cen*100.0 >= self.get_parameter('emergency_cm').value)  # False = muy cerca
         self.pub_us.publish(d)
+        # IR de proximidad como Range (para el collision_monitor): distancia frontal desde base_link, capada corto
+        ir_dist = self.cast(x, y, yaw, self.ir_max)
+        ir = Range(); ir.header.stamp = now; ir.header.frame_id = 'base_link'
+        ir.radiation_type = Range.INFRARED; ir.field_of_view = 0.2
+        ir.min_range = 0.02; ir.max_range = self.ir_max; ir.range = float(ir_dist)
+        self.pub_ir.publish(ir)
         # --- laser virtual /scan (360) ---
         n = int(self.get_parameter('n_scan').value)
         smax = self.get_parameter('scan_max').value

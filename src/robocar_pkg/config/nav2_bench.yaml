@@ -202,6 +202,34 @@ behavior_server:
 # LIFECYCLE MANAGER — arranca y activa todos los servidores en orden.
 # (Sin map_server ni amcl: el mapa y map->odom los da el banco.)
 # ----------------------------------------------------------------------------
+# ----------------------------------------------------------------------------
+# COLLISION MONITOR — reflejo de seguridad: entre Nav2 y el robot. Si el IR ve
+# algo dentro de la zona de parada, CORTA la velocidad (parada de emergencia),
+# sin esperar a que Nav2 replanifique. cmd_vel_raw (Nav2) -> /cmd_vel (al coche).
+# ----------------------------------------------------------------------------
+collision_monitor:
+  ros__parameters:
+    base_frame_id: "base_link"
+    odom_frame_id: "odom"
+    cmd_vel_in_topic: "cmd_vel_raw"
+    cmd_vel_out_topic: "cmd_vel"
+    transform_tolerance: 0.2
+    source_timeout: 1.0
+    base_shift_correction: true
+    stop_pub_timeout: 2.0
+    polygons: ["StopZone"]
+    StopZone:
+      type: "polygon"
+      points: [0.38, 0.16, 0.38, -0.16, 0.03, -0.16, 0.03, 0.16]   # caja delante del coche
+      action_type: "stop"
+      min_points: 1
+      visualize: true
+      polygon_pub_topic: "collision_stop_zone"
+    observation_sources: ["ir"]
+    ir:
+      type: "range"
+      topic: "/ir_range"
+
 lifecycle_manager_navigation:
   ros__parameters:
     autostart: true
@@ -210,3 +238,4 @@ lifecycle_manager_navigation:
       - planner_server
       - behavior_server
       - bt_navigator
+      - collision_monitor
