@@ -149,7 +149,7 @@ local_costmap:
       height: 4
       resolution: 0.05
       robot_radius: 0.12
-      plugins: ["obstacle_layer", "inflation_layer"]
+      plugins: ["obstacle_layer", "range_layer", "inflation_layer"]
       obstacle_layer:
         plugin: "nav2_costmap_2d::ObstacleLayer"
         enabled: true
@@ -162,6 +162,12 @@ local_costmap:
           max_obstacle_height: 2.0
           obstacle_max_range: 4.0
           raytrace_max_range: 4.5
+      range_layer:                              # 3 ultrasonidos (sensor_msgs/Range) para evitacion local
+        plugin: "nav2_costmap_2d::RangeSensorLayer"
+        enabled: true
+        topics: ["/us_center", "/us_left", "/us_right"]
+        input_sensor_type: "ALL"
+        clear_on_max_reading: true
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         inflation_radius: 0.15

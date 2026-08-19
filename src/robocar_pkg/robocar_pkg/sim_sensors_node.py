@@ -11,7 +11,7 @@
 import json, math, rclpy
 from rclpy.node import Node
 from nav_msgs.msg import Odometry
-from sensor_msgs.msg import LaserScan
+from sensor_msgs.msg import LaserScan, Range
 from std_msgs.msg import String
 from messages_pkg.msg import Distance
 
@@ -43,6 +43,13 @@ class SimSensors(Node):
         self.pose = None
         self.pub_us = self.create_publisher(Distance, '/ultrasound_data', 10)
         self.pub_scan = self.create_publisher(LaserScan, '/scan', 10)
+        # ultrasonidos como sensor_msgs/Range (para la range_sensor_layer del costmap de Nav2).
+        # (offset x,y en base_link, yaw, frame) segun el URDF: centro y +-25 grados.
+        self.us_cfg = [(0.25, 0.0, 0.0, 'ultrasound_center'),
+                       (0.24, 0.0525, 0.436, 'ultrasound_left'),
+                       (0.24, -0.0525, -0.436, 'ultrasound_right')]
+        self.pub_range = {n: self.create_publisher(Range, '/us_' + n.split('_')[1], 10)
+                          for _, _, _, n in self.us_cfg}
         self.create_subscription(Odometry, '/odometry/filtered', self.ocb, 20)
         self.create_subscription(String, '/sim_map', self.mcb, 10)
         self.create_subscription(String, '/sim_obstacles', self.obcb, 10)
@@ -102,12 +109,21 @@ class SimSensors(Node):
         if self.pose is None:
             return
         x, y, yaw = self.pose
-        # --- ultrasonidos (3 rayos frontales), en cm ---
+        # --- ultrasonidos: castea desde la posicion/direccion REAL de cada sensor ---
         us_max = self.get_parameter('us_max_cm').value / 100.0
-        side = math.radians(self.get_parameter('us_side_deg').value)
-        cen = self.cast(x, y, yaw, us_max)
-        lef = self.cast(x, y, yaw+side, us_max)
-        rig = self.cast(x, y, yaw-side, us_max)
+        now = self.get_clock().now().to_msg()
+        c, s = math.cos(yaw), math.sin(yaw)
+        vals = {}
+        for sx, sy, syaw, name in self.us_cfg:
+            wx = x + sx*c - sy*s; wy = y + sx*s + sy*c       # posicion del sensor en odom
+            r = self.cast(wx, wy, yaw + syaw, us_max)        # distancia en su direccion
+            vals[name] = r
+            rg = Range()
+            rg.header.stamp = now; rg.header.frame_id = name
+            rg.radiation_type = Range.ULTRASOUND; rg.field_of_view = 0.5
+            rg.min_range = 0.02; rg.max_range = us_max; rg.range = float(r)
+            self.pub_range[name].publish(rg)
+        cen = vals['ultrasound_center']; lef = vals['ultrasound_left']; rig = vals['ultrasound_right']
         d = Distance()
         d.center_distance = cen*100.0; d.left_distance = lef*100.0; d.right_distance = rig*100.0
         d.emergency_stop = (cen*100.0 >= self.get_parameter('emergency_cm').value)  # False = muy cerca
