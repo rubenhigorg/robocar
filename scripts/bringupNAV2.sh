@@ -17,10 +17,7 @@ nohup ros2 run robocar_pkg sim_sensors_node >/tmp/ss.log 2>&1 & disown
 nohup python3 ~/robocar/src/robocar_pkg/robocar_pkg/sim_map_grid_node.py >/tmp/smg.log 2>&1 & disown
 nohup ros2 run robocar_pkg trajectory_nav_node >/tmp/tn.log 2>&1 & disown   # modo RUTA (script antiguo, /cmd_vel en twist)
 sleep 4
-# publicar el mapa ANTES de Nav2 (el costmap estatico lo necesita)
-python3 /tmp/pub_room.py
-sleep 1
-echo "=== /map presente? ==="; timeout 5 ros2 topic echo --once /map --field info 2>&1 | grep -E 'width|height' | head -2
+# (sin mapa de arranque: la web empieza limpia; el usuario carga su mapa cuando quiere)
 # --- Nav2 ---
 nohup ros2 run nav2_planner planner_server --ros-args --params-file $CFG >/tmp/planner.log 2>&1 & disown
 nohup ros2 run nav2_controller controller_server --ros-args --params-file $CFG >/tmp/controller.log 2>&1 & disown
