@@ -87,7 +87,7 @@
   <div class="row" id="rowNav" style="display:none"><span class="lbl">Nav2</span>
     <button id="go" class="primary">▶ Ir a destino</button>
     <button id="navstop" class="danger">■ Parar</button>
-    <button id="togCost" class="tog on" title="Zonas donde NO puede ir el robot (costmap)">▨ no-go</button>
+    <button id="togCost" class="tog on" title="Zonas donde NO puede ir el robot (costmap de Nav2)">▨ no-go</button>
     <span class="lbl" style="min-width:0">pincha ◎ destino en zona despejada</span>
   </div>
   <div class="row" id="rowRuta"><span class="lbl">RUTA</span>
@@ -118,9 +118,7 @@ let PPM=45;                       // px/m (zoom); mas bajo = mas espacio
 let ox=W/2, oy=H*0.62;           // origen (robot) abajo-centro, con sitio detras
 const cv=$('#c'), g=cv.getContext('2d');
 let wps=[], walls=[], real=[], scanPts=[], carRel=null, temp=null, mapImg=null, costImg=null, goal=null, navPlan=[];
-let mode='obs', mapTool='rect', connected=false, showCost=true;   // por defecto MAPA·Nav2, muestra zonas no-go
-// el marco de la web ES el de odom (mapa): fijo, no depende de la pose al cargar -> robusto al recargar
-const odom0={x:0,y:0,yaw:0}, odom0_last={x:0,y:0,yaw:0};
+let mode='obs', mapTool='rect', connected=false, odom0=null, odom0_last=null, showCost=true;   // por defecto MAPA·Nav2
 
 function toM(px,py){ return {x:(oy-py)/PPM, y:(ox-px)/PPM}; }
 function toPx(m){ return {x:ox-m.y*PPM, y:oy-m.x*PPM}; }
@@ -134,7 +132,7 @@ function draw(){
   for(let m=Math.floor(br.y/GRID)*GRID; m<=tl.y; m+=GRID){ let p=toPx({x:0,y:m}); g.beginPath();g.moveTo(p.x,0);g.lineTo(p.x,H);g.stroke(); }
   for(let m=Math.floor(br.x/GRID)*GRID; m<=tl.x; m+=GRID){ let p=toPx({x:m,y:0}); g.beginPath();g.moveTo(0,p.y);g.lineTo(W,p.y);g.stroke();
     if(Math.abs(m%1)<0.01 && m!==0) g.fillText(m.toFixed(0)+'m',4,p.y-2); }
-  // /map + costmap (rejillas de ocupacion, por debajo del resto)
+  // /map + costmap (rejillas de ocupacion) por debajo del resto
   if(map){ drawGrid(mapImg); if(showCost) drawGrid(costImg); }
   if(map){   // laser + paredes: solo modo MAPA
   g.fillStyle='#4bd0d0'; scanPts.forEach(m=>{ let p=toPx(m); g.fillRect(p.x-1,p.y-1,2,2); });
@@ -165,8 +163,8 @@ function draw(){
   g.save(); g.translate(o.x,o.y); g.rotate(-cp.yaw); g.fillStyle='#e6ecf3';
   g.beginPath();g.moveTo(0,-10);g.lineTo(-7,7);g.lineTo(7,7);g.closePath();g.fill(); g.restore();
 }
-// dibuja una rejilla de ocupacion (mapImg/costImg) con afin celda->pantalla via odom0
-function drawGrid(gi){ if(!gi) return; const A=-odom0.yaw, ca=Math.cos(A), sa=Math.sin(A), res=gi.res, Hc=gi.H;
+// dibuja una rejilla de ocupacion (mapImg/costImg) con el mismo afin celda->pantalla via odom0
+function drawGrid(gi){ if(!gi || !odom0) return; const A=-odom0.yaw, ca=Math.cos(A), sa=Math.sin(A), res=gi.res, Hc=gi.H;
   const a=-PPM*res*sa, b=-PPM*res*ca, cc=PPM*res*ca, dd=-PPM*res*sa;
   const wx0=gi.ox+0.5*res, wy0=gi.oy+(Hc-0.5)*res, dx0=wx0-odom0.x, dy0=wy0-odom0.y;
   const rx0=dx0*ca-dy0*sa, ry0=dx0*sa+dy0*ca, e=ox-ry0*PPM, f=oy-rx0*PPM;
@@ -213,7 +211,7 @@ $('#mclear').onclick=()=>{ if(!connected){flash('Sin conexión');return;}
   send({op:'publish',topic:'/sim_map',msg:{data:JSON.stringify({segments:[]})}});     // limpia /map
   send({op:'publish',topic:'/nav2_relay/cancel',msg:{}});                              // cancela Nav2
   send({op:'publish',topic:'/set_pose',msg:{header:{frame_id:'odom'},pose:{pose:{position:{x:0,y:0,z:0},orientation:{x:0,y:0,z:0,w:1}},covariance:cov0()}}});  // robot al origen
-  walls=[];wps=[];scanPts=[];mapImg=null;costImg=null;goal=null;navPlan=[];real=[];carRel=null;
+  walls=[];wps=[];scanPts=[];mapImg=null;costImg=null;goal=null;navPlan=[];real=[];carRel=null;odom0=null;
   flash('Limpio — robot al origen. Carga un mapa nuevo'); draw(); };
 
 // ---- plantas de piso (mapas realistas con muebles) ----
@@ -319,8 +317,8 @@ function connect(){
     send({op:'subscribe',topic:'/odometry/filtered',type:'nav_msgs/msg/Odometry'});
     send({op:'subscribe',topic:'/scan',type:'sensor_msgs/msg/LaserScan'});
     send({op:'subscribe',topic:'/map',type:'nav_msgs/msg/OccupancyGrid'});
-    send({op:'subscribe',topic:'/plan',type:'nav_msgs/msg/Path'});
-    send({op:'subscribe',topic:'/global_costmap/costmap',type:'nav_msgs/msg/OccupancyGrid'}); };
+    send({op:'subscribe',topic:'/global_costmap/costmap',type:'nav_msgs/msg/OccupancyGrid'});
+    send({op:'subscribe',topic:'/plan',type:'nav_msgs/msg/Path'}); };
   ws.onclose=()=>{connected=false;setConn();setTimeout(connect,1500);};
   ws.onerror=()=>ws.close();
   ws.onmessage=ev=>{ const d=JSON.parse(ev.data); if(d.op!=='publish')return;
@@ -337,7 +335,16 @@ function setConn(){ const e=$('#conn'); e.textContent=connected?'conectado':'des
 function relPose(p,q){ const yaw=Math.atan2(2*(q.w*q.z+q.x*q.y),1-2*(q.y*q.y+q.z*q.z)); if(!odom0)return null;
   const dx=p.x-odom0.x,dy=p.y-odom0.y,c=Math.cos(-odom0.yaw),s=Math.sin(-odom0.yaw); return {x:dx*c-dy*s,y:dx*s+dy*c,yaw:yaw-odom0.yaw}; }
 function onOdom(m){ const p=m.pose.pose.position,q=m.pose.pose.orientation;
+  const yaw=Math.atan2(2*(q.w*q.z+q.x*q.y),1-2*(q.y*q.y+q.z*q.z)); odom0_last={x:p.x,y:p.y,yaw:yaw};
+  if(!odom0){ odom0={x:p.x,y:p.y,yaw:yaw}; real=[]; }
   const rp=relPose(p,q); if(rp){ carRel=rp; real.push({x:rp.x,y:rp.y}); if(real.length>4000)real.shift(); draw(); } }
+function onMap(m){ const W=m.info.width,H=m.info.height,res=m.info.resolution,d=m.data;
+  if(!W||!H) return; const oc=document.createElement('canvas'); oc.width=W; oc.height=H;
+  const g2=oc.getContext('2d'), img=g2.createImageData(W,H);
+  for(let r=0;r<H;r++)for(let c=0;c<W;c++){ if(d[r*W+c]>=50){
+    const idx=((H-1-r)*W+c)*4; img.data[idx]=110; img.data[idx+1]=140; img.data[idx+2]=170; img.data[idx+3]=150; } }
+  g2.putImageData(img,0,0);
+  mapImg={canvas:oc,ox:m.info.origin.position.x,oy:m.info.origin.position.y,res,W,H}; draw(); }
 function onCostmap(m){ if(!showCost){ costImg=null; return; } const W=m.info.width,H=m.info.height,res=m.info.resolution,d=m.data;
   if(!W||!H||W*H<=1){ costImg=null; return; } const oc=document.createElement('canvas'); oc.width=W; oc.height=H;
   const g2=oc.getContext('2d'), img=g2.createImageData(W,H);
@@ -347,13 +354,6 @@ function onCostmap(m){ if(!showCost){ costImg=null; return; } const W=m.info.wid
     else { img.data[i]=224; img.data[i+1]=200; img.data[i+2]=90; img.data[i+3]=45; } }           // margen (tenue)
   g2.putImageData(img,0,0);
   costImg={canvas:oc,ox:m.info.origin.position.x,oy:m.info.origin.position.y,res,W,H}; draw(); }
-function onMap(m){ const W=m.info.width,H=m.info.height,res=m.info.resolution,d=m.data;
-  if(!W||!H) return; const oc=document.createElement('canvas'); oc.width=W; oc.height=H;
-  const g2=oc.getContext('2d'), img=g2.createImageData(W,H);
-  for(let r=0;r<H;r++)for(let c=0;c<W;c++){ if(d[r*W+c]>=50){
-    const idx=((H-1-r)*W+c)*4; img.data[idx]=110; img.data[idx+1]=140; img.data[idx+2]=170; img.data[idx+3]=150; } }
-  g2.putImageData(img,0,0);
-  mapImg={canvas:oc,ox:m.info.origin.position.x,oy:m.info.origin.position.y,res,W,H}; draw(); }
 function onScan(m){ if(!carRel) return; const pts=[]; const n=m.ranges.length;
   for(let i=0;i<n;i+=2){ const r=m.ranges[i]; if(!isFinite(r)||r<=0.02)continue;
     const a=m.angle_min+i*m.angle_increment, lx=r*Math.cos(a), ly=r*Math.sin(a), c=Math.cos(carRel.yaw), s=Math.sin(carRel.yaw);
@@ -362,7 +362,7 @@ function onScan(m){ if(!carRel) return; const pts=[]; const n=m.ranges.length;
 function onPlan(m){ if(!odom0){navPlan=[];return;} const c=Math.cos(-odom0.yaw),s=Math.sin(-odom0.yaw), pts=[];
   (m.poses||[]).forEach(ps=>{ const px=ps.pose.position.x, py=ps.pose.position.y, dx=px-odom0.x, dy=py-odom0.y;
     pts.push({x:dx*c-dy*s, y:dx*s+dy*c}); }); navPlan=pts; draw(); }
-function ensureOrigin(){ return true; }   // el marco es fijo (odom); ya no hace falta capturar origen
+function ensureOrigin(){ if(!odom0){ if(!odom0_last){flash('Aún sin odometría');return false;} odom0={...odom0_last}; real=[]; } return true; }
 
 $('#sendmap').onclick=()=>{ if(!connected){flash('Sin conexión');return;} if(!walls.length){flash('Dibuja o carga un mapa');return;}
   if(!ensureOrigin())return; const segs=walls.map(w=>[w.x1,w.y1,w.x2,w.y2]);
@@ -383,8 +383,7 @@ $('#togCost').onclick=()=>{ showCost=!showCost; $('#togCost').classList.toggle('
 function cov0(){ const c=Array(36).fill(0); [0,7,14,21,28,35].forEach(i=>c[i]=0.01); return c; }
 $('#reset').onclick=()=>{ if(!connected){flash('Sin conexión');return;}
   send({op:'publish',topic:'/set_pose',msg:{header:{frame_id:'odom'},pose:{pose:{position:{x:0,y:0,z:0},orientation:{x:0,y:0,z:0,w:1}},covariance:cov0()}}});
-  send({op:'publish',topic:'/nav2_relay/cancel',msg:{}});
-  real=[]; navPlan=[]; carRel=null; flash('Robot al origen'); };
+  odom0=null; real=[]; scanPts=[]; carRel=null; mapImg=null; navPlan=[]; flash('Odometría a 0 — reenvía mapa y destino'); };
 let bt=null; function flash(t){ const b=$('#banner'); b.textContent=t; b.classList.add('show'); clearTimeout(bt); bt=setTimeout(()=>b.classList.remove('show'),2000); }
 connect();
 </script>
