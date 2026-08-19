@@ -7,7 +7,7 @@ CFG=~/robocar/src/robocar_pkg/config/nav2_bench.yaml
 pgrep -f rosbridge_websocket >/dev/null || ( nohup ros2 launch rosbridge_server rosbridge_websocket_launch.xml >/tmp/rosbridge.log 2>&1 & )
 pgrep -f "http.server 8080" >/dev/null || ( cd ~/robocar/tools/car-panel/static; nohup python3 -m http.server 8080 >/tmp/panel.log 2>&1 & )
 # limpiar todo lo que pueda chocar
-for n in bt_navigator controller_server planner_server behavior_server lifecycle_manager waypoint_follower velocity_smoother smoother_server trajectory_nav sim_map_grid sim_sensors sim_motion ekf_node ekf_filter ekf.launch car_control_node encoder_node accelerometer_node steer_yaw_node robot_state_publisher; do pkill -9 -f "$n" 2>/dev/null; done
+for n in bt_navigator controller_server planner_server behavior_server lifecycle_manager waypoint_follower velocity_smoother smoother_server goal_relay trajectory_nav sim_map_grid sim_sensors sim_motion ekf_node ekf_filter ekf.launch car_control_node encoder_node accelerometer_node steer_yaw_node robot_state_publisher; do pkill -9 -f "$n" 2>/dev/null; done
 sleep 3
 # --- banco (planta simulada) ---
 nohup ros2 launch robocar_description description.launch.py >/tmp/desc.log 2>&1 & disown
@@ -15,6 +15,7 @@ sleep 2
 nohup python3 ~/robocar/src/robocar_pkg/robocar_pkg/sim_motion_node.py --ros-args -p cmd_mode:=twist >/tmp/sm.log 2>&1 & disown
 nohup ros2 run robocar_pkg sim_sensors_node >/tmp/ss.log 2>&1 & disown
 nohup python3 ~/robocar/src/robocar_pkg/robocar_pkg/sim_map_grid_node.py >/tmp/smg.log 2>&1 & disown
+nohup ros2 run robocar_pkg trajectory_nav_node >/tmp/tn.log 2>&1 & disown   # modo RUTA (script antiguo, /cmd_vel en twist)
 sleep 4
 # publicar el mapa ANTES de Nav2 (el costmap estatico lo necesita)
 python3 /tmp/pub_room.py
@@ -27,7 +28,10 @@ nohup ros2 run nav2_behaviors behavior_server --ros-args --params-file $CFG >/tm
 nohup ros2 run nav2_bt_navigator bt_navigator --ros-args --params-file $CFG >/tmp/btnav.log 2>&1 & disown
 sleep 4
 nohup ros2 run nav2_lifecycle_manager lifecycle_manager --ros-args -r __node:=lifecycle_manager_navigation --params-file $CFG >/tmp/lifecycle.log 2>&1 & disown
-sleep 10
-echo "=== nodos Nav2 ==="; ros2 node list 2>/dev/null | grep -iE 'planner|controller|behavior|bt_nav|lifecycle' | sort
+sleep 12
+# relay del destino: /goal_pose (web) -> accion NavigateToPose (Nav2)
+nohup python3 ~/robocar/src/robocar_pkg/robocar_pkg/goal_relay_node.py >/tmp/gr.log 2>&1 & disown
+sleep 2
+echo "=== nodos Nav2 ==="; ros2 node list 2>/dev/null | grep -iE 'planner|controller|behavior|bt_nav|lifecycle|goal_relay|trajectory' | sort
 echo "=== estado lifecycle ==="
 for s in planner_server controller_server behavior_server bt_navigator; do echo -n "$s: "; timeout 5 ros2 lifecycle get /$s 2>/dev/null || echo "no responde"; done

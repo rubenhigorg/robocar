@@ -24,6 +24,12 @@ class TrajectoryNav(Node):
         super().__init__('trajectory_nav')
         self.declare_parameter('drive_speed', 0.20)
         self.declare_parameter('max_angular', 0.4)
+        # salida /cmd_vel en convencion ESTANDAR (twist): angular.z = velocidad de giro (rad/s),
+        # para que sim_motion (modo twist) y Nav2 compartan la misma interpretacion. La logica
+        # interna sigue en "mando de direccion normalizado"; _pub() convierte al publicar.
+        self.declare_parameter('output_twist', True)
+        self.declare_parameter('wheelbase', 0.175)
+        self.declare_parameter('tan_max', 0.188)
         self.declare_parameter('kp_heading', 1.5)
         self.declare_parameter('goal_tol', 0.20)
         self.declare_parameter('slow_cm', 70.0)
@@ -92,6 +98,15 @@ class TrajectoryNav(Node):
 
     # ---------- helpers ----------
     def _pub(self, lin, ang):
+        # ang llega como mando de direccion normalizado (+-max_angular = tope). Si output_twist,
+        # se convierte a velocidad de giro real yaw_rate = v*tan_max*(ang/max_angular)/L, que es
+        # como lo entiende sim_motion en modo twist (y Nav2). Movimiento identico al de antes.
+        if self.get_parameter('output_twist').value:
+            L = self.get_parameter('wheelbase').value
+            tmax = self.get_parameter('tan_max').value
+            maxa = self.get_parameter('max_angular').value
+            ratio = (ang / maxa) if maxa > 0 else 0.0
+            ang = lin * tmax * ratio / L
         t = Twist(); t.linear.x = float(lin); t.angular.z = float(ang); self.pub.publish(t)
 
     def _now_s(self):
