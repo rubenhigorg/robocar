@@ -13,7 +13,7 @@ sleep 2
 nohup ros2 launch robocar_description description.launch.py >/tmp/desc.log 2>&1 & disown
 sleep 2
 nohup python3 ~/robocar/src/robocar_pkg/robocar_pkg/sim_motion_node.py --ros-args -p cmd_mode:=twist >/tmp/sm.log 2>&1 & disown
-nohup ros2 run robocar_pkg sim_sensors_node >/tmp/ss.log 2>&1 & disown
+nohup python3 ~/robocar/src/robocar_pkg/robocar_pkg/sim_sensors_node.py >/tmp/ss.log 2>&1 & disown   # src parcheado (obstaculos)
 nohup python3 ~/robocar/src/robocar_pkg/robocar_pkg/sim_map_grid_node.py >/tmp/smg.log 2>&1 & disown
 nohup ros2 run robocar_pkg trajectory_nav_node >/tmp/tn.log 2>&1 & disown   # modo RUTA (script antiguo, /cmd_vel en twist)
 sleep 4

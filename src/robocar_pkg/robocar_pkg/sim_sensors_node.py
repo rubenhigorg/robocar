@@ -38,12 +38,14 @@ class SimSensors(Node):
         self.declare_parameter('emergency_cm', 15.0)     # IR: objeto muy cerca
         self.declare_parameter('scan_frame', 'base_link')
 
-        self.segs = []      # segmentos en frame ODOM [(ax,ay,bx,by),...]
+        self.segs = []      # segmentos-pared en frame ODOM [(ax,ay,bx,by),...]
+        self.obs = []       # obstaculos dinamicos (NO van al /map, solo al /scan)
         self.pose = None
         self.pub_us = self.create_publisher(Distance, '/ultrasound_data', 10)
         self.pub_scan = self.create_publisher(LaserScan, '/scan', 10)
         self.create_subscription(Odometry, '/odometry/filtered', self.ocb, 20)
         self.create_subscription(String, '/sim_map', self.mcb, 10)
+        self.create_subscription(String, '/sim_obstacles', self.obcb, 10)
         rate = self.get_parameter('rate_hz').value
         self.create_timer(1.0/rate, self.tick)
         self.get_logger().info('sim_sensors listo (mapa por /sim_map, publica /ultrasound_data + /scan)')
@@ -73,10 +75,24 @@ class SimSensors(Node):
             self.segs.append((ax, ay, bx, by))
         self.get_logger().info('MAPA recibido: %d paredes.' % len(self.segs))
 
+    def obcb(self, msg):
+        # obstaculos dinamicos: mismo formato/transform que el mapa, pero solo afectan al /scan
+        if self.pose is None:
+            return
+        try:
+            rel = json.loads(msg.data).get('segments', [])
+        except Exception:
+            return
+        x0, y0, yaw0 = self.pose
+        c, s = math.cos(yaw0), math.sin(yaw0)
+        self.obs = [(x0 + q[0]*c - q[1]*s, y0 + q[0]*s + q[1]*c,
+                     x0 + q[2]*c - q[3]*s, y0 + q[2]*s + q[3]*c) for q in rel]
+        self.get_logger().info('OBSTACULOS: %d' % len(self.obs))
+
     def cast(self, px, py, ang, maxd):
         dx, dy = math.cos(ang), math.sin(ang)
         best = maxd
-        for (ax, ay, bx, by) in self.segs:
+        for (ax, ay, bx, by) in self.segs + self.obs:
             t = ray_seg(px, py, dx, dy, ax, ay, bx, by)
             if t is not None and t < best:
                 best = t

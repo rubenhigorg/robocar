@@ -74,14 +74,14 @@
   <div class="legend">
     <span>▲ robot</span><span style="color:var(--accent)">● wp</span><span style="color:var(--ok)">─ ruta manual</span>
     <span style="color:var(--warn)">─ real</span><span style="color:var(--wall)">▬ pared</span>
-    <span style="color:#4bd0d0">· láser</span><span style="color:#6e8cae">▨ /map</span>
+    <span style="color:#4bd0d0">· láser</span><span style="color:#6e8cae">▨ /map</span><span style="color:#ff8c42">▧ obstáculo</span>
     <span style="color:var(--nav)">─ ruta Nav2</span><span style="color:var(--goal)">◎ destino</span><span style="color:var(--bad)">▨ no-go</span>
     <span id="coords" style="margin-left:auto;color:var(--faint)"></span>
   </div>
 
   <div class="row" id="rowMapa" style="display:none"><span class="lbl">MAPA</span>
     <select id="planta" title="Cargar planta de piso con muebles"><option value="">🏠 Plantas…</option><option value="0">Piso 100 m² · 2 dorm</option><option value="1">Piso 130 m² · 3 dorm</option><option value="2">Piso 160 m² · 4 hab</option><option value="3">Ático 200 m² · 4 hab</option></select>
-    <span class="seg" id="mtool"><button data-t="rect" class="act">▭ habitación</button><button data-t="wall">─ pared</button><button data-t="goal">◎ destino</button></span>
+    <span class="seg" id="mtool"><button data-t="rect" class="act">▭ habitación</button><button data-t="wall">─ pared</button><button data-t="obst">▧ obstáculo</button><button data-t="goal">◎ destino</button></span>
     <button id="mundo">↶</button><button id="mclear">limpiar</button>
     <button id="sendmap" class="map">▦ Enviar mapa</button>
   </div>
@@ -125,7 +125,7 @@ const GRID=0.5, W=1000, H=720;
 let PPM=45;                       // px/m (zoom); mas bajo = mas espacio
 let ox=W/2, oy=H*0.62;           // origen (robot) abajo-centro, con sitio detras
 const cv=$('#c'), g=cv.getContext('2d');
-let wps=[], walls=[], real=[], scanPts=[], carRel=null, temp=null, mapImg=null, costImg=null, goal=null, navPlan=[];
+let wps=[], walls=[], obstacles=[], real=[], scanPts=[], carRel=null, temp=null, mapImg=null, costImg=null, goal=null, navPlan=[];
 let mode='obs', mapTool='rect', connected=false, odom0=null, odom0_last=null, showCost=true, navCfg=null;   // por defecto MAPA·Nav2
 
 function toM(px,py){ return {x:(oy-py)/PPM, y:(ox-px)/PPM}; }
@@ -146,10 +146,16 @@ function draw(){
   g.fillStyle='#4bd0d0'; scanPts.forEach(m=>{ let p=toPx(m); g.fillRect(p.x-1,p.y-1,2,2); });
   g.strokeStyle='#c05a5a'; g.lineWidth=3.5; g.lineCap='round';
   walls.forEach(w=>{ let a=toPx({x:w.x1,y:w.y1}),b=toPx({x:w.x2,y:w.y2}); g.beginPath();g.moveTo(a.x,a.y);g.lineTo(b.x,b.y);g.stroke(); });
-  if(temp){ g.strokeStyle='#e0a24a'; let a=toPx({x:temp.x1,y:temp.y1}),b=toPx({x:temp.x2,y:temp.y2});
-    if(mapTool==='rect') g.strokeRect(Math.min(a.x,b.x),Math.min(a.y,b.y),Math.abs(b.x-a.x),Math.abs(b.y-a.y));
+  g.lineCap='butt';
+  // obstaculos dinamicos (bloques naranjas, NO en el mapa; el laser los ve)
+  obstacles.forEach(o=>{ let a=toPx({x:o.x1,y:o.y1}),b=toPx({x:o.x2,y:o.y2});
+    let X=Math.min(a.x,b.x),Y=Math.min(a.y,b.y),Wd=Math.abs(b.x-a.x),Hd=Math.abs(b.y-a.y);
+    g.fillStyle='rgba(255,140,66,.45)'; g.fillRect(X,Y,Wd,Hd); g.strokeStyle='#ff8c42'; g.lineWidth=2; g.strokeRect(X,Y,Wd,Hd); });
+  if(temp){ let a=toPx({x:temp.x1,y:temp.y1}),b=toPx({x:temp.x2,y:temp.y2});
+    g.strokeStyle=(mapTool==='obst')?'#ff8c42':'#e0a24a'; g.lineWidth=2;
+    if(mapTool==='rect'||mapTool==='obst') g.strokeRect(Math.min(a.x,b.x),Math.min(a.y,b.y),Math.abs(b.x-a.x),Math.abs(b.y-a.y));
     else { g.beginPath();g.moveTo(a.x,a.y);g.lineTo(b.x,b.y);g.stroke(); } }
-  g.lineCap='butt'; }
+  }
   // real
   if(real.length>1){ g.strokeStyle='#e0a24a'; g.lineWidth=2.5; g.beginPath(); real.forEach((m,i)=>{let p=toPx(m);i?g.lineTo(p.x,p.y):g.moveTo(p.x,p.y);}); g.stroke(); }
   // ruta manual (waypoints) — solo modo RUTA
@@ -190,7 +196,8 @@ cv.addEventListener('pointermove', e=>{ const p=evPx(e), m=toM(p.x,p.y); $('#coo
   if(mode==='obs'&&temp){ temp.x2=+m.x.toFixed(2); temp.y2=+m.y.toFixed(2); draw(); } });
 function endWall(){ if(mode==='obs'&&temp){
     const {x1,y1,x2,y2}=temp;
-    if(mapTool==='rect'){ if(Math.abs(x2-x1)>0.1&&Math.abs(y2-y1)>0.1)
+    if(mapTool==='obst'){ if(Math.abs(x2-x1)>0.05&&Math.abs(y2-y1)>0.05){ obstacles.push({x1,y1,x2,y2}); sendObstacles(); } }
+    else if(mapTool==='rect'){ if(Math.abs(x2-x1)>0.1&&Math.abs(y2-y1)>0.1)
         walls.push({x1,y1,x2,y2:y1},{x1:x2,y1,x2,y2},{x1:x2,y1:y2,x2:x1,y2},{x1,y1:y2,x2:x1,y2:y1}); }
     else { if(Math.hypot(x2-x1,y2-y1)>0.05) walls.push({x1,y1,x2,y2}); }
     temp=null; draw(); } }
@@ -201,7 +208,7 @@ function updateMode(){ const map=mode==='obs';
   $('#rowMapa').style.display = map?'flex':'none';
   $('#rowNav').style.display  = map?'flex':'none';
   $('#hint').innerHTML = map
-    ? '<b>MAPA · Nav2</b>: carga/dibuja el mapa y «Enviar mapa». Con <b>◎ destino</b> pincha un punto y pulsa «Ir a destino»: Nav2 traza la ruta (morada punteada) y conduce.'
+    ? '<b>MAPA · Nav2</b>: carga/dibuja el mapa y «Enviar mapa». Con <b>▧ obstáculo</b> pintas cosas que NO están en el mapa (el láser las ve y Nav2 las esquiva). Con <b>◎ destino</b> pincha un punto y «Ir a destino».'
     : '<b>RUTA · aproximación</b>: pincha waypoints (o cuadrado/línea) y «Enviar ruta»: el script antiguo los sigue esquivando. Rejilla 0.5 m.'; }
 $('#mode').addEventListener('click', e=>{ const b=e.target.closest('button'); if(!b)return; mode=b.dataset.m;
   $('#mode').querySelectorAll('button').forEach(x=>x.classList.toggle('act',x===b)); updateMode(); draw(); });
@@ -213,13 +220,17 @@ $('#zin').onclick=()=>setZoom(PPM*1.3); $('#zout').onclick=()=>setZoom(PPM/1.3);
 $('#undo').onclick=()=>{wps.pop();draw();}; $('#clear').onclick=()=>{wps=[];real=[];draw();};
 $('#sq').onclick=()=>{wps=[{x:0.8,y:0},{x:0.8,y:0.8},{x:0,y:0.8},{x:0,y:0}];draw();};
 $('#ln').onclick=()=>{wps=[{x:1.5,y:0}];draw();};
-$('#mundo').onclick=()=>{walls.splice(-4);draw();};
+$('#mundo').onclick=()=>{ if(mapTool==='obst'){ obstacles.pop(); sendObstacles(); } else walls.splice(-4); draw(); };
+function sendObstacles(){ if(!connected)return; const segs=[];
+  obstacles.forEach(o=>{ segs.push([o.x1,o.y1,o.x2,o.y1],[o.x2,o.y1,o.x2,o.y2],[o.x2,o.y2,o.x1,o.y2],[o.x1,o.y2,o.x1,o.y1]); });
+  send({op:'publish',topic:'/sim_obstacles',msg:{data:JSON.stringify({segments:segs})}}); }
 // "limpiar" = EMPEZAR DE NUEVO: borra el mapa, cancela Nav2 y devuelve el robot al origen.
 $('#mclear').onclick=()=>{ if(!connected){flash('Sin conexión');return;}
   send({op:'publish',topic:'/sim_map',msg:{data:JSON.stringify({segments:[]})}});     // limpia /map
   send({op:'publish',topic:'/nav2_relay/cancel',msg:{}});                              // cancela Nav2
   send({op:'publish',topic:'/set_pose',msg:{header:{frame_id:'odom'},pose:{pose:{position:{x:0,y:0,z:0},orientation:{x:0,y:0,z:0,w:1}},covariance:cov0()}}});  // robot al origen
-  walls=[];wps=[];scanPts=[];mapImg=null;costImg=null;goal=null;navPlan=[];real=[];carRel=null;odom0=null;
+  send({op:'publish',topic:'/sim_obstacles',msg:{data:JSON.stringify({segments:[]})}});   // limpia obstaculos
+  walls=[];wps=[];obstacles=[];scanPts=[];mapImg=null;costImg=null;goal=null;navPlan=[];real=[];carRel=null;odom0=null;
   flash('Limpio — robot al origen. Carga un mapa nuevo'); draw(); };
 
 // ---- plantas de piso (mapas realistas con muebles) ----
@@ -340,6 +351,7 @@ function connect(){
   ws.onopen=()=>{ connected=true; setConn();
     send({op:'advertise',topic:'/plan_waypoints',type:'geometry_msgs/msg/PoseArray'});
     send({op:'advertise',topic:'/sim_map',type:'std_msgs/msg/String'});
+    send({op:'advertise',topic:'/sim_obstacles',type:'std_msgs/msg/String'});
     send({op:'advertise',topic:'/set_pose',type:'geometry_msgs/msg/PoseWithCovarianceStamped'});
     send({op:'advertise',topic:'/goal_pose',type:'geometry_msgs/msg/PoseStamped'});
     send({op:'advertise',topic:'/nav2_relay/cancel',type:'std_msgs/msg/Empty'});
