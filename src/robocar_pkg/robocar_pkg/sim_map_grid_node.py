@@ -117,13 +117,7 @@ class SimMapGrid(Node):
             og.data = [0]
             self.grid = og; self.publish_grid()
             self.get_logger().info('/map limpiado (mapa vacio recibido)'); return
-        x0, y0, yaw0 = self.pose
-        c, s = math.cos(yaw0), math.sin(yaw0)
-        segs = []
-        for seg in rel:
-            ax = x0 + seg[0] * c - seg[1] * s; ay = y0 + seg[0] * s + seg[1] * c
-            bx = x0 + seg[2] * c - seg[3] * s; by = y0 + seg[2] * s + seg[3] * c
-            segs.append((ax, ay, bx, by))
+        segs = [(seg[0], seg[1], seg[2], seg[3]) for seg in rel]  # ya en odom (identidad)
         res = self.get_parameter('resolution').value
         margin = self.get_parameter('margin').value
         wc = self.get_parameter('wall_cells').value
