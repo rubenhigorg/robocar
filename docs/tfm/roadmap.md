@@ -137,9 +137,11 @@ flowchart TB
    la **capa estática del _costmap_** de Nav2 con el mismo mapa de banco. Pintado también en la web.
 2. Exponer el objetivo como **`NavigateToPose` / `/goal_pose`** (además de `/plan_waypoints`),
    que es lo que emitirá el MCP/LLM de la Capa 3.
-3. Cerrar el **árbol TF** que espera Nav2: `map→odom` (**ya emitido** por `sim_map_grid` como
-   identidad estática en banco; en real lo dará AMCL/SLAM), `odom→base_link` (odometría, ✅) y
-   `base_link→laser` (pendiente de comprobar en el URDF).
+3. ✅ **HECHO** — Cerrar el **árbol TF** que espera Nav2: `map→odom` (emitido por `sim_map_grid`
+   como identidad estática en banco; en real AMCL/SLAM), `odom→base_link` (odometría) y
+   `base_link→laser` (URDF, `[0.070,0,0.028]`+180°). Se corrigió un árbol partido: `base_footprint`
+   era padre de `base_link` chocando con `odom→base_link` → invertida la junta (base_link raíz).
+   Árbol único `map→odom→base_link→{base_footprint,laser,imu,...}` verificado.
 4. Con esas tres piezas, el `trajectory_nav_node` se **sustituye por Nav2** (BT Navigator +
    planner + TEB) **sin tocar** ni la web, ni `sim_sensors`, ni `sim_motion`. Ese es el criterio
    de "banco bien hecho". Recordatorio de reparto: **Nav2 hace la ruta** (planner global sobre el
@@ -147,8 +149,10 @@ flowchart TB
    dibujamos a mano en la web con `trajectory_nav`, que es el andamio a retirar.
 
 > **Estado del banco (sim puro):** ✅ `sim_motion` (planta cinemática), ✅ `/scan` (sim_sensors),
-> ✅ `/map` + TF `map→odom` (sim_map_grid), ✅ TF `odom→base_link` (sim_motion). **Falta** para
-> Nav2: comprobar `base_link→laser` en el URDF, exponer `/goal_pose`, e instalar+configurar Nav2.
+> ✅ `/map` + TF `map→odom` (sim_map_grid), ✅ TF `odom→base_link` (sim_motion), ✅ árbol TF único
+> `map→odom→base_link→laser`. **Falta** para Nav2: (a) `/scan` en frame `laser` (hoy `sim_sensors`
+> lo publica en `base_link`; para fidelidad total, casterar desde la pose del laser), (b) exponer
+> `/goal_pose`, (c) instalar+configurar Nav2 (params Ackermann + TEB + costmaps).
 
 ## Decisiones de diseño
 
