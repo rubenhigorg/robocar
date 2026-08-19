@@ -108,6 +108,15 @@ class SimMapGrid(Node):
             rel = json.loads(msg.data).get('segments', [])
         except Exception as e:
             self.get_logger().warn('mapa JSON invalido: %s' % e); return
+        if not rel:
+            # mapa vacio -> LIMPIAR /map (rejilla 1x1 libre): borra la web y el costmap,
+            # y deja de republicar el mapa viejo.
+            og = OccupancyGrid(); og.header.frame_id = self.get_parameter('map_frame').value
+            og.info.resolution = float(self.get_parameter('resolution').value)
+            og.info.width = 1; og.info.height = 1; og.info.origin.orientation.w = 1.0
+            og.data = [0]
+            self.grid = og; self.publish_grid()
+            self.get_logger().info('/map limpiado (mapa vacio recibido)'); return
         x0, y0, yaw0 = self.pose
         c, s = math.cos(yaw0), math.sin(yaw0)
         segs = []
