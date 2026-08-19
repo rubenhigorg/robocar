@@ -55,12 +55,12 @@
     <h1>Robocar · Ruta y Mapa</h1>
     <span class="conn off" id="conn">desconectado</span>
   </div>
-  <p class="sub"><b>RUTA</b> (aproximación): dibujas los waypoints y el <b>script antiguo</b> los sigue. <b>MAPA · Nav2</b>: cargas el mapa, marcas un <b>destino</b> y <b>Nav2</b> planifica la ruta y conduce. Botón <b>ⓘ nodos</b> = ver el cableado de cada modo.</p>
+  <p class="sub"><b>MAPA · Nav2</b> (por defecto): cargas el mapa, marcas un <b>destino</b> y <b>Nav2</b> planifica y conduce. <b>RUTA</b>: modo aparte para dibujar waypoints que sigue el <b>script antiguo</b>. Son <b>independientes</b>. Botón <b>ⓘ nodos</b> = ver el cableado.</p>
 
   <div class="row">
     <span class="seg" id="mode">
-      <button data-m="wp" class="act">◦ RUTA</button>
-      <button data-m="obs">▦ MAPA · Nav2</button>
+      <button data-m="obs" class="act">▦ MAPA · Nav2</button>
+      <button data-m="wp">◦ RUTA</button>
     </span>
     <button id="graph" title="Ver nodos y topics de este modo">ⓘ nodos</button>
     <span class="lbl" style="margin-left:auto">zoom</span>
@@ -116,7 +116,7 @@ let PPM=45;                       // px/m (zoom); mas bajo = mas espacio
 let ox=W/2, oy=H*0.62;           // origen (robot) abajo-centro, con sitio detras
 const cv=$('#c'), g=cv.getContext('2d');
 let wps=[], walls=[], real=[], scanPts=[], carRel=null, temp=null, mapImg=null, goal=null, navPlan=[];
-let mode='wp', mapTool='rect', connected=false, odom0=null, odom0_last=null;
+let mode='obs', mapTool='rect', connected=false, odom0=null, odom0_last=null;   // por defecto MAPA·Nav2
 
 function toM(px,py){ return {x:(oy-py)/PPM, y:(ox-px)/PPM}; }
 function toPx(m){ return {x:ox-m.y*PPM, y:oy-m.x*PPM}; }
@@ -124,38 +124,40 @@ function setZoom(v){ PPM=Math.max(20,Math.min(140,v)); $('#zlbl').textContent=(W
 
 function draw(){
   g.clearRect(0,0,W,H);
+  const map=mode==='obs';   // capas independientes: MAPA/Nav2 vs RUTA
   const tl=toM(0,0), br=toM(W,H);
   g.strokeStyle='#1e2a38'; g.lineWidth=1; g.font='10px monospace'; g.fillStyle='#3a4a5a';
   for(let m=Math.floor(br.y/GRID)*GRID; m<=tl.y; m+=GRID){ let p=toPx({x:0,y:m}); g.beginPath();g.moveTo(p.x,0);g.lineTo(p.x,H);g.stroke(); }
   for(let m=Math.floor(br.x/GRID)*GRID; m<=tl.x; m+=GRID){ let p=toPx({x:m,y:0}); g.beginPath();g.moveTo(0,p.y);g.lineTo(W,p.y);g.stroke();
     if(Math.abs(m%1)<0.01 && m!==0) g.fillText(m.toFixed(0)+'m',4,p.y-2); }
   // /map (OccupancyGrid) por debajo del resto — afin celda->pantalla via odom0
-  if(mapImg && odom0){ const A=-odom0.yaw, ca=Math.cos(A), sa=Math.sin(A), res=mapImg.res, Hc=mapImg.H;
+  if(map && mapImg && odom0){ const A=-odom0.yaw, ca=Math.cos(A), sa=Math.sin(A), res=mapImg.res, Hc=mapImg.H;
     const a=-PPM*res*sa, b=-PPM*res*ca, cc=PPM*res*ca, dd=-PPM*res*sa;
     const wx0=mapImg.ox+0.5*res, wy0=mapImg.oy+(Hc-0.5)*res, dx0=wx0-odom0.x, dy0=wy0-odom0.y;
     const rx0=dx0*ca-dy0*sa, ry0=dx0*sa+dy0*ca, e=ox-ry0*PPM, f=oy-rx0*PPM;
     g.save(); g.imageSmoothingEnabled=false; g.setTransform(a,b,cc,dd,e,f); g.drawImage(mapImg.canvas,0,0); g.restore(); }
-  // laser
+  if(map){   // laser + paredes: solo modo MAPA
   g.fillStyle='#4bd0d0'; scanPts.forEach(m=>{ let p=toPx(m); g.fillRect(p.x-1,p.y-1,2,2); });
-  // paredes
   g.strokeStyle='#c05a5a'; g.lineWidth=3.5; g.lineCap='round';
   walls.forEach(w=>{ let a=toPx({x:w.x1,y:w.y1}),b=toPx({x:w.x2,y:w.y2}); g.beginPath();g.moveTo(a.x,a.y);g.lineTo(b.x,b.y);g.stroke(); });
   if(temp){ g.strokeStyle='#e0a24a'; let a=toPx({x:temp.x1,y:temp.y1}),b=toPx({x:temp.x2,y:temp.y2});
     if(mapTool==='rect') g.strokeRect(Math.min(a.x,b.x),Math.min(a.y,b.y),Math.abs(b.x-a.x),Math.abs(b.y-a.y));
     else { g.beginPath();g.moveTo(a.x,a.y);g.lineTo(b.x,b.y);g.stroke(); } }
-  g.lineCap='butt';
+  g.lineCap='butt'; }
   // real
   if(real.length>1){ g.strokeStyle='#e0a24a'; g.lineWidth=2.5; g.beginPath(); real.forEach((m,i)=>{let p=toPx(m);i?g.lineTo(p.x,p.y):g.moveTo(p.x,p.y);}); g.stroke(); }
-  // ruta manual (waypoints)
-  if(wps.length){ g.strokeStyle='#2fae6a'; g.lineWidth=2; g.beginPath(); let o=toPx({x:0,y:0}); g.moveTo(o.x,o.y); wps.forEach(m=>{let p=toPx(m);g.lineTo(p.x,p.y);}); g.stroke(); }
-  wps.forEach((m,i)=>{ let p=toPx(m); g.fillStyle='#5b9bea'; g.beginPath();g.arc(p.x,p.y,7,0,7);g.fill();
-    g.fillStyle='#08131f';g.font='bold 10px monospace';g.textAlign='center';g.textBaseline='middle';g.fillText(i+1,p.x,p.y); });
-  g.textAlign='start';g.textBaseline='alphabetic';
-  // ruta calculada por Nav2 (/plan)
-  if(navPlan.length>1){ g.strokeStyle='#b483e6'; g.lineWidth=2.5; g.setLineDash([6,4]); g.beginPath();
+  // ruta manual (waypoints) — solo modo RUTA
+  if(!map){
+    if(wps.length){ g.strokeStyle='#2fae6a'; g.lineWidth=2; g.beginPath(); let o=toPx({x:0,y:0}); g.moveTo(o.x,o.y); wps.forEach(m=>{let p=toPx(m);g.lineTo(p.x,p.y);}); g.stroke(); }
+    wps.forEach((m,i)=>{ let p=toPx(m); g.fillStyle='#5b9bea'; g.beginPath();g.arc(p.x,p.y,7,0,7);g.fill();
+      g.fillStyle='#08131f';g.font='bold 10px monospace';g.textAlign='center';g.textBaseline='middle';g.fillText(i+1,p.x,p.y); });
+    g.textAlign='start';g.textBaseline='alphabetic';
+  }
+  // ruta calculada por Nav2 (/plan) — solo modo MAPA
+  if(map && navPlan.length>1){ g.strokeStyle='#b483e6'; g.lineWidth=2.5; g.setLineDash([6,4]); g.beginPath();
     navPlan.forEach((m,i)=>{let p=toPx(m);i?g.lineTo(p.x,p.y):g.moveTo(p.x,p.y);}); g.stroke(); g.setLineDash([]); }
-  // destino Nav2 (goal)
-  if(goal){ let p=toPx(goal); g.strokeStyle='#ffcf4a'; g.fillStyle='rgba(255,207,74,.22)'; g.lineWidth=2;
+  // destino Nav2 (goal) — solo modo MAPA
+  if(map && goal){ let p=toPx(goal); g.strokeStyle='#ffcf4a'; g.fillStyle='rgba(255,207,74,.22)'; g.lineWidth=2;
     g.beginPath();g.arc(p.x,p.y,9,0,7);g.fill();g.stroke();
     g.beginPath();g.moveTo(p.x-12,p.y);g.lineTo(p.x+12,p.y);g.moveTo(p.x,p.y-12);g.lineTo(p.x,p.y+12);g.stroke(); }
   // coche
@@ -190,7 +192,7 @@ function updateMode(){ const map=mode==='obs';
     ? '<b>MAPA · Nav2</b>: carga/dibuja el mapa y «Enviar mapa». Con <b>◎ destino</b> pincha un punto y pulsa «Ir a destino»: Nav2 traza la ruta (morada punteada) y conduce.'
     : '<b>RUTA · aproximación</b>: pincha waypoints (o cuadrado/línea) y «Enviar ruta»: el script antiguo los sigue esquivando. Rejilla 0.5 m.'; }
 $('#mode').addEventListener('click', e=>{ const b=e.target.closest('button'); if(!b)return; mode=b.dataset.m;
-  $('#mode').querySelectorAll('button').forEach(x=>x.classList.toggle('act',x===b)); updateMode(); });
+  $('#mode').querySelectorAll('button').forEach(x=>x.classList.toggle('act',x===b)); updateMode(); draw(); });
 updateMode();
 $('#mtool').addEventListener('click', e=>{ const b=e.target.closest('button'); if(!b)return; mapTool=b.dataset.t;
   cv.style.cursor = mapTool==='goal' ? 'pointer' : 'crosshair';
@@ -200,9 +202,13 @@ $('#undo').onclick=()=>{wps.pop();draw();}; $('#clear').onclick=()=>{wps=[];real
 $('#sq').onclick=()=>{wps=[{x:0.8,y:0},{x:0.8,y:0.8},{x:0,y:0.8},{x:0,y:0}];draw();};
 $('#ln').onclick=()=>{wps=[{x:1.5,y:0}];draw();};
 $('#mundo').onclick=()=>{walls.splice(-4);draw();};
-$('#mclear').onclick=()=>{ walls=[];scanPts=[];mapImg=null;goal=null;navPlan=[];
-  if(connected) send({op:'publish',topic:'/sim_map',msg:{data:JSON.stringify({segments:[]})}});   // limpia /map en el nodo
-  draw(); };
+// "limpiar" = EMPEZAR DE NUEVO: borra el mapa, cancela Nav2 y devuelve el robot al origen.
+$('#mclear').onclick=()=>{ if(!connected){flash('Sin conexión');return;}
+  send({op:'publish',topic:'/sim_map',msg:{data:JSON.stringify({segments:[]})}});     // limpia /map
+  send({op:'publish',topic:'/nav2_relay/cancel',msg:{}});                              // cancela Nav2
+  send({op:'publish',topic:'/set_pose',msg:{header:{frame_id:'odom'},pose:{pose:{position:{x:0,y:0,z:0},orientation:{x:0,y:0,z:0,w:1}},covariance:cov0()}}});  // robot al origen
+  walls=[];wps=[];scanPts=[];mapImg=null;goal=null;navPlan=[];real=[];carRel=null;odom0=null;
+  flash('Limpio — robot al origen. Carga un mapa nuevo'); draw(); };
 
 // ---- plantas de piso (mapas realistas con muebles) ----
 // frame del coche: x adelante, y izquierda; entrada al sur (x menor), robot en el origen.
