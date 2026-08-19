@@ -1,0 +1,22 @@
+<!--
+  Arbol de comportamiento para el banco: replanifica y sigue, pero SIN recuperaciones
+  que muevan el robot (nada de spin ni backup). Si no encuentra ruta, solo ESPERA y
+  reintenta; asi el coche NO se sale del mapa retrocediendo cuando el destino es
+  inalcanzable. Tras unos reintentos, aborta limpiamente (robot quieto).
+-->
+<root main_tree_to_execute="MainTree">
+  <BehaviorTree ID="MainTree">
+    <RecoveryNode number_of_retries="3" name="NavigateRecovery">
+      <PipelineSequence name="NavigateWithReplanning">
+        <RateController hz="1.0">
+          <RecoveryNode number_of_retries="1" name="ComputePathToPose">
+            <ComputePathToPose goal="{goal}" path="{path}" planner_id="GridBased"/>
+            <Wait wait_duration="0.5"/>
+          </RecoveryNode>
+        </RateController>
+        <FollowPath path="{path}" controller_id="FollowPath"/>
+      </PipelineSequence>
+      <Wait wait_duration="1.0"/>
+    </RecoveryNode>
+  </BehaviorTree>
+</root>

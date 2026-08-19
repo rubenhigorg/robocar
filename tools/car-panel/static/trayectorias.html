@@ -14,7 +14,7 @@
   }
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased}
-  .wrap{max-width:800px;margin:0 auto;padding:12px}
+  .wrap{max-width:1080px;margin:0 auto;padding:12px}
   h1{font-size:1.1rem;margin:.2rem 0 .1rem}
   .sub{color:var(--muted);font-size:.78rem;margin:0 0 .5rem}
   .conn{font-family:var(--mono);font-size:.72rem;padding:.12rem .5rem;border-radius:20px;border:1px solid var(--line2)}
@@ -69,7 +69,7 @@
     <span class="lbl" id="zlbl">—</span>
   </div>
 
-  <div class="canvas-wrap"><canvas id="c" width="760" height="760"></canvas></div>
+  <div class="canvas-wrap"><canvas id="c" width="1000" height="720"></canvas></div>
   <div class="legend">
     <span>▲ robot</span><span style="color:var(--accent)">● wp</span><span style="color:var(--ok)">─ ruta manual</span>
     <span style="color:var(--warn)">─ real</span><span style="color:var(--wall)">▬ pared</span>
@@ -113,7 +113,7 @@
 <script>
 const $=s=>document.querySelector(s);
 const host=location.hostname||'192.168.1.102';
-const GRID=0.5, W=760, H=760;
+const GRID=0.5, W=1000, H=720;
 let PPM=45;                       // px/m (zoom); mas bajo = mas espacio
 let ox=W/2, oy=H*0.62;           // origen (robot) abajo-centro, con sitio detras
 const cv=$('#c'), g=cv.getContext('2d');

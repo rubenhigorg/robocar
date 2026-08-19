@@ -51,11 +51,19 @@ class GoalRelay(Node):
         gh.get_result_async().add_done_callback(self.result_cb)
 
     def fb(self, fb):
-        self._st('navegando: quedan %.2f m' % fb.feedback.distance_remaining)
+        d = fb.feedback.distance_remaining
+        if d < 0.05:
+            self._st('buscando ruta...')          # aun no hay plan (distancia 0)
+        else:
+            self._st('navegando: quedan %.2f m' % d)
 
     def result_cb(self, fut):
         st = fut.result().status
-        txt = {4: 'DESTINO ALCANZADO', 5: 'cancelado', 6: 'ABORTADO (no pudo llegar)'}.get(st, 'fin (%d)' % st)
+        txt = {
+            4: 'DESTINO ALCANZADO',
+            5: 'cancelado',
+            6: 'No pudo llegar: destino inalcanzable (sobre obstaculo, habitacion cerrada o fuera del mapa). Elige zona despejada (fuera del rojo).',
+        }.get(st, 'fin (%d)' % st)
         self._st(txt)
         self.goal_handle = None
 
