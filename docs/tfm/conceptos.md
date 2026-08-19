@@ -8,6 +8,12 @@ Recorrido desde el principio por los conceptos base de ROS2 aplicados al robocar
 
 [Abrir documento](de-cero-nodos-tf-nav2.md){ .md-button .md-button--primary }
 
+## Control de la navegación por el LLM (Capa 3)
+
+Catálogo de todo lo que un LLM podrá controlar sobre Nav2: **velocidad adaptativa** (rápido en rectas, lento en curvas/obstáculos, límites por zona) y **condicionar la ruta** (pasar por puntos, zonas prohibidas/lentas, pegado a pared vs centro, orientación…). Con el estado de cada palanca y la arquitectura de control (`/nav_config` + objetivos + máscaras).
+
+[Abrir documento](control-navegacion-llm.md){ .md-button .md-button--primary }
+
 ## Odometría, SLAM y navegación
 
 Cómo se combinan las tres piezas para llevar el robot a un destino, y cómo se relacionan sobre el árbol TF `map → odom → base_link`.
