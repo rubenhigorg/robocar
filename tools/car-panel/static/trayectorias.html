@@ -64,6 +64,7 @@
       <button data-m="wp">◦ RUTA</button>
     </span>
     <button id="graph" title="Ver nodos y topics de este modo">ⓘ nodos</button>
+    <button id="cfg" title="Configuracion de Nav2 (velocidad, marcha atras, tolerancia...)">⚙ Nav2</button>
     <span class="lbl" style="margin-left:auto">zoom</span>
     <button id="zin">＋</button><button id="zout">－</button>
     <span class="lbl" id="zlbl">—</span>
@@ -108,6 +109,13 @@
   <h3 id="graphTitle"></h3>
   <div id="graphBody"></div>
 </div></div>
+<div class="modal" id="cfgModal"><div class="box">
+  <button class="close" id="cfgClose">✕ cerrar</button>
+  <h3>⚙ Configuración de Nav2</h3>
+  <p style="color:var(--muted);font-size:.72rem;margin:.1rem 0 .6rem">Ajusta cómo navega el robot. Se aplica al instante. Es el mismo interfaz (<code>/nav_config</code>) que usará el LLM para guiarlo.</p>
+  <div id="cfgBody"></div>
+  <div class="row" style="margin-top:.7rem"><button id="cfgApply" class="primary">Aplicar</button><span id="cfgStatus" class="lbl" style="min-width:0"></span></div>
+</div></div>
 <div class="banner" id="banner"></div>
 
 <script>
@@ -118,7 +126,7 @@ let PPM=45;                       // px/m (zoom); mas bajo = mas espacio
 let ox=W/2, oy=H*0.62;           // origen (robot) abajo-centro, con sitio detras
 const cv=$('#c'), g=cv.getContext('2d');
 let wps=[], walls=[], real=[], scanPts=[], carRel=null, temp=null, mapImg=null, costImg=null, goal=null, navPlan=[];
-let mode='obs', mapTool='rect', connected=false, odom0=null, odom0_last=null, showCost=true;   // por defecto MAPA·Nav2
+let mode='obs', mapTool='rect', connected=false, odom0=null, odom0_last=null, showCost=true, navCfg=null;   // por defecto MAPA·Nav2
 
 function toM(px,py){ return {x:(oy-py)/PPM, y:(ox-px)/PPM}; }
 function toPx(m){ return {x:ox-m.y*PPM, y:oy-m.x*PPM}; }
@@ -302,6 +310,29 @@ $('#graph').onclick=()=>{ const gg=GRAPHS[mode]; $('#graphTitle').textContent=gg
 $('#graphClose').onclick=()=>$('#graphModal').classList.remove('show');
 $('#graphModal').addEventListener('click',e=>{ if(e.target.id==='graphModal') $('#graphModal').classList.remove('show'); });
 
+// ---- panel de configuracion de Nav2 (contrato /nav_config, tambien para el LLM) ----
+function onNavConfig(m){ try{ navCfg=JSON.parse(m.data); }catch(e){ return; }
+  if(navCfg.status) $('#cfgStatus').textContent=navCfg.status;
+  if($('#cfgModal').classList.contains('show')) renderCfg(); }
+function renderCfg(){ if(!navCfg||!navCfg.params){ $('#cfgBody').innerHTML='<p class="lbl">Esperando /nav_config… (¿está nav_config corriendo?)</p>'; return; }
+  $('#cfgBody').innerHTML = navCfg.params.map(p=>{ const id='cf_'+p.key;
+    if(p.type==='bool') return '<div style="margin:.6rem 0"><label style="display:flex;gap:.5rem;align-items:center;font-size:.82rem;cursor:pointer">'
+      +'<input type="checkbox" id="'+id+'" '+(p.value?'checked':'')+'> <b>'+p.label+'</b>'+(p.restart?' <span title="reinicia Nav2 ~15s" style="color:var(--warn);font-size:.62rem">🔄 reinicia</span>':'')+'</label>'
+      +'<div style="font-size:.68rem;color:var(--faint);margin-left:1.5rem">'+p.desc+'</div></div>';
+    return '<div style="margin:.6rem 0"><div style="display:flex;justify-content:space-between;font-size:.82rem">'
+      +'<b>'+p.label+'</b>'+(p.restart?' <span title="reinicia Nav2 ~15s" style="color:var(--warn);font-size:.62rem">🔄</span>':'')+'<span class="lbl" id="'+id+'v" style="min-width:0">'+(+p.value).toFixed(2)+' '+(p.unit||'')+'</span></div>'
+      +'<input type="range" id="'+id+'" min="'+p.min+'" max="'+p.max+'" step="'+p.step+'" value="'+p.value+'" style="width:100%" '
+      +'oninput="document.getElementById(\''+id+'v\').textContent=(+this.value).toFixed(2)+\' '+(p.unit||'')+'\'">'
+      +'<div style="font-size:.68rem;color:var(--faint)">'+p.desc+'</div></div>';
+  }).join(''); }
+$('#cfg').onclick=()=>{ if(!connected){flash('Sin conexión');return;} renderCfg(); $('#cfgModal').classList.add('show'); };
+$('#cfgClose').onclick=()=>$('#cfgModal').classList.remove('show');
+$('#cfgModal').addEventListener('click',e=>{ if(e.target.id==='cfgModal') $('#cfgModal').classList.remove('show'); });
+$('#cfgApply').onclick=()=>{ if(!navCfg||!navCfg.params){return;} const out={};
+  navCfg.params.forEach(p=>{ const el=document.getElementById('cf_'+p.key); if(!el)return;
+    out[p.key] = (p.type==='bool') ? el.checked : parseFloat(el.value); });
+  send({op:'publish',topic:'/nav_config/set',msg:{data:JSON.stringify(out)}}); $('#cfgStatus').textContent='aplicando…'; flash('Config enviada a Nav2'); };
+
 // ---- rosbridge ----
 let ws=null;
 function connect(){
@@ -318,6 +349,8 @@ function connect(){
     send({op:'subscribe',topic:'/scan',type:'sensor_msgs/msg/LaserScan'});
     send({op:'subscribe',topic:'/map',type:'nav_msgs/msg/OccupancyGrid'});
     send({op:'subscribe',topic:'/global_costmap/costmap',type:'nav_msgs/msg/OccupancyGrid'});
+    send({op:'advertise',topic:'/nav_config/set',type:'std_msgs/msg/String'});
+    send({op:'subscribe',topic:'/nav_config',type:'std_msgs/msg/String'});
     send({op:'subscribe',topic:'/plan',type:'nav_msgs/msg/Path'}); };
   ws.onclose=()=>{connected=false;setConn();setTimeout(connect,1500);};
   ws.onerror=()=>ws.close();
@@ -328,7 +361,8 @@ function connect(){
     else if(d.topic==='/scan') onScan(d.msg);
     else if(d.topic==='/map') onMap(d.msg);
     else if(d.topic==='/plan') onPlan(d.msg);
-    else if(d.topic==='/global_costmap/costmap') onCostmap(d.msg); };
+    else if(d.topic==='/global_costmap/costmap') onCostmap(d.msg);
+    else if(d.topic==='/nav_config') onNavConfig(d.msg); };
 }
 function send(o){ if(ws&&ws.readyState===1) ws.send(JSON.stringify(o)); }
 function setConn(){ const e=$('#conn'); e.textContent=connected?'conectado':'desconectado'; e.className='conn '+(connected?'on':'off'); }
