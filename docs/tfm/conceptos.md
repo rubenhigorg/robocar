@@ -2,6 +2,12 @@
 
 Explicaciones visuales de los fundamentos del robot. Cada documento se abre como **página completa** (diseño propio, con modo claro/oscuro).
 
+## De cero: nodos, topics, TF y Nav2
+
+Recorrido desde el principio por los conceptos base de ROS2 aplicados al robocar: **nodos**, **publicar/suscribir**, **mensajes y tipos**, **frames**, **TF** (con el árbol del robot y el bug real de `base_footprint`) y cómo encaja **Nav2**. Para reconstruir el mapa mental sin dar nada por supuesto.
+
+[Abrir documento](de-cero-nodos-tf-nav2.md){ .md-button .md-button--primary }
+
 ## Odometría, SLAM y navegación
 
 Cómo se combinan las tres piezas para llevar el robot a un destino, y cómo se relacionan sobre el árbol TF `map → odom → base_link`.
