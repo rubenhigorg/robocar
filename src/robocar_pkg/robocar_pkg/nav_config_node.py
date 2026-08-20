@@ -39,9 +39,9 @@ PARAMS = [
     {"key": "dist_frenado_obstaculo", "label": "Distancia de frenado a obstaculo", "unit": "m",
      "min": 0.2, "max": 1.5, "step": 0.1, "default": 0.6, "restart": False,
      "desc": "A que distancia de un obstaculo empieza a frenar. Mayor = mas prudente/lento cerca de las cosas. (en caliente)"},
-    {"key": "marcha_atras", "label": "Marcha atras", "type": "bool", "default": False, "restart": True,
-     "desc": "Permite RETROCEDER para giros cerrados (Reeds-Shepp). Off = solo adelante (Dubin). "
-             "REINICIA Nav2 (~15 s)."},
+    {"key": "marcha_atras", "label": "Marcha atras", "type": "bool", "default": True, "restart": True,
+     "desc": "Permite RETROCEDER para giros cerrados (Reeds-Shepp). ACTIVA por defecto. "
+             "Off = solo adelante (Dubin). REINICIA Nav2 (~15 s)."},
     {"key": "radio_giro_min", "label": "Radio de giro minimo", "unit": "m",
      "min": 0.4, "max": 1.5, "step": 0.05, "default": 0.93, "restart": True,
      "desc": "Lo cerrado que puede girar (Ackermann real ~0.93 m). Menor = giros mas cerrados. REINICIA Nav2 (~15 s)."},

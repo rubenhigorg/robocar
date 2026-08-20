@@ -41,7 +41,7 @@ planner_server:
       allow_unknown: false            # nuestro /map no tiene celdas "desconocidas"
       max_iterations: 1000000
       max_planning_time: 5.0
-      motion_model_for_search: "DUBIN"   # solo hacia delante (sin marcha atrás, de momento)
+      motion_model_for_search: "REEDS_SHEPP"   # permite marcha atras (activada por defecto); reverse_penalty la limita
       angle_quantization_bins: 72
       minimum_turning_radius: 0.930    # ¡EL RADIO REAL DEL COCHE!
       reverse_penalty: 2.0
@@ -94,7 +94,7 @@ controller_server:
       cost_scaling_gain: 1.0
       inflation_cost_scaling_factor: 3.00   # DEBE casar con cost_scaling_factor del local_costmap
       use_rotate_to_heading: false   # ¡el coche NO puede girar en el sitio!
-      allow_reversing: false
+      allow_reversing: true          # marcha atras activada por defecto (el planner traza rutas con reversa)
       use_collision_detection: true
       max_allowed_time_to_collision_up_to_carrot: 1.0
       min_approach_linear_velocity: 0.05
