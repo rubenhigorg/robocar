@@ -139,10 +139,18 @@ nodos y el perfilado de CPU medidos en la Pi el **20-ago-2026**.
   pero el número de cabecera de `sim_sensors` **solo baja con O8** (menos Hz de odometría). → **O8 es
   ahora la palanca clara** (toca a sim_sensors, sim_motion consumidores, etc. a la vez).
 
-**O8 · Bajar frecuencias donde no aporten.**
-- *Acción:* revisar la tasa de integración de `sim_motion` y `controller_frequency` (20 Hz) — bajarlas
-  si la calidad de control no sufre.
-- *Ganancia:* moderada. *Esfuerzo:* bajo. *Riesgo:* medio (afecta al control).
+**O8 · Bajar la frecuencia de `sim_motion` (odom + TF).** ✅ **HECHO (20-ago)** — la palanca de fondo
+- *Problema (medido):* `sim_motion` publicaba `/odometry/filtered` + TF a **60 Hz**; cada consumidor
+  (sim_sensors, bt_navigator, controller, sim_motion mismo…) paga la deserializacion a 60 Hz. La
+  **suma de consumidores = 88 %** de CPU.
+- *Solución:* `sim_motion` a **20 Hz** (`-p rate_hz:=20.0` en el bringup; por encima del control a
+  20 Hz, con margen). Sin tocar codigo, reversible.
+- *Resultado medido (estado limpio):* **suma 88 % → 59.7 %** (**−28 pts**): sim_motion 25→11,
+  sim_sensors 31.6→19, bt_navigator 14.8→11. Navegacion `DESTINO ALCANZADO`. Commit pendiente.
+- *Lección operativa (→ O10/robustez):* reiniciar en caliente un nodo que publica **TF**
+  (`sim_motion` = odom→base_link, `sim_map_grid` = map→odom) corrompe la cache TF/costmap y provoca
+  "message filter dropping" + "collision ahead". **Tras tocar un nodo de TF, hacer bringup completo**,
+  no reinicio suelto.
 
 **O9 · (Opcional, mayor) rosbridge → `foxglove_bridge` (C++).**
 - *El único cambio "a C++" con ROI real.* Es un **swap de componente**, no reescribir código nuestro.
@@ -161,12 +169,14 @@ Correctness, no CPU.
 
 ## 4. Orden recomendado y objetivo
 
-**Secuencia:** ~~O1~~ ✅ → ~~O3~~ ✅ → ~~O2~~ ✅ → ~~O5~~ ✅ → ~~O4~~ ✅ → ~~O7~~ ✅ → **O8** (la palanca de fondo) → O6/O10/O11.
+**Secuencia:** ~~O1~~ ✅ → ~~O3~~ ✅ → ~~O2~~ ✅ → ~~O5~~ ✅ → ~~O4~~ ✅ → ~~O7~~ ✅ → ~~O8~~ ✅ → (quedan O6/O9/O10/O11, menores).
 
 > **Progreso CPU (medido):** goal_relay 35.6→6.6 (O1) · sim_map_grid 17.8→0.2 (O3) · rosbridge
-> 79→50 (O2) · trajectory_nav 26→3 (O5) = **~98 puntos de CPU** recuperados.
-> **Progreso RAM:** O4 quitó 6 wrappers `ros2 run` = **138 MB** (+94 MB disponibles medidos). O5 quitó
-> otro wrapper. La Pi pasa de ir al ~60-70 % de CPU a holgura amplia, con más RAM libre.
+> 79→50 (O2) · trajectory_nav 26→3 (O5) · O8 bajó la suma de consumidores de odometría **88→60**
+> (sim_motion 25→11, sim_sensors 31.6→19, bt_navigator 15→11). En total **>120 puntos de CPU**.
+> **Progreso RAM:** O4 quitó 6 wrappers `ros2 run` = **138 MB** (+94 MB disponibles medidos) + O5 otro.
+> **La Pi ha pasado de ir al ~60-70 % (y congelarse) a holgura amplia.** O7 además evita que los
+> planos con muebles disparen el CPU (ray-cast vectorizado, escala plano).
 > Insight recurrente: consumir topics de alta frecuencia (49 Hz odom / 20 Hz control) en Python es
 > caro; **O8 (bajar la frecuencia de `sim_motion`) aliviaría a varios nodos a la vez** → sube prioridad.
 
