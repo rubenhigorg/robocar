@@ -76,12 +76,17 @@ nodos y el perfilado de CPU medidos en la Pi el **20-ago-2026**.
 - *Ganancia:* recorte grande del mayor consumidor. *Esfuerzo:* medio-bajo (cambios en el cliente web).
 - *Riesgo:* bajo (solo afecta a la fluidez visual). *Verificación:* perfilador → rosbridge de ~85 % a <40 %.
 
-**O3 · `sim_map_grid` que actúe solo al cambiar el mapa.**
-- *Problema:* 18 % de CPU para, en teoría, republicar a 1 Hz — probablemente recalcula en el callback
-  de `/odometry/filtered` (alta frecuencia).
-- *Acción:* cachear la rejilla y regenerarla **solo** cuando llega `/sim_map`; la republicación latched
-  a 1 Hz basta. Desacoplar del callback de odometría.
-- *Ganancia:* ~15 % CPU. *Esfuerzo:* bajo. *Riesgo:* bajo.
+**O3 · `sim_map_grid` que actúe solo al cambiar el mapa.** ✅ **HECHO (20-ago)**
+- *Problema (medido):* 17.8 % de CPU. No era recalcular (el rasterizado ya era por evento), sino
+  **mantener una suscripción a `/odometry/filtered` a 49 Hz** solo para cachear la pose. Confirmado:
+  cambiarla por un `TransformListener` la dejó igual (17→17 %) — el coste es *consumir cualquier
+  topic a 49 Hz*, no la deserialización concreta.
+- *Solución:* **suscripción efímera** a odometría — se crea al llegar un `/sim_map`, captura una sola
+  pose para anclar los segmentos, y se destruye (fuera de su callback, desde el timer). En reposo:
+  cero topics de alta frecuencia consumidos.
+- *Resultado medido:* **17.8 % → ~0.2 %** (idle). Mapa anclado y publicado OK (`/map`=180 celdas) y
+  navegación de punta a punta verificada (`DESTINO ALCANZADO`). Commit pendiente.
+- *Bonus:* limpiar el mapa (`/sim_map` vacío) ya no exige tener odometría.
 
 ### Tier 2 — Estructura (RAM + mantenibilidad)
 
@@ -135,7 +140,10 @@ Correctness, no CPU.
 
 ## 4. Orden recomendado y objetivo
 
-**Secuencia:** ~~O1~~ ✅ → **O3** (siguiente) → O2 → O5 → O6 → O4 → O7 → (O8/O9/O10/O11 según haga falta).
+**Secuencia:** ~~O1~~ ✅ → ~~O3~~ ✅ → **O2** (siguiente) → O5 → O6 → O4 → O7 → (O8/O9/O10/O11 según haga falta).
+
+> **Progreso CPU:** goal_relay 35.6→6.6 % (O1) y sim_map_grid 17.8→0.2 % (O3) suman **~46 puntos**
+> de CPU recuperados en el peor caso. Falta el gordo: rosbridge (O2).
 
 **Objetivo cuantitativo:** bajar de **282 % (nav)** a **< 200 %** de CPU y **−150 MB** de RAM,
 manteniendo la navegación de punta a punta. Cada paso se valida con el perfilador antes de seguir.

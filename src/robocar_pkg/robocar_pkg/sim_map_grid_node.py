@@ -11,7 +11,9 @@
 # Entradas:
 #   /sim_map (std_msgs/String, JSON {"segments":[[x1,y1,x2,y2],...]} RELATIVOS a la pose
 #            del coche al enviarlo, igual que sim_sensors_node).
-#   /odometry/filtered (nav_msgs/Odometry) -> pose actual para anclar el mapa en 'odom'.
+#   /odometry/filtered (nav_msgs/Odometry) -> SOLO se escucha un instante al recibir un mapa,
+#            para anclar los segmentos a la pose actual. NO se mantiene una suscripcion a 49 Hz
+#            (era ~17% de CPU inutil): se crea una suscripcion efimera y se destruye enseguida.
 # Salidas:
 #   /map (nav_msgs/OccupancyGrid, frame 'map', QoS transient_local/latched).
 #   TF estatico map->odom (identidad) para que el mapa sea colocable (en real lo da AMCL/SLAM).
@@ -70,8 +72,10 @@ class SimMapGrid(Node):
         self.declare_parameter('publish_map_tf', True) # TF estatico map->odom identidad (banco)
         self.declare_parameter('republish_hz', 1.0)    # re-publica el mapa (robustez ademas de latched)
 
-        self.pose = None
         self.grid = None                               # OccupancyGrid cacheada
+        self._odom_sub = None                          # suscripcion EFIMERA a odometria (solo al llegar mapa)
+        self._pending = None                           # segmentos esperando la pose
+        self._kill_odom = False                        # bandera para soltar la suscripcion efimera
 
         qos = QoSProfile(depth=1)
         qos.durability = QoSDurabilityPolicy.TRANSIENT_LOCAL   # latched: subs tardios reciben el ultimo
@@ -79,7 +83,6 @@ class SimMapGrid(Node):
         qos.history = QoSHistoryPolicy.KEEP_LAST
         self.pub = self.create_publisher(OccupancyGrid, '/map', qos)
 
-        self.create_subscription(Odometry, '/odometry/filtered', self.ocb, 20)
         self.create_subscription(String, '/sim_map', self.mcb, 10)
 
         if self.get_parameter('publish_map_tf').value:
@@ -96,29 +99,33 @@ class SimMapGrid(Node):
             self.create_timer(1.0 / hz, self.republish)
         self.get_logger().info('sim_map_grid listo (dibuja el mapa y "Enviar mapa" -> /map OccupancyGrid)')
 
-    def ocb(self, m):
-        p = m.pose.pose; q = p.orientation
-        yaw = math.atan2(2 * (q.w * q.z + q.x * q.y), 1 - 2 * (q.y * q.y + q.z * q.z))
-        self.pose = (p.position.x, p.position.y, yaw)
-
     def mcb(self, msg):
-        if self.pose is None:
-            self.get_logger().warn('Sin odometria; ignoro mapa.'); return
         try:
             rel = json.loads(msg.data).get('segments', [])
         except Exception as e:
             self.get_logger().warn('mapa JSON invalido: %s' % e); return
         if not rel:
-            # mapa vacio -> LIMPIAR /map (rejilla 1x1 libre): borra la web y el costmap,
-            # y deja de republicar el mapa viejo.
+            # mapa vacio -> LIMPIAR /map (rejilla 1x1 libre): borra la web y el costmap.
             og = OccupancyGrid(); og.header.frame_id = self.get_parameter('map_frame').value
             og.info.resolution = float(self.get_parameter('resolution').value)
             og.info.width = 1; og.info.height = 1; og.info.origin.orientation.w = 1.0
             og.data = [0]
             self.grid = og; self.publish_grid()
             self.get_logger().info('/map limpiado (mapa vacio recibido)'); return
-        x0, y0, yaw0 = self.pose
-        c, s = math.cos(yaw0), math.sin(yaw0)
+        # Necesitamos la pose AHORA: suscripcion efimera a odometria (un mensaje y fuera).
+        self._pending = rel
+        if self._odom_sub is None:
+            self._odom_sub = self.create_subscription(Odometry, '/odometry/filtered', self._on_odom_once, 1)
+
+    def _on_odom_once(self, m):
+        if self._pending is None:
+            return                                     # ya capturada; ignora hasta que el timer la suelte
+        rel = self._pending; self._pending = None
+        self._kill_odom = True                         # que el timer suelte la suscripcion efimera
+        p = m.pose.pose; q = p.orientation
+        yaw = math.atan2(2 * (q.w * q.z + q.x * q.y), 1 - 2 * (q.y * q.y + q.z * q.z))
+        x0, y0 = p.position.x, p.position.y
+        c, s = math.cos(yaw), math.sin(yaw)
         segs = []
         for seg in rel:
             ax = x0 + seg[0] * c - seg[1] * s; ay = y0 + seg[0] * s + seg[1] * c
@@ -150,6 +157,10 @@ class SimMapGrid(Node):
         self.pub.publish(self.grid)
 
     def republish(self):
+        # Suelta la suscripcion efimera de odometria FUERA de su propio callback (seguro).
+        if self._kill_odom and self._odom_sub is not None:
+            self.destroy_subscription(self._odom_sub)
+            self._odom_sub = None; self._kill_odom = False
         self.publish_grid()
 
 
