@@ -143,10 +143,24 @@ fiabilidad más allá de unos pocos metros.
 - Lo **robusto** es una **cascada**: pose conocida / última / pista como vía principal, y **global +
   auto-mover** como último recurso.
 
-**Test que le falta al banco (para justificar AMCL aquí):** inyectar **deriva simulada** en
-`sim_motion` (un error sistemático + ruido en la integración) y comparar **llegar a un destino con y
-sin AMCL** — sin él, el robot llegaría **desviado**; con él, la corrección `map→odom` lo mantiene
-exacto. Es la prueba que convierte el banco en un test **fiel** de localización.
+### El test de la deriva (hecho) — la prueba del valor de AMCL
+
+Para que el banco **deje de engañar**, se inyecta **deriva** en `sim_motion`: se separa la pose
+**REAL** (exacta, en `/truth_pose`, desde donde `sim_sensors` lanza el láser) de la **ODOMETRÍA**
+publicada, que acumula un error de rumbo por metro (+ escala + ruido, ajustable en caliente;
+`drift_enabled=false` por defecto). Así AMCL tiene **deriva real que corregir**.
+
+**Resultado medido** (robot conduciendo 2 m recto, con deriva activada):
+
+| | error de posición |
+|---|---|
+| **SIN AMCL** (`map==odom`, solo odometría) | 0.01 → 0.04 → 0.10 → 0.19 → **0.24 m** (CRECE sin freno) |
+| **CON AMCL** (corrige con láser+mapa) | 0.13 → 0.14 → 0.12 → **0.06 m** (se mantiene ACOTADO) |
+
+Lo decisivo no es solo que 0.06 < 0.24, sino la **forma**: el error de odometría **crece con la
+distancia** (y seguiría creciendo en un trayecto largo), mientras el de AMCL se queda **plano**,
+acotado por el mapa. Esa es, en una imagen, la razón por la que **en el robot real AMCL es
+imprescindible**. (Sin deriva —por defecto— odom == real y el banco navega igual que siempre.)
 
 ---
 
