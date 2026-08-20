@@ -68,13 +68,19 @@ nodos y el perfilado de CPU medidos en la Pi el **20-ago-2026**.
   `marcha_atras`/`radio_giro_min` **persiste en disco** y cambia el comportamiento por defecto hasta
   revertirlo (nos dejó REEDS_SHEPP+reversa, que provocaba abortos "collision ahead"). → ojo en O6/O10.
 
-**O2 · Recortar lo que la web streamea (ataca el 83 % de rosbridge).**
-- *Problema:* rosbridge serializa `/scan`, `/odometry/filtered`, costmaps y `/map` a JSON continuamente.
-- *Acción:* suscribir en el cliente con **throttle_rate** (rosbridge lo soporta) — p. ej. `/scan` y
-  `/odometry` a 5–10 Hz en vez de full; no traer el costmap a máxima resolución/ritmo; enviar `/map`
-  solo cuando cambia (ya es latched).
-- *Ganancia:* recorte grande del mayor consumidor. *Esfuerzo:* medio-bajo (cambios en el cliente web).
-- *Riesgo:* bajo (solo afecta a la fluidez visual). *Verificación:* perfilador → rosbridge de ~85 % a <40 %.
+**O2 · Recortar lo que la web streamea (ataca el 79 % de rosbridge).** ✅ **HECHO (20-ago)**
+- *Problema (medido):* rosbridge es **un único proceso Python (GIL → tope ~1 core)** y estaba al
+  **79 %** serializando a JSON todo lo que la web suscribe sin throttle: `/odometry/filtered` (49 Hz),
+  `/scan` (~12 Hz, grande), `/global_costmap/costmap` (200×200 = **40 000 celdas**), `/map`, `/plan`.
+- *Solución:* `throttle_rate` + `queue_length:1` en las suscripciones pesadas del cliente web:
+  odometry 49→10 Hz, scan →5 Hz, costmap →1 Hz, map →0.5 Hz, plan →3 Hz. Los de texto (status,
+  nav_config) sin throttle. Verificado con un cliente WS de prueba (odometry 49.8→9.7, scan 11.8→5.0).
+- *Resultado medido:* **rosbridge 79 % → 50 %** (−37 %) con un panel. Commit `3f003f69`.
+- *Gotcha:* solo aplica al **recargar** la página (F5); reconectar no basta (el JS viejo sigue en
+  memoria). Y cada pestaña/cliente cuenta: 2 pestañas viejas sin throttle mantenían rosbridge alto.
+- *Palanca extra (si se quiere <40 %):* subir el throttle de los dos `OccupancyGrid` grandes
+  (`/global_costmap/costmap` a 2.5–3 s, `/map` a 5 s) — cambian despacio; o servir la vista costmap
+  bajo demanda. No hay un culpable único (grids y scan/odom cuestan parecido), hay que apretar en varios.
 
 **O3 · `sim_map_grid` que actúe solo al cambiar el mapa.** ✅ **HECHO (20-ago)**
 - *Problema (medido):* 17.8 % de CPU. No era recalcular (el rasterizado ya era por evento), sino
@@ -140,10 +146,12 @@ Correctness, no CPU.
 
 ## 4. Orden recomendado y objetivo
 
-**Secuencia:** ~~O1~~ ✅ → ~~O3~~ ✅ → **O2** (siguiente) → O5 → O6 → O4 → O7 → (O8/O9/O10/O11 según haga falta).
+**Secuencia:** ~~O1~~ ✅ → ~~O3~~ ✅ → ~~O2~~ ✅ → **O5** (siguiente) → O6 → O4 → O7 → (O8/O9/O10/O11).
 
-> **Progreso CPU:** goal_relay 35.6→6.6 % (O1) y sim_map_grid 17.8→0.2 % (O3) suman **~46 puntos**
-> de CPU recuperados en el peor caso. Falta el gordo: rosbridge (O2).
+> **Progreso CPU (medido):** goal_relay 35.6→6.6 (O1) · sim_map_grid 17.8→0.2 (O3) · rosbridge
+> 79→50 (O2) = **~75 puntos de CPU** recuperados. La Pi pasa de ir al ~60-70 % a tener holgura real.
+> Insight recurrente: consumir topics de alta frecuencia (49 Hz odom / 20 Hz control) en Python es
+> caro; **O8 (bajar la frecuencia de `sim_motion`) aliviaría a varios nodos a la vez** → sube prioridad.
 
 **Objetivo cuantitativo:** bajar de **282 % (nav)** a **< 200 %** de CPU y **−150 MB** de RAM,
 manteniendo la navegación de punta a punta. Cada paso se valida con el perfilador antes de seguir.
