@@ -116,12 +116,15 @@ nodos y el perfilado de CPU medidos en la Pi el **20-ago-2026**.
 - *Resultado medido:* **26 % → 3 %** ocioso. Modo RUTA verificado: ruta de 2 m seguida a completar
   (`state=DONE wp=2/2`, robot movió 1.81 m) y sensores soltados después. Commit pendiente.
 
-**O6 · Decidir la política colcon (coherencia).**
-- *Acción:* o bien **meter todos los nodos propios en colcon con `--symlink-install`** (coherente y
-  editable sin rebuild — resuelve la razón por la que hoy van "sueltos"), o dejarlos sueltos **a
-  propósito** y documentarlo. *Recomendado:* `colcon build --symlink-install` una vez → luego se edita
-  el `src/` y `ros2 run` ya usa el código vivo.
-- *Ganancia:* mantenibilidad; base para el `launch` de O4. *Esfuerzo:* bajo-medio. *Riesgo:* bajo.
+**O6 · Política colcon (coherencia).** ✅ **HECHO (20-ago)** — decidida y documentada
+- *Decisión:* **los nodos propios (`robocar_pkg`) se lanzan por `python3` directo desde `src/`**, no
+  por `ros2 run`. Motivo: se editan **sin recompilar** (colcon build en la Pi4 es lento y arriesga
+  OOM), y así el `src/` es la única fuente de verdad. Los nodos **stock de Nav2** se lanzan por su
+  **binario directo** (O4). Nadie usa `ros2 run` en el banco.
+- *Coherencia aplicada:* `trajectory_nav` (que iba por `ros2 run`) pasó a python3 directo en O5, así
+  que **todos** los nodos propios siguen la misma regla. `setup.py`/`entry_points` se mantiene por si
+  algún día se quiere `ros2 run`, pero el arranque canónico es `bringupNAV2.sh` (python3 directo).
+- *Documentado* en la cabecera de `bringupNAV2.sh`.
 
 ### Tier 3 — CPU pesada (si necesitamos más margen)
 
@@ -169,7 +172,7 @@ Correctness, no CPU.
 
 ## 4. Orden recomendado y objetivo
 
-**Secuencia:** ~~O1~~ ✅ → ~~O3~~ ✅ → ~~O2~~ ✅ → ~~O5~~ ✅ → ~~O4~~ ✅ → ~~O7~~ ✅ → ~~O8~~ ✅ → (quedan O6/O9/O10/O11, menores).
+**Secuencia:** ~~O1~~ ✅ → ~~O3~~ ✅ → ~~O2~~ ✅ → ~~O5~~ ✅ → ~~O4~~ ✅ → ~~O7~~ ✅ → ~~O8~~ ✅ → ~~O10~~ ✅ → ~~O6~~ ✅. **Backlog:** O9 (foxglove), O11 (carga Pi).
 
 > **Progreso CPU (medido):** goal_relay 35.6→6.6 (O1) · sim_map_grid 17.8→0.2 (O3) · rosbridge
 > 79→50 (O2) · trajectory_nav 26→3 (O5) · O8 bajó la suma de consumidores de odometría **88→60**

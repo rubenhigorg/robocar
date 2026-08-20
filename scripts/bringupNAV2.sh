@@ -1,4 +1,15 @@
 #!/bin/bash
+# ============================================================================
+# POLITICA DE ARRANQUE DEL BANCO (O6)
+#   - Nodos propios (robocar_pkg): se lanzan por PYTHON3 DIRECTO desde src/ (no
+#     'ros2 run'). Asi se editan SIN recompilar (colcon en la Pi4 es lento/OOM)
+#     y src/ es la unica fuente de verdad.
+#   - Nodos stock de Nav2: BINARIO DIRECTO /opt/ros/humble/lib/... (no 'ros2 run'),
+#     para no dejar wrappers de ~23 MB (O4).
+#   - Todo el stack corre con ROS_LOCALHOST_ONLY=1 (DDS por 'lo', fix dual-interface).
+#   OJO: reiniciar en caliente un nodo que publica TF (sim_motion=odom->base_link,
+#   sim_map_grid=map->odom) corrompe la cache TF/costmap -> relanzar con ESTE script.
+# ============================================================================
 source /opt/ros/humble/setup.bash
 source ~/robocar/src/install/setup.bash 2>/dev/null
 export ROS_DOMAIN_ID=0 ROS_LOCALHOST_ONLY=1
