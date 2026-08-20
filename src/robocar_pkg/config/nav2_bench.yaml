@@ -258,7 +258,7 @@ amcl:
     odom_frame_id: "odom"
     global_frame_id: "map"
     scan_topic: /scan
-    map_topic: /map
+    map_topic: /map_amcl              # SOLO cambia al cargar mapa nuevo (sim_map_grid); evita re-init cada seg
     set_initial_pose: true                # arranca creyendo estar en el origen (compatibilidad)
     initial_pose: {x: 0.0, y: 0.0, z: 0.0, yaw: 0.0}
     tf_broadcast: true
@@ -291,7 +291,7 @@ amcl:
     recovery_alpha_slow: 0.001             # inyeccion de particulas si va perdido (kidnapped)
     recovery_alpha_fast: 0.1
     save_pose_rate: 0.5
-    first_map_only: true                   # sim_map_grid republica /map a 1 Hz; sin esto amcl re-init cada seg
+    first_map_only: false                  # /map_amcl solo cambia al cargar mapa nuevo -> re-localiza limpio (sin re-init cada seg)
 
 lifecycle_manager_localization:
   ros__parameters:

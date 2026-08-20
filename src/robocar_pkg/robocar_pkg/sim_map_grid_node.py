@@ -81,7 +81,8 @@ class SimMapGrid(Node):
         qos.durability = QoSDurabilityPolicy.TRANSIENT_LOCAL   # latched: subs tardios reciben el ultimo
         qos.reliability = QoSReliabilityPolicy.RELIABLE
         qos.history = QoSHistoryPolicy.KEEP_LAST
-        self.pub = self.create_publisher(OccupancyGrid, '/map', qos)
+        self.pub = self.create_publisher(OccupancyGrid, '/map', qos)              # web + costmaps (periodico)
+        self.pub_amcl = self.create_publisher(OccupancyGrid, '/map_amcl', qos)    # AMCL: SOLO al cambiar (no re-init cada seg)
 
         self.create_subscription(String, '/sim_map', self.mcb, 10)
 
@@ -110,7 +111,7 @@ class SimMapGrid(Node):
             og.info.resolution = float(self.get_parameter('resolution').value)
             og.info.width = 1; og.info.height = 1; og.info.origin.orientation.w = 1.0
             og.data = [0]
-            self.grid = og; self.publish_grid()
+            self.grid = og; self.publish_change()
             self.get_logger().info('/map limpiado (mapa vacio recibido)'); return
         # Necesitamos la pose AHORA: suscripcion efimera a odometria (un mensaje y fuera).
         self._pending = rel
@@ -147,7 +148,7 @@ class SimMapGrid(Node):
         og.info.origin.orientation.w = 1.0
         og.data = data
         self.grid = og
-        self.publish_grid()
+        self.publish_change()
         self.get_logger().info('/map publicado: %dx%d celdas @ %.2f m (%d paredes)' % (W, H, res, len(segs)))
 
     def publish_grid(self):
@@ -155,6 +156,12 @@ class SimMapGrid(Node):
             return
         self.grid.header.stamp = self.get_clock().now().to_msg()
         self.pub.publish(self.grid)
+
+    def publish_change(self):
+        """Publica en /map (web/costmaps) Y en /map_amcl (AMCL). Solo se llama cuando el mapa CAMBIA."""
+        self.publish_grid()
+        if self.grid is not None:
+            self.pub_amcl.publish(self.grid)
 
     def republish(self):
         # Suelta la suscripcion efimera de odometria FUERA de su propio callback (seguro).
