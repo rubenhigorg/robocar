@@ -101,7 +101,7 @@
 
   <div class="row" id="rowMapa" style="display:none"><span class="lbl">MAPA</span>
     <select id="planta" title="Cargar planta de piso con muebles"><option value="">🏠 Plantas…</option><option value="0">Piso 100 m² · 2 dorm</option><option value="1">Piso 130 m² · 3 dorm</option><option value="2">Piso 160 m² · 4 hab</option><option value="3">Ático 200 m² · 4 hab</option></select>
-    <span class="seg" id="mtool"><button data-t="rect" class="act">▭ habitación</button><button data-t="wall">─ pared</button><button data-t="obst">▧ obstáculo</button><button data-t="goal">◎ destino</button><button data-t="area">🏷️ área</button></span>
+    <span class="seg" id="mtool"><button data-t="rect" class="act">▭ habitación</button><button data-t="wall">─ pared</button><button data-t="obst">▧ obstáculo</button><button data-t="goal">◎ destino</button><button data-t="area">🏷️ área</button><button data-t="truth" title="Colocar la pose REAL oculta (solo test de localización)">📍 real</button></span>
     <button id="mundo">↶</button><button id="mclear">limpiar</button>
     <button id="sendmap" class="map">▦ Enviar mapa</button>
   </div>
@@ -110,6 +110,11 @@
     <button id="navstop" class="danger">■ Parar</button>
     <button id="togCost" class="tog on" title="Zonas donde NO puede ir el robot (costmap de Nav2)">▨ no-go</button>
     <span class="lbl" style="min-width:0">pincha ◎ destino en zona despejada</span>
+  </div>
+  <div class="row" id="rowLoc" style="display:none"><span class="lbl">Localiz.</span>
+    <button id="globalLoc" title="Pose desconocida: reparte partículas por todo el mapa">🌍 global</button>
+    <button id="togPart" class="tog on">◦ partículas</button>
+    <span class="lbl" style="min-width:0">AMCL infiere la pose (lidar+mapa). <b>📍 real</b> = colocar pose oculta (test)</span>
   </div>
   <div class="row" id="rowArea" style="display:none"><span class="lbl">Zonas</span>
     <span class="lbl" style="min-width:0">🏷️ <b>área</b>: arrastra un rectángulo y ponle nombre</span>
@@ -207,16 +212,28 @@ function draw(){
   if(map && goal){ let p=toPx(goal); g.strokeStyle='#ffcf4a'; g.fillStyle='rgba(255,207,74,.22)'; g.lineWidth=2;
     g.beginPath();g.arc(p.x,p.y,9,0,7);g.fill();g.stroke();
     g.beginPath();g.moveTo(p.x-12,p.y);g.lineTo(p.x+12,p.y);g.moveTo(p.x,p.y-12);g.lineTo(p.x,p.y+12);g.stroke(); }
+  // AMCL: nube de particulas (hipotesis de pose) — solo modo MAPA
+  if(map && showParticles && particles.length){ g.fillStyle='rgba(91,155,234,.5)';
+    particles.forEach(pt=>{ const r=mapToRel(pt.x,pt.y); if(!r)return; const p=toPx(r); g.fillRect(p.x-1,p.y-1,2,2); }); }
+  // AMCL: elipse de confianza alrededor de la pose estimada (radio = desviacion)
+  if(map && amclConf){ const rr=mapToRel(amclConf.x,amclConf.y);
+    if(rr){ const p=toPx(rr), rad=Math.max(4,amclConf.sig*PPM), loc=amclConf.sig<0.25;
+      g.strokeStyle=loc?'#2fae6a':'#e0a24a'; g.lineWidth=1.5; g.setLineDash([3,3]);
+      g.beginPath();g.arc(p.x,p.y,rad,0,7);g.stroke(); g.setLineDash([]); } }
   // coche
   let cp=carRel||{x:0,y:0,yaw:0}, o=toPx(cp);
   g.save(); g.translate(o.x,o.y); g.rotate(-cp.yaw); g.fillStyle='#e6ecf3';
   g.beginPath();g.moveTo(0,-10);g.lineTo(-7,7);g.lineTo(7,7);g.closePath();g.fill(); g.restore();
+  // badge de confianza de localizacion
+  if(map && amclConf){ const loc=amclConf.sig<0.25;
+    g.font='bold 11px monospace'; g.fillStyle=loc?'#2fae6a':'#e0a24a'; g.textAlign='left';
+    g.fillText((loc?'◉ LOCALIZADO':'◌ localizando…')+'  σ='+amclConf.sig.toFixed(2)+' m', 10, 18); g.textAlign='start'; }
 }
 // dibuja una rejilla de ocupacion (mapImg/costImg) con el mismo afin celda->pantalla via odom0
-function drawGrid(gi){ if(!gi || !odom0) return; const A=-odom0.yaw, ca=Math.cos(A), sa=Math.sin(A), res=gi.res, Hc=gi.H;
+function drawGrid(gi){ if(!gi || !odom0) return; const A=-(odom0.yaw+Tmo.th), ca=Math.cos(A), sa=Math.sin(A), res=gi.res, Hc=gi.H;
   const a=-PPM*res*sa, b=-PPM*res*ca, cc=PPM*res*ca, dd=-PPM*res*sa;
-  const wx0=gi.ox+0.5*res, wy0=gi.oy+(Hc-0.5)*res, dx0=wx0-odom0.x, dy0=wy0-odom0.y;
-  const rx0=dx0*ca-dy0*sa, ry0=dx0*sa+dy0*ca, e=ox-ry0*PPM, f=oy-rx0*PPM;
+  const r0=mapToRel(gi.ox+0.5*res, gi.oy+(Hc-0.5)*res);   // origen del grid (map) -> rel, con Tmo
+  const e=ox-r0.y*PPM, f=oy-r0.x*PPM;
   g.save(); g.imageSmoothingEnabled=false; g.setTransform(a,b,cc,dd,e,f); g.drawImage(gi.canvas,0,0); g.restore(); }
 setZoom(45);
 
@@ -226,6 +243,7 @@ function evPx(e){ const r=cv.getBoundingClientRect(),sx=W/r.width,sy=H/r.height;
 cv.addEventListener('pointerdown', e=>{ const p=evPx(e), m=toM(p.x,p.y);
   if(mode==='wp'){ if(m.x<-0.2)return; wps.push({x:+m.x.toFixed(2),y:+m.y.toFixed(2)}); draw(); }
   else if(mapTool==='goal'){ goal={x:+m.x.toFixed(2),y:+m.y.toFixed(2)}; draw(); }
+  else if(mapTool==='truth'){ sendTruth(m); }
   else { temp={x1:+m.x.toFixed(2),y1:+m.y.toFixed(2),x2:+m.x.toFixed(2),y2:+m.y.toFixed(2)}; cv.setPointerCapture(e.pointerId); } });
 cv.addEventListener('pointermove', e=>{ const p=evPx(e), m=toM(p.x,p.y); $('#coords').textContent='x='+m.x.toFixed(2)+' y='+m.y.toFixed(2);
   if(mode==='obs'&&temp){ temp.x2=+m.x.toFixed(2); temp.y2=+m.y.toFixed(2); draw(); } });
@@ -245,6 +263,7 @@ function updateMode(){ const map=mode==='obs';
   $('#rowRuta').style.display = map?'none':'flex';
   $('#rowMapa').style.display = map?'flex':'none';
   $('#rowNav').style.display  = map?'flex':'none';
+  $('#rowLoc').style.display  = map?'flex':'none';
   $('#rowArea').style.display = map?'flex':'none';
   $('#hint').innerHTML = map
     ? '<b>MAPA · Nav2</b>: carga/dibuja el mapa y «Enviar mapa». Con <b>▧ obstáculo</b> pintas cosas que NO están en el mapa (el láser las ve y Nav2 las esquiva). Con <b>◎ destino</b> pincha un punto y «Ir a destino». Con <b>🏷️ área</b> etiquetas salas (cocina, baño…) para «Ir a sala» y para el LLM.'
@@ -253,7 +272,7 @@ $('#mode').addEventListener('click', e=>{ const b=e.target.closest('button'); if
   $('#mode').querySelectorAll('button').forEach(x=>x.classList.toggle('act',x===b)); updateMode(); draw(); });
 updateMode();
 $('#mtool').addEventListener('click', e=>{ const b=e.target.closest('button'); if(!b)return; mapTool=b.dataset.t;
-  cv.style.cursor = mapTool==='goal' ? 'pointer' : 'crosshair';
+  cv.style.cursor = (mapTool==='goal'||mapTool==='truth') ? 'pointer' : 'crosshair';
   $('#mtool').querySelectorAll('button').forEach(x=>x.classList.toggle('act',x===b)); });
 $('#zin').onclick=()=>setZoom(PPM*1.3); $('#zout').onclick=()=>setZoom(PPM/1.3);
 $('#undo').onclick=()=>{wps.pop();draw();}; $('#clear').onclick=()=>{wps=[];real=[];draw();};
@@ -267,8 +286,15 @@ function sendObstacles(){ if(!connected)return; const segs=[];
 // ---- ZONAS del mapa (cocina, bano, salon...) : contrato /map_areas para la web hoy y el LLM manana ----
 let areas=[];
 const AREA_COLORS=['#5b9bea','#2fae6a','#e0a24a','#b483e6','#e0533a','#4bd0d0','#d98cc0','#8ca0b8'];
-function mapToRel(mx,my){ if(!odom0)return null; const c=Math.cos(-odom0.yaw),s=Math.sin(-odom0.yaw),dx=mx-odom0.x,dy=my-odom0.y; return {x:dx*c-dy*s,y:dx*s+dy*c}; }
-function relToMap(rx,ry){ const c=Math.cos(odom0.yaw),s=Math.sin(odom0.yaw); return {x:odom0.x+rx*c-ry*s, y:odom0.y+rx*s+ry*c}; }
+// --- frame map<->odom (AMCL). Con map==odom (banco clasico) Tmo=identidad. ---
+let Tmo={x:0,y:0,th:0};   // transform map->odom (odom expresado en map)
+function se2c(A,B){ const c=Math.cos(A.th),s=Math.sin(A.th); return {x:A.x+B.x*c-B.y*s, y:A.y+B.x*s+B.y*c, th:A.th+B.th}; }
+function se2i(A){ const c=Math.cos(A.th),s=Math.sin(A.th); return {x:-(A.x*c+A.y*s), y:A.x*s-A.y*c, th:-A.th}; }
+function odomToRel(ox_,oy_){ const c=Math.cos(-odom0.yaw),s=Math.sin(-odom0.yaw),dx=ox_-odom0.x,dy=oy_-odom0.y; return {x:dx*c-dy*s,y:dx*s+dy*c}; }
+function relToOdom(rx,ry){ const c=Math.cos(odom0.yaw),s=Math.sin(odom0.yaw); return {x:odom0.x+rx*c-ry*s, y:odom0.y+rx*s+ry*c}; }
+function mapToRel(mx,my){ if(!odom0)return null; const i=se2i(Tmo), c=Math.cos(i.th),s=Math.sin(i.th);
+  return odomToRel(i.x+mx*c-my*s, i.y+mx*s+my*c); }                 // map -> odom -> rel
+function relToMap(rx,ry){ const o=relToOdom(rx,ry); return se2c(Tmo,{x:o.x,y:o.y,th:0}); }   // rel -> odom -> map
 function onAreas(m){ try{ areas=(JSON.parse(m.data).areas)||[]; }catch(e){ return; } fillAreaSel(); draw(); }
 function fillAreaSel(){ const sel=$('#areaSel'); if(!sel)return; const cur=sel.value;
   sel.innerHTML='<option value="">— zona —</option>'+areas.map(a=>'<option>'+a.name+'</option>').join('');
@@ -524,6 +550,9 @@ function connect(){
     send({op:'subscribe',topic:'/nav_config',type:'std_msgs/msg/String'});                       // config, sin throttle
     send({op:'advertise',topic:'/map_areas/set',type:'std_msgs/msg/String'});
     send({op:'subscribe',topic:'/map_areas',type:'std_msgs/msg/String'});                        // zonas etiquetadas
+    send({op:'advertise',topic:'/sim_truth',type:'std_msgs/msg/String'});
+    send({op:'subscribe',topic:'/amcl_pose',type:'geometry_msgs/msg/PoseWithCovarianceStamped',throttle_rate:200,queue_length:1});
+    send({op:'subscribe',topic:'/particle_cloud_viz',type:'nav2_msgs/msg/ParticleCloud',throttle_rate:300,queue_length:1}); // localizacion
     send({op:'subscribe',topic:'/plan',type:'nav_msgs/msg/Path',throttle_rate:300,queue_length:1}); };                 // ruta -> ~3Hz
   ws.onclose=()=>{connected=false;setConn();setTimeout(connect,1500);};
   ws.onerror=()=>ws.close();
@@ -536,7 +565,9 @@ function connect(){
     else if(d.topic==='/plan') onPlan(d.msg);
     else if(d.topic==='/global_costmap/costmap') onCostmap(d.msg);
     else if(d.topic==='/nav_config') onNavConfig(d.msg);
-    else if(d.topic==='/map_areas') onAreas(d.msg); };
+    else if(d.topic==='/map_areas') onAreas(d.msg);
+    else if(d.topic==='/amcl_pose') onAmcl(d.msg);
+    else if(d.topic==='/particle_cloud_viz') onParticles(d.msg); };
 }
 function send(o){ if(ws&&ws.readyState===1) ws.send(JSON.stringify(o)); }
 function setConn(){ const e=$('#conn'); e.textContent=connected?'conectado':'desconectado'; e.className='conn '+(connected?'on':'off'); }
@@ -567,9 +598,27 @@ function onScan(m){ if(!carRel) return; const pts=[]; const n=m.ranges.length;
     const a=m.angle_min+i*m.angle_increment, lx=r*Math.cos(a), ly=r*Math.sin(a), c=Math.cos(carRel.yaw), s=Math.sin(carRel.yaw);
     pts.push({x:carRel.x+lx*c-ly*s, y:carRel.y+lx*s+ly*c}); }
   scanPts=pts; }
-function onPlan(m){ if(!odom0){navPlan=[];return;} const c=Math.cos(-odom0.yaw),s=Math.sin(-odom0.yaw), pts=[];
-  (m.poses||[]).forEach(ps=>{ const px=ps.pose.position.x, py=ps.pose.position.y, dx=px-odom0.x, dy=py-odom0.y;
-    pts.push({x:dx*c-dy*s, y:dx*s+dy*c}); }); navPlan=pts; draw(); }
+function onPlan(m){ if(!odom0){navPlan=[];return;} const pts=[];
+  (m.poses||[]).forEach(ps=>{ const r=mapToRel(ps.pose.position.x, ps.pose.position.y); if(r) pts.push(r); });
+  navPlan=pts; draw(); }
+// ---- LOCALIZACION (AMCL): nube de particulas + pose + confianza ----
+let particles=[], amclConf=null, showParticles=true;
+function onAmcl(m){ const p=m.pose.pose.position, q=m.pose.pose.orientation, cov=m.pose.covariance;
+  const yaw=Math.atan2(2*(q.w*q.z+q.x*q.y),1-2*(q.y*q.y+q.z*q.z));
+  const sig=Math.sqrt(Math.max(0,cov[0])+Math.max(0,cov[7]));      // desviacion de posicion (m)
+  amclConf={x:p.x,y:p.y,yaw:yaw,sig:sig,sigyaw:Math.sqrt(Math.max(0,cov[35]))};
+  // actualiza Tmo SOLO si esta razonablemente localizado (si no, no saltar el mapa)
+  if(odom0_last && sig<0.5){ const amcl={x:p.x,y:p.y,th:yaw}, od={x:odom0_last.x,y:odom0_last.y,th:odom0_last.yaw};
+    Tmo=se2c(amcl, se2i(od)); }
+  draw(); }
+function onParticles(m){ particles=(m.particles||[]).map(pt=>({x:pt.pose.position.x, y:pt.pose.position.y})); draw(); }
+function sendTruth(m){ if(!ensureOrigin())return; const p=relToMap(m.x,m.y);
+  send({op:'publish',topic:'/sim_truth',msg:{data:JSON.stringify({x:p.x,y:p.y,yaw:0})}});
+  flash('Pose REAL (oculta) colocada — pulsa 🌍 global y conduce para localizar'); }
+$('#globalLoc').onclick=()=>{ if(!connected){flash('Sin conexión');return;}
+  send({op:'call_service',service:'/reinitialize_global_localization',type:'std_srvs/srv/Empty',args:{}});
+  Tmo={x:0,y:0,th:0}; flash('Localización global: partículas por todo el mapa'); };
+$('#togPart').onclick=()=>{ showParticles=!showParticles; $('#togPart').classList.toggle('on',showParticles); draw(); };
 function ensureOrigin(){ if(!odom0){ if(!odom0_last){flash('Aún sin odometría');return false;} odom0={...odom0_last}; real=[]; } return true; }
 
 $('#sendmap').onclick=()=>{ if(!connected){flash('Sin conexión');return;} if(!walls.length){flash('Dibuja o carga un mapa');return;}
