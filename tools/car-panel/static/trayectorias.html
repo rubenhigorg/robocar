@@ -158,6 +158,7 @@ let ox=W/2, oy=H*0.62;           // origen (robot) abajo-centro, con sitio detra
 const cv=$('#c'), g=cv.getContext('2d');
 let wps=[], walls=[], obstacles=[], real=[], scanPts=[], carRel=null, temp=null, mapImg=null, costImg=null, goal=null, navPlan=[];
 let mode='obs', mapTool='rect', connected=false, odom0=null, odom0_last=null, showCost=true, navCfg=null;   // por defecto MAPA·Nav2
+let Tmo={x:0,y:0,th:0}, particles=[], amclConf=null, showParticles=true;   // estado de localizacion (AMCL) — arriba para evitar TDZ en draw()
 
 function toM(px,py){ return {x:(oy-py)/PPM, y:(ox-px)/PPM}; }
 function toPx(m){ return {x:ox-m.y*PPM, y:oy-m.x*PPM}; }
@@ -287,7 +288,7 @@ function sendObstacles(){ if(!connected)return; const segs=[];
 let areas=[];
 const AREA_COLORS=['#5b9bea','#2fae6a','#e0a24a','#b483e6','#e0533a','#4bd0d0','#d98cc0','#8ca0b8'];
 // --- frame map<->odom (AMCL). Con map==odom (banco clasico) Tmo=identidad. ---
-let Tmo={x:0,y:0,th:0};   // transform map->odom (odom expresado en map)
+// Tmo (map->odom) se declara arriba con el resto del estado (evita TDZ)
 function se2c(A,B){ const c=Math.cos(A.th),s=Math.sin(A.th); return {x:A.x+B.x*c-B.y*s, y:A.y+B.x*s+B.y*c, th:A.th+B.th}; }
 function se2i(A){ const c=Math.cos(A.th),s=Math.sin(A.th); return {x:-(A.x*c+A.y*s), y:A.x*s-A.y*c, th:-A.th}; }
 function odomToRel(ox_,oy_){ const c=Math.cos(-odom0.yaw),s=Math.sin(-odom0.yaw),dx=ox_-odom0.x,dy=oy_-odom0.y; return {x:dx*c-dy*s,y:dx*s+dy*c}; }
@@ -601,8 +602,7 @@ function onScan(m){ if(!carRel) return; const pts=[]; const n=m.ranges.length;
 function onPlan(m){ if(!odom0){navPlan=[];return;} const pts=[];
   (m.poses||[]).forEach(ps=>{ const r=mapToRel(ps.pose.position.x, ps.pose.position.y); if(r) pts.push(r); });
   navPlan=pts; draw(); }
-// ---- LOCALIZACION (AMCL): nube de particulas + pose + confianza ----
-let particles=[], amclConf=null, showParticles=true;
+// ---- LOCALIZACION (AMCL): nube de particulas + pose + confianza (estado declarado arriba) ----
 function onAmcl(m){ const p=m.pose.pose.position, q=m.pose.pose.orientation, cov=m.pose.covariance;
   const yaw=Math.atan2(2*(q.w*q.z+q.x*q.y),1-2*(q.y*q.y+q.z*q.z));
   const sig=Math.sqrt(Math.max(0,cov[0])+Math.max(0,cov[7]));      // desviacion de posicion (m)
