@@ -19,13 +19,13 @@ nohup python3 ~/robocar/src/robocar_pkg/robocar_pkg/trajectory_nav_node.py --ros
 sleep 4
 # (sin mapa de arranque: la web empieza limpia; el usuario carga su mapa cuando quiere)
 # --- Nav2 ---
-nohup ros2 run nav2_planner planner_server --ros-args --params-file $CFG >/tmp/planner.log 2>&1 & disown
-nohup ros2 run nav2_controller controller_server --ros-args -r /cmd_vel:=/cmd_vel_raw --params-file $CFG >/tmp/controller.log 2>&1 & disown
-nohup ros2 run nav2_behaviors behavior_server --ros-args --params-file $CFG >/tmp/behavior.log 2>&1 & disown
-nohup ros2 run nav2_bt_navigator bt_navigator --ros-args --params-file $CFG >/tmp/btnav.log 2>&1 & disown
-nohup ros2 run nav2_collision_monitor collision_monitor --ros-args --params-file $CFG >/tmp/colmon.log 2>&1 & disown   # reflejo IR
+nohup /opt/ros/humble/lib/nav2_planner/planner_server --ros-args --params-file $CFG >/tmp/planner.log 2>&1 & disown
+nohup /opt/ros/humble/lib/nav2_controller/controller_server --ros-args -r /cmd_vel:=/cmd_vel_raw --params-file $CFG >/tmp/controller.log 2>&1 & disown
+nohup /opt/ros/humble/lib/nav2_behaviors/behavior_server --ros-args --params-file $CFG >/tmp/behavior.log 2>&1 & disown
+nohup /opt/ros/humble/lib/nav2_bt_navigator/bt_navigator --ros-args --params-file $CFG >/tmp/btnav.log 2>&1 & disown
+nohup /opt/ros/humble/lib/nav2_collision_monitor/collision_monitor --ros-args --params-file $CFG >/tmp/colmon.log 2>&1 & disown   # reflejo IR
 sleep 4
-nohup ros2 run nav2_lifecycle_manager lifecycle_manager --ros-args -r __node:=lifecycle_manager_navigation --params-file $CFG >/tmp/lifecycle.log 2>&1 & disown
+nohup /opt/ros/humble/lib/nav2_lifecycle_manager/lifecycle_manager --ros-args -r __node:=lifecycle_manager_navigation --params-file $CFG >/tmp/lifecycle.log 2>&1 & disown
 sleep 12
 # relay del destino: /goal_pose (web) -> accion NavigateToPose (Nav2)
 nohup python3 ~/robocar/src/robocar_pkg/robocar_pkg/goal_relay_node.py >/tmp/gr.log 2>&1 & disown

@@ -96,14 +96,16 @@ nodos y el perfilado de CPU medidos en la Pi el **20-ago-2026**.
 
 ### Tier 2 — Estructura (RAM + mantenibilidad)
 
-**O4 · Un *launch file* único (`nav2_bench.launch.py`) que sustituya a `bringupNAV2.sh`.**
-- *Problema:* arranque frágil con `nohup`/`pkill`, y ~160 MB en wrappers `ros2 run`.
-- *Acción:* un `launch.py` que lance los **ejecutables directos** (sin el wrapper de `ros2 run`) con
-  sus remaps/params; opción de **composición** (varios nodos Nav2 en un solo proceso contenedor) para
-  bajar aún más RAM y coste de descubrimiento.
-- *Ganancia:* **−150 MB RAM** aprox. + arranque reproducible y parametrizable. *Esfuerzo:* medio.
-- *Riesgo:* medio (revisar que todos los remaps y el `ROS_LOCALHOST_ONLY=1` se mantienen).
-- *Verificación:* `ps rss` total antes/después; el banco navega igual.
+**O4 · Quitar los wrappers `ros2 run` (−RAM).** ✅ **HECHO (20-ago)**
+- *Problema (medido):* cada `ros2 run <pkg> <exe>` deja vivo un proceso wrapper Python de ~23 MB
+  como padre del nodo real. **6 wrappers Nav2 = 138 MB** de RAM sin hacer nada.
+- *Solución:* en `bringupNAV2.sh` y `restart_nav2.sh`, lanzar los **binarios directos**
+  (`/opt/ros/humble/lib/nav2_*/…`) en vez de `ros2 run`. Mismos params/remaps/orden; el entorno
+  (`ROS_LOCALHOST_ONLY=1`, RMW) se hereda del shell. Los nodos propios ya iban por python3 directo.
+- *Resultado medido:* 0 wrappers, **RAM disponible +94 MB** (2812→2909 MB), Nav2 `active` y navegación
+  de punta a punta OK (`DESTINO ALCANZADO`). Commit pendiente.
+- *Paso extra futuro (más RAM, más riesgo):* **composición** (nodos Nav2 en un `ComposableNodeContainer`
+  único) — ahorra memoria y coste de descubrimiento, pero es un cambio mayor. No hecho.
 
 **O5 · Apagar `trajectory_nav` en modo Nav2.** ✅ **HECHO (20-ago)**
 - *Problema (medido):* ocioso en modo Nav2 consumía **26 %** de CPU por escuchar `/odometry/filtered`
@@ -151,11 +153,12 @@ Correctness, no CPU.
 
 ## 4. Orden recomendado y objetivo
 
-**Secuencia:** ~~O1~~ ✅ → ~~O3~~ ✅ → ~~O2~~ ✅ → ~~O5~~ ✅ → **O6/O4** (siguiente) → O7 → (O8/O9/O10/O11).
+**Secuencia:** ~~O1~~ ✅ → ~~O3~~ ✅ → ~~O2~~ ✅ → ~~O5~~ ✅ → ~~O4~~ ✅ → **O6** (siguiente) → O7 → (O8/O9/O10/O11).
 
 > **Progreso CPU (medido):** goal_relay 35.6→6.6 (O1) · sim_map_grid 17.8→0.2 (O3) · rosbridge
-> 79→50 (O2) · trajectory_nav 26→3 (O5) = **~98 puntos de CPU** recuperados, + varios wrappers de RAM.
-> La Pi pasa de ir al ~60-70 % a tener holgura amplia.
+> 79→50 (O2) · trajectory_nav 26→3 (O5) = **~98 puntos de CPU** recuperados.
+> **Progreso RAM:** O4 quitó 6 wrappers `ros2 run` = **138 MB** (+94 MB disponibles medidos). O5 quitó
+> otro wrapper. La Pi pasa de ir al ~60-70 % de CPU a holgura amplia, con más RAM libre.
 > Insight recurrente: consumir topics de alta frecuencia (49 Hz odom / 20 Hz control) en Python es
 > caro; **O8 (bajar la frecuencia de `sim_motion`) aliviaría a varios nodos a la vez** → sube prioridad.
 
