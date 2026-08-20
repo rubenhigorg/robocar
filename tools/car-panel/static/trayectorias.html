@@ -611,9 +611,12 @@ function onAmcl(m){ const p=m.pose.pose.position, q=m.pose.pose.orientation, cov
   const yaw=Math.atan2(2*(q.w*q.z+q.x*q.y),1-2*(q.y*q.y+q.z*q.z));
   const sig=Math.sqrt(Math.max(0,cov[0])+Math.max(0,cov[7]));      // desviacion de posicion (m)
   amclConf={x:p.x,y:p.y,yaw:yaw,sig:sig,sigyaw:Math.sqrt(Math.max(0,cov[35]))};
-  // actualiza Tmo SOLO si esta razonablemente localizado (si no, no saltar el mapa)
+  // Tmo (map->odom) SOLO si localizado, y con HISTERESIS: se actualiza si cambia de verdad
+  // (correccion real de deriva), no con el temblor de cada frame -> el mapa no baila.
   if(odom0_last && sig<0.5){ const amcl={x:p.x,y:p.y,th:yaw}, od={x:odom0_last.x,y:odom0_last.y,th:odom0_last.yaw};
-    Tmo=se2c(amcl, se2i(od)); }
+    const nt=se2c(amcl, se2i(od));
+    if(Math.hypot(nt.x-Tmo.x, nt.y-Tmo.y) > 0.12 || Math.abs(Math.atan2(Math.sin(nt.th-Tmo.th),Math.cos(nt.th-Tmo.th))) > 0.06){
+      Tmo=nt; } }
   draw(); }
 function onParticles(m){ particles=(m.particles||[]).map(pt=>({x:pt.pose.position.x, y:pt.pose.position.y})); draw(); }
 function sendTruth(m){ if(!ensureOrigin())return; const p=relToMap(m.x,m.y);
