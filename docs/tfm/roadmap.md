@@ -156,13 +156,20 @@ flowchart TB
 > los 3 ultrasonidos (`sensor_msgs/Range` → range_sensor_layer del costmap local) y **parada de
 > emergencia IR** (`/ir_range` → `collision_monitor`, corta `/cmd_vel`). Contrato **`/nav_config`**
 > (get/set JSON autodescrito) = **la interfaz de configuración para el LLM** (velocidad, marcha atrás,
-> radio de giro, tolerancia, margen, orientación, centrado, suavidad); en caliente o con reinicio de
-> Nav2 según el parámetro. Ver [Control de la navegación por el LLM](control-navegacion-llm.md).
+> radio de giro, tolerancia, margen, orientación, centrado, suavidad, y **velocidad adaptativa** —
+> frenado en curvas y cerca de obstáculos, verificado: mismo arco, frenado fuerte 0.31 vs suave 0.44 m/s);
+> en caliente o con reinicio de Nav2 según el parámetro. Ver [Control de la navegación por el LLM](control-navegacion-llm.md).
 >
 > **Lo que queda para llevarlo al robot real** = la **Capa 1 (SLAM)**: cuando Cartographer publique un
 > `/map` real, se enchufa en el costmap estático en lugar del simulado y **Nav2 no cambia** (drop-in).
 > Opcional: `/scan` en frame `laser`, ultrasonidos también en el costmap global (hoy cuelgan el planner
-> por TF timing). **Aviso:** la Pi4 va justa de carga con todo el stack (se congeló una vez).
+> por TF timing).
+>
+> **Banco OPTIMIZADO (ago 2026):** la Pi4 iba justa (se congeló una vez); tras un plan de optimización
+> medido nodo a nodo se recuperaron **>120 puntos de CPU y ~150 MB de RAM** — goal_relay 35→7 %,
+> sim_map_grid 18→0.2 %, rosbridge 79→50 %, trajectory_nav 26→3 %, ray-cast vectorizado, `sim_motion`
+> a 20 Hz (consumidores de odometría 88→60 %), binarios Nav2 sin wrappers. La Pi tiene ya holgura amplia.
+> Ver [Plan de optimización del banco](optimizacion-banco.md).
 
 ## Decisiones de diseño
 
