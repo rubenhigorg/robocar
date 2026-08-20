@@ -135,24 +135,34 @@ flowchart TB
    `sim_map_grid_node` rasteriza los segmentos (`/sim_map`) a rejilla de ocupación (celdas
    pared=100, libre=0, 0.05 m/celda), QoS `transient_local` (latched) + republish 1 Hz. Alimenta
    la **capa estática del _costmap_** de Nav2 con el mismo mapa de banco. Pintado también en la web.
-2. Exponer el objetivo como **`NavigateToPose` / `/goal_pose`** (además de `/plan_waypoints`),
-   que es lo que emitirá el MCP/LLM de la Capa 3.
+2. ✅ **HECHO** — Objetivo como **`/goal_pose`**: `goal_relay_node` lo convierte a la acción
+   `NavigateToPose` de Nav2 (estado legible en `/nav2_relay/status`). Es lo que emitirá el MCP/LLM (Capa 3).
 3. ✅ **HECHO** — Cerrar el **árbol TF** que espera Nav2: `map→odom` (emitido por `sim_map_grid`
    como identidad estática en banco; en real AMCL/SLAM), `odom→base_link` (odometría) y
    `base_link→laser` (URDF, `[0.070,0,0.028]`+180°). Se corrigió un árbol partido: `base_footprint`
    era padre de `base_link` chocando con `odom→base_link` → invertida la junta (base_link raíz).
    Árbol único `map→odom→base_link→{base_footprint,laser,imu,...}` verificado.
-4. Con esas tres piezas, el `trajectory_nav_node` se **sustituye por Nav2** (BT Navigator +
-   planner + TEB) **sin tocar** ni la web, ni `sim_sensors`, ni `sim_motion`. Ese es el criterio
-   de "banco bien hecho". Recordatorio de reparto: **Nav2 hace la ruta** (planner global sobre el
-   `/map`) **y la conduce** (controller TEB); nosotros solo damos el **destino** — hoy la ruta la
-   dibujamos a mano en la web con `trajectory_nav`, que es el andamio a retirar.
+4. ✅ **HECHO — Nav2 FUNCIONA en el banco** y sustituye a `trajectory_nav` (que queda como modo
+   RUTA aparte, andamio): BT Navigator + planner **Smac Hybrid-A\*** (car-like, `minimum_turning_radius`
+   =0.93) + controlador **RPP** (D3 permitía TEB/RPP/MPPI; elegimos RPP) + costmaps (static `/map` +
+   obstacle `/scan` + **range** ultrasonidos en el local + inflación) + **collision_monitor** (parada
+   IR). Con **marcha atrás** (Reeds-Shepp; contradice el "forward-only" del plan viejo) y un BT sin
+   recuperaciones-que-mueven (no se sale del mapa). La web da el **destino**; Nav2 planifica y conduce.
+   Sin tocar `sim_sensors`/`sim_motion`/web: **el diseño drop-in se cumplió**.
 
-> **Estado del banco (sim puro):** ✅ `sim_motion` (planta cinemática), ✅ `/scan` (sim_sensors),
-> ✅ `/map` + TF `map→odom` (sim_map_grid), ✅ TF `odom→base_link` (sim_motion), ✅ árbol TF único
-> `map→odom→base_link→laser`. **Falta** para Nav2: (a) `/scan` en frame `laser` (hoy `sim_sensors`
-> lo publica en `base_link`; para fidelidad total, casterar desde la pose del laser), (b) exponer
-> `/goal_pose`, (c) instalar+configurar Nav2 (params Ackermann + TEB + costmaps).
+> **Estado del banco (ago 2026): NAV2 FUNCIONANDO DE PUNTA A PUNTA.** Das un destino en la web (o
+> `/goal_pose`) → Nav2 traza la ruta rodeando paredes y conduce. Incluye: **marcha atrás**,
+> **obstáculos dinámicos** (canal `/sim_obstacles`: van al `/scan`, no al `/map`), **evitación** con
+> los 3 ultrasonidos (`sensor_msgs/Range` → range_sensor_layer del costmap local) y **parada de
+> emergencia IR** (`/ir_range` → `collision_monitor`, corta `/cmd_vel`). Contrato **`/nav_config`**
+> (get/set JSON autodescrito) = **la interfaz de configuración para el LLM** (velocidad, marcha atrás,
+> radio de giro, tolerancia, margen, orientación, centrado, suavidad); en caliente o con reinicio de
+> Nav2 según el parámetro. Ver [Control de la navegación por el LLM](control-navegacion-llm.md).
+>
+> **Lo que queda para llevarlo al robot real** = la **Capa 1 (SLAM)**: cuando Cartographer publique un
+> `/map` real, se enchufa en el costmap estático en lugar del simulado y **Nav2 no cambia** (drop-in).
+> Opcional: `/scan` en frame `laser`, ultrasonidos también en el costmap global (hoy cuelgan el planner
+> por TF timing). **Aviso:** la Pi4 va justa de carga con todo el stack (se congeló una vez).
 
 ## Decisiones de diseño
 
@@ -160,7 +170,7 @@ flowchart TB
 |---|---|---|
 | **D1** | Distro ROS2 | **Humble** (LTS hasta 2027, alineada con la memoria). Migración realizada. |
 | **D2** | Odometría/localización | **Opción A**: pose por *scan-matching* de Cartographer. Plan B (fusión encoder+IMU+dirección → odometría modelo-bicicleta) **implementado y validado** en Capa 0 (~±1.5 % / ~2 cm a 30 Hz), disponible si no se cumple OE1 (<10 cm) y como base para el banco. |
-| **D3** | Controlador local Nav2 | **TEB** (o RPP/MPPI) por la cinemática Ackermann — no el DWB diferencial. Datos **medidos**: L=0.175 m, **radio de giro mín. R_min ≈ 0.93 m** (tan_max=0.188, ~10.6° de rueda a tope), velocidad mínima conducible **~0.3 m/s** (el ESC/BLHeli no hace *crawl* fino). **Marcha atrás disponible** (con pausa en neutro) → **maniobras en 3 puntos (k-turn)** para giros por debajo de R_min. TEB deberá respetar esta misma restricción y, idealmente, permitir reversa. |
+| **D3** | Controlador local Nav2 → **RPP (elegido en el banco)** | En el banco se usa **Regulated Pure Pursuit** (RPP) con planner **Smac Hybrid-A\*** (car-like), no DWB diferencial. TEB queda como alternativa futura. Datos **medidos**: L=0.175 m, **R_min ≈ 0.93 m** (tan_max=0.188), velocidad mínima conducible **~0.3 m/s**. **Marcha atrás implementada** (Reeds-Shepp + `allow_reversing`; contradice el viejo "forward-only"). Config y "mandos" del LLM en **`/nav_config`**. |
 | **D4** | Puente de actuación | `car_control_node` extendido (único dueño del bus I2C): `/cmd_vel` → servo dirección + ESC, con rampa anti-pico, watchdog y neutro garantizado. |
 
 ## Correspondencia fases ↔ capas ↔ objetivos
