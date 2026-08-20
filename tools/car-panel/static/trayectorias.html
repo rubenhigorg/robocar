@@ -101,7 +101,7 @@
 
   <div class="row" id="rowMapa" style="display:none"><span class="lbl">MAPA</span>
     <select id="planta" title="Cargar planta de piso con muebles"><option value="">🏠 Plantas…</option><option value="0">Piso 100 m² · 2 dorm</option><option value="1">Piso 130 m² · 3 dorm</option><option value="2">Piso 160 m² · 4 hab</option><option value="3">Ático 200 m² · 4 hab</option></select>
-    <span class="seg" id="mtool"><button data-t="rect" class="act">▭ habitación</button><button data-t="wall">─ pared</button><button data-t="obst">▧ obstáculo</button><button data-t="goal">◎ destino</button></span>
+    <span class="seg" id="mtool"><button data-t="rect" class="act">▭ habitación</button><button data-t="wall">─ pared</button><button data-t="obst">▧ obstáculo</button><button data-t="goal">◎ destino</button><button data-t="area">🏷️ área</button></span>
     <button id="mundo">↶</button><button id="mclear">limpiar</button>
     <button id="sendmap" class="map">▦ Enviar mapa</button>
   </div>
@@ -110,6 +110,12 @@
     <button id="navstop" class="danger">■ Parar</button>
     <button id="togCost" class="tog on" title="Zonas donde NO puede ir el robot (costmap de Nav2)">▨ no-go</button>
     <span class="lbl" style="min-width:0">pincha ◎ destino en zona despejada</span>
+  </div>
+  <div class="row" id="rowArea" style="display:none"><span class="lbl">Zonas</span>
+    <span class="lbl" style="min-width:0">🏷️ <b>área</b>: arrastra un rectángulo y ponle nombre</span>
+    <select id="areaSel"><option value="">— zona —</option></select>
+    <button id="goArea" class="primary">▶ Ir a sala</button>
+    <button id="delArea" title="Borrar la zona seleccionada">🗑</button>
   </div>
   <div class="row" id="rowRuta"><span class="lbl">RUTA</span>
     <button id="undo">↶</button><button id="clear">limpiar</button>
@@ -173,7 +179,8 @@ function draw(){
     g.fillStyle='rgba(255,140,66,.45)'; g.fillRect(X,Y,Wd,Hd); g.strokeStyle='#ff8c42'; g.lineWidth=2; g.strokeRect(X,Y,Wd,Hd); });
   if(temp){ let a=toPx({x:temp.x1,y:temp.y1}),b=toPx({x:temp.x2,y:temp.y2});
     g.strokeStyle=(mapTool==='obst')?'#ff8c42':'#e0a24a'; g.lineWidth=2;
-    if(mapTool==='rect'||mapTool==='obst') g.strokeRect(Math.min(a.x,b.x),Math.min(a.y,b.y),Math.abs(b.x-a.x),Math.abs(b.y-a.y));
+    if(mapTool==='area') g.strokeStyle='#5b9bea';
+    if(mapTool==='rect'||mapTool==='obst'||mapTool==='area') g.strokeRect(Math.min(a.x,b.x),Math.min(a.y,b.y),Math.abs(b.x-a.x),Math.abs(b.y-a.y));
     else { g.beginPath();g.moveTo(a.x,a.y);g.lineTo(b.x,b.y);g.stroke(); } }
   }
   // real
@@ -188,6 +195,14 @@ function draw(){
   // ruta calculada por Nav2 (/plan) — solo modo MAPA
   if(map && navPlan.length>1){ g.strokeStyle='#b483e6'; g.lineWidth=2.5; g.setLineDash([6,4]); g.beginPath();
     navPlan.forEach((m,i)=>{let p=toPx(m);i?g.lineTo(p.x,p.y):g.moveTo(p.x,p.y);}); g.stroke(); g.setLineDash([]); }
+  // zonas etiquetadas (cocina, baño…) — solo modo MAPA, por debajo del destino
+  if(map && odom0 && areas.length){ g.textAlign='center'; g.textBaseline='middle';
+    areas.forEach((a,i)=>{ const col=AREA_COLORS[i%AREA_COLORS.length];
+      const r1=mapToRel(a.rect[0],a.rect[1]), r2=mapToRel(a.rect[2],a.rect[3]); if(!r1||!r2)return;
+      const p1=toPx(r1), p2=toPx(r2), X=Math.min(p1.x,p2.x),Y=Math.min(p1.y,p2.y),Wd=Math.abs(p2.x-p1.x),Hd=Math.abs(p2.y-p1.y);
+      g.fillStyle=col+'22'; g.fillRect(X,Y,Wd,Hd); g.strokeStyle=col; g.lineWidth=1.5; g.setLineDash([5,3]); g.strokeRect(X,Y,Wd,Hd); g.setLineDash([]);
+      const gp=toPx(mapToRel(a.goal[0],a.goal[1])); g.fillStyle=col; g.font='bold 12px monospace'; g.fillText('🏷️ '+a.name, gp.x, gp.y); });
+    g.textAlign='start'; g.textBaseline='alphabetic'; }
   // destino Nav2 (goal) — solo modo MAPA
   if(map && goal){ let p=toPx(goal); g.strokeStyle='#ffcf4a'; g.fillStyle='rgba(255,207,74,.22)'; g.lineWidth=2;
     g.beginPath();g.arc(p.x,p.y,9,0,7);g.fill();g.stroke();
@@ -219,6 +234,9 @@ function endWall(){ if(mode==='obs'&&temp){
     if(mapTool==='obst'){ if(Math.abs(x2-x1)>0.05&&Math.abs(y2-y1)>0.05){ obstacles.push({x1,y1,x2,y2}); sendObstacles(); } }
     else if(mapTool==='rect'){ if(Math.abs(x2-x1)>0.1&&Math.abs(y2-y1)>0.1)
         walls.push({x1,y1,x2,y2:y1},{x1:x2,y1,x2,y2},{x1:x2,y1:y2,x2:x1,y2},{x1,y1:y2,x2:x1,y2:y1}); }
+    else if(mapTool==='area'){ if(Math.abs(x2-x1)>0.3&&Math.abs(y2-y1)>0.3){
+        const nm=(prompt('Nombre de la zona (cocina, baño, salón, dormitorio, pasillo…)')||'').trim();
+        if(nm) sendArea(nm,x1,y1,x2,y2); } }
     else { if(Math.hypot(x2-x1,y2-y1)>0.05) walls.push({x1,y1,x2,y2}); }
     temp=null; draw(); } }
 cv.addEventListener('pointerup', endWall); cv.addEventListener('pointercancel', endWall);
@@ -227,8 +245,9 @@ function updateMode(){ const map=mode==='obs';
   $('#rowRuta').style.display = map?'none':'flex';
   $('#rowMapa').style.display = map?'flex':'none';
   $('#rowNav').style.display  = map?'flex':'none';
+  $('#rowArea').style.display = map?'flex':'none';
   $('#hint').innerHTML = map
-    ? '<b>MAPA · Nav2</b>: carga/dibuja el mapa y «Enviar mapa». Con <b>▧ obstáculo</b> pintas cosas que NO están en el mapa (el láser las ve y Nav2 las esquiva). Con <b>◎ destino</b> pincha un punto y «Ir a destino».'
+    ? '<b>MAPA · Nav2</b>: carga/dibuja el mapa y «Enviar mapa». Con <b>▧ obstáculo</b> pintas cosas que NO están en el mapa (el láser las ve y Nav2 las esquiva). Con <b>◎ destino</b> pincha un punto y «Ir a destino». Con <b>🏷️ área</b> etiquetas salas (cocina, baño…) para «Ir a sala» y para el LLM.'
     : '<b>RUTA · aproximación</b>: pincha waypoints (o cuadrado/línea) y «Enviar ruta»: el script antiguo los sigue esquivando. Rejilla 0.5 m.'; }
 $('#mode').addEventListener('click', e=>{ const b=e.target.closest('button'); if(!b)return; mode=b.dataset.m;
   $('#mode').querySelectorAll('button').forEach(x=>x.classList.toggle('act',x===b)); updateMode(); draw(); });
@@ -244,6 +263,24 @@ $('#mundo').onclick=()=>{ if(mapTool==='obst'){ obstacles.pop(); sendObstacles()
 function sendObstacles(){ if(!connected)return; const segs=[];
   obstacles.forEach(o=>{ segs.push([o.x1,o.y1,o.x2,o.y1],[o.x2,o.y1,o.x2,o.y2],[o.x2,o.y2,o.x1,o.y2],[o.x1,o.y2,o.x1,o.y1]); });
   send({op:'publish',topic:'/sim_obstacles',msg:{data:JSON.stringify({segments:segs})}}); }
+
+// ---- ZONAS del mapa (cocina, bano, salon...) : contrato /map_areas para la web hoy y el LLM manana ----
+let areas=[];
+const AREA_COLORS=['#5b9bea','#2fae6a','#e0a24a','#b483e6','#e0533a','#4bd0d0','#d98cc0','#8ca0b8'];
+function mapToRel(mx,my){ if(!odom0)return null; const c=Math.cos(-odom0.yaw),s=Math.sin(-odom0.yaw),dx=mx-odom0.x,dy=my-odom0.y; return {x:dx*c-dy*s,y:dx*s+dy*c}; }
+function relToMap(rx,ry){ const c=Math.cos(odom0.yaw),s=Math.sin(odom0.yaw); return {x:odom0.x+rx*c-ry*s, y:odom0.y+rx*s+ry*c}; }
+function onAreas(m){ try{ areas=(JSON.parse(m.data).areas)||[]; }catch(e){ return; } fillAreaSel(); draw(); }
+function fillAreaSel(){ const sel=$('#areaSel'); if(!sel)return; const cur=sel.value;
+  sel.innerHTML='<option value="">— zona —</option>'+areas.map(a=>'<option>'+a.name+'</option>').join('');
+  if(areas.some(a=>a.name===cur)) sel.value=cur; }
+function sendArea(name,rx1,ry1,rx2,ry2){ if(!ensureOrigin())return; const A=relToMap(rx1,ry1),B=relToMap(rx2,ry2);
+  send({op:'publish',topic:'/map_areas/set',msg:{data:JSON.stringify({op:'add',name:name,rect:[A.x,A.y,B.x,B.y]})}}); flash('Zona «'+name+'» guardada'); }
+$('#goArea').onclick=()=>{ if(!connected){flash('Sin conexión');return;} const nm=$('#areaSel').value, a=areas.find(x=>x.name===nm);
+  if(!a){flash('Elige una zona');return;} const now=Date.now();
+  send({op:'publish',topic:'/goal_pose',msg:{header:{stamp:{sec:Math.floor(now/1000),nanosec:0},frame_id:'map'},pose:{position:{x:a.goal[0],y:a.goal[1],z:0},orientation:{x:0,y:0,z:0,w:1}}}});
+  const gr=mapToRel(a.goal[0],a.goal[1]); if(gr){goal=gr;draw();} flash('Voy a «'+nm+'»'); };
+$('#delArea').onclick=()=>{ const nm=$('#areaSel').value; if(!nm){flash('Elige una zona');return;}
+  send({op:'publish',topic:'/map_areas/set',msg:{data:JSON.stringify({op:'del',name:nm})}}); flash('Zona «'+nm+'» borrada'); };
 // "limpiar" = EMPEZAR DE NUEVO: borra el mapa, cancela Nav2 y devuelve el robot al origen.
 $('#mclear').onclick=()=>{ if(!connected){flash('Sin conexión');return;}
   send({op:'publish',topic:'/sim_map',msg:{data:JSON.stringify({segments:[]})}});     // limpia /map
@@ -389,6 +426,10 @@ const NODES=[
   rl:'Contrato de configuración (velocidad, frenados, tolerancias…) para la web y el LLM',
   subs:[{t:'/nav_config/set',f:'String JSON',x:'← web/LLM · nuevos valores'}],
   pubs:[{t:'/nav_config',f:'String JSON',x:'→ web/LLM · parámetros autodescritos'},{t:'srv set_parameters',f:'SetParameters',x:'→ controller/costmaps · aplica en caliente'}]},
+ {id:'map_areas',nm:'map_areas',emoji:'🏷️',lane:'bridge',o:'propio',lang:'Python',integ:'no — script suelto',launch:'python3 map_areas_node.py',modes:['obs'],
+  rl:'Zonas del mapa con nombre (cocina, baño…): resolución semántica nombre→pose para web y LLM',
+  subs:[{t:'/map_areas/set',f:'String JSON',x:'← web/LLM · alta/baja de zonas'}],
+  pubs:[{t:'/map_areas',f:'String JSON',x:'→ web/LLM · zonas + centroide (persiste en disco)'}]},
 
  {id:'trajectory_nav',nm:'trajectory_nav',emoji:'🕹️',lane:'ruta',o:'propio',lang:'Python',integ:'colcon · ros2 run',launch:'ros2 run robocar_pkg trajectory_nav_node',modes:['wp'],
   rl:'Modo RUTA (script antiguo): sigue waypoints dibujados de forma reactiva. NO planifica',
@@ -476,6 +517,8 @@ function connect(){
     send({op:'subscribe',topic:'/global_costmap/costmap',type:'nav_msgs/msg/OccupancyGrid',throttle_rate:1000,queue_length:1}); // 1Hz basta
     send({op:'advertise',topic:'/nav_config/set',type:'std_msgs/msg/String'});
     send({op:'subscribe',topic:'/nav_config',type:'std_msgs/msg/String'});                       // config, sin throttle
+    send({op:'advertise',topic:'/map_areas/set',type:'std_msgs/msg/String'});
+    send({op:'subscribe',topic:'/map_areas',type:'std_msgs/msg/String'});                        // zonas etiquetadas
     send({op:'subscribe',topic:'/plan',type:'nav_msgs/msg/Path',throttle_rate:300,queue_length:1}); };                 // ruta -> ~3Hz
   ws.onclose=()=>{connected=false;setConn();setTimeout(connect,1500);};
   ws.onerror=()=>ws.close();
@@ -487,7 +530,8 @@ function connect(){
     else if(d.topic==='/map') onMap(d.msg);
     else if(d.topic==='/plan') onPlan(d.msg);
     else if(d.topic==='/global_costmap/costmap') onCostmap(d.msg);
-    else if(d.topic==='/nav_config') onNavConfig(d.msg); };
+    else if(d.topic==='/nav_config') onNavConfig(d.msg);
+    else if(d.topic==='/map_areas') onAreas(d.msg); };
 }
 function send(o){ if(ws&&ws.readyState===1) ws.send(JSON.stringify(o)); }
 function setConn(){ const e=$('#conn'); e.textContent=connected?'conectado':'desconectado'; e.className='conn '+(connected?'on':'off'); }
