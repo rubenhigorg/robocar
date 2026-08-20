@@ -41,6 +41,8 @@ class SimMotion(Node):
         self.last_cmd = None
 
         self.pub = self.create_publisher(Odometry, '/odometry/filtered', 20)
+        # al teletransportar (reset del banco) avisamos a AMCL de la pose conocida (evita que se descoloque)
+        self.pub_init = self.create_publisher(PoseWithCovarianceStamped, '/initialpose', 10)
         self.tfb = TransformBroadcaster(self)
         self.create_subscription(Twist, '/cmd_vel', self.ccb, 10)
         self.create_subscription(PoseWithCovarianceStamped, '/set_pose', self.rcb, 10)
@@ -78,6 +80,13 @@ class SimMotion(Node):
         self.yaw = math.atan2(2 * (q.w * q.z + q.x * q.y), 1 - 2 * (q.y * q.y + q.z * q.z))
         self.v = 0.0; self.wz = 0.0
         self.get_logger().info('pose reiniciada a (%.2f, %.2f, %.0f deg)' % (self.x, self.y, math.degrees(self.yaw)))
+        # sincroniza AMCL: en el reset la pose es CONOCIDA (map==odom en el banco) -> initialpose
+        ip = PoseWithCovarianceStamped(); ip.header.frame_id = 'map'
+        ip.header.stamp = self.get_clock().now().to_msg()
+        ip.pose.pose.position.x = self.x; ip.pose.pose.position.y = self.y
+        ip.pose.pose.orientation.z = math.sin(self.yaw/2); ip.pose.pose.orientation.w = math.cos(self.yaw/2)
+        cov = [0.0]*36; cov[0] = 0.10; cov[7] = 0.10; cov[35] = 0.03; ip.pose.covariance = cov
+        self.pub_init.publish(ip)
 
     def tick(self):
         to = self.get_parameter('cmd_timeout').value
