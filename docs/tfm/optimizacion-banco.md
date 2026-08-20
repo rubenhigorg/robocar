@@ -105,9 +105,14 @@ nodos y el perfilado de CPU medidos en la Pi el **20-ago-2026**.
 - *Riesgo:* medio (revisar que todos los remaps y el `ROS_LOCALHOST_ONLY=1` se mantienen).
 - *Verificación:* `ps rss` total antes/después; el banco navega igual.
 
-**O5 · Apagar `trajectory_nav` en modo Nav2.**
-- *Acción:* lanzarlo solo cuando se usa el modo RUTA (o pararlo al entrar en MAPA·Nav2).
-- *Ganancia:* un proceso Python menos suscrito a odometría/ultrasonidos. *Esfuerzo:* bajo.
+**O5 · Apagar `trajectory_nav` en modo Nav2.** ✅ **HECHO (20-ago)**
+- *Problema (medido):* ocioso en modo Nav2 consumía **26 %** de CPU por escuchar `/odometry/filtered`
+  a 49 Hz + `/ultrasound_data` (más un wrapper `ros2 run` de ~23 MB).
+- *Solución (patrón efímero, como O3, sin romper la web):* odometría y ultrasonidos se **arman al
+  recibir waypoints** y se **sueltan al terminar la ruta**; en modo Nav2 (sin ruta) queda ocioso sin
+  consumir. Además pasado de `ros2 run` a **python3 directo** (usa `src`, quita el wrapper, −RAM).
+- *Resultado medido:* **26 % → 3 %** ocioso. Modo RUTA verificado: ruta de 2 m seguida a completar
+  (`state=DONE wp=2/2`, robot movió 1.81 m) y sensores soltados después. Commit pendiente.
 
 **O6 · Decidir la política colcon (coherencia).**
 - *Acción:* o bien **meter todos los nodos propios en colcon con `--symlink-install`** (coherente y
@@ -146,10 +151,11 @@ Correctness, no CPU.
 
 ## 4. Orden recomendado y objetivo
 
-**Secuencia:** ~~O1~~ ✅ → ~~O3~~ ✅ → ~~O2~~ ✅ → **O5** (siguiente) → O6 → O4 → O7 → (O8/O9/O10/O11).
+**Secuencia:** ~~O1~~ ✅ → ~~O3~~ ✅ → ~~O2~~ ✅ → ~~O5~~ ✅ → **O6/O4** (siguiente) → O7 → (O8/O9/O10/O11).
 
 > **Progreso CPU (medido):** goal_relay 35.6→6.6 (O1) · sim_map_grid 17.8→0.2 (O3) · rosbridge
-> 79→50 (O2) = **~75 puntos de CPU** recuperados. La Pi pasa de ir al ~60-70 % a tener holgura real.
+> 79→50 (O2) · trajectory_nav 26→3 (O5) = **~98 puntos de CPU** recuperados, + varios wrappers de RAM.
+> La Pi pasa de ir al ~60-70 % a tener holgura amplia.
 > Insight recurrente: consumir topics de alta frecuencia (49 Hz odom / 20 Hz control) en Python es
 > caro; **O8 (bajar la frecuencia de `sim_motion`) aliviaría a varios nodos a la vez** → sube prioridad.
 

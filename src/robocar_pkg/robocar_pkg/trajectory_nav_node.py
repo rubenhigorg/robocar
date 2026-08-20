@@ -65,8 +65,11 @@ class TrajectoryNav(Node):
 
         self.pub = self.create_publisher(Twist, '/cmd_vel', 10)
         self.stpub = self.create_publisher(String, '/trajectory_nav/status', 10)
-        self.create_subscription(Odometry, '/odometry/filtered', self.ocb, 20)
-        self.create_subscription(Distance, '/ultrasound_data', self.dcb, 10)
+        # Odometria (49 Hz) y ultrasonidos solo se escuchan MIENTRAS se sigue una ruta: se
+        # arman al recibir waypoints y se sueltan al terminar. En modo Nav2 (sin ruta) el nodo
+        # queda ocioso sin consumir odom a 49 Hz (antes ~26% de CPU inutil).
+        self._odom_sub = None; self._us_sub = None
+        self._pending = None; self._disarm = False
         self.create_subscription(PoseArray, '/plan_waypoints', self.wcb, 10)
         self.create_timer(1/15.0, self.loop)
         self.get_logger().info('trajectory_nav listo (con k-turn de reserva). Waypoints en /plan_waypoints.')
@@ -75,6 +78,8 @@ class TrajectoryNav(Node):
     def ocb(self, m):
         p = m.pose.pose
         self.pose = (p.position.x, p.position.y, yaw_of(p.orientation))
+        if self._pending is not None:
+            self._anchor()          # anclar la ruta pendiente con la primera pose fresca
 
     def dcb(self, m):
         cl = lambda d: FAR if (d is None or d < 2.0) else d
@@ -82,14 +87,37 @@ class TrajectoryNav(Node):
         self.emergency = (not bool(m.emergency_stop))
 
     def wcb(self, msg):
-        if self.pose is None:
-            self.get_logger().warn('Sin odometria; ignoro waypoints.'); return
         if len(msg.poses) == 0:
             self._stop('lista vacia -> parar'); return
+        was_active = self._odom_sub is not None      # ruta ya en curso -> pose fresca
+        self._pending = list(msg.poses)
+        self._arm_sensors()
+        if was_active and self.pose is not None:
+            self._anchor()                           # ruta encadenada: anclar ya
+        # si no, _anchor() lo hara ocb con la primera pose fresca
+
+    def _arm_sensors(self):
+        self._disarm = False
+        if self._odom_sub is None:
+            self._odom_sub = self.create_subscription(Odometry, '/odometry/filtered', self.ocb, 20)
+        if self._us_sub is None:
+            self._us_sub = self.create_subscription(Distance, '/ultrasound_data', self.dcb, 10)
+
+    def _disarm_sensors(self):
+        if self._odom_sub is not None:
+            self.destroy_subscription(self._odom_sub); self._odom_sub = None
+        if self._us_sub is not None:
+            self.destroy_subscription(self._us_sub); self._us_sub = None
+        self.c = self.l = self.r = FAR; self.emergency = False   # sin lecturas -> "todo despejado"
+
+    def _anchor(self):
+        poses = self._pending; self._pending = None
+        if self.pose is None:
+            return
         x0, y0, yaw0 = self.pose
         c, s = math.cos(yaw0), math.sin(yaw0)
         self.wps = [(x0 + p.position.x*c - p.position.y*s,
-                     y0 + p.position.x*s + p.position.y*c) for p in msg.poses]
+                     y0 + p.position.x*s + p.position.y*c) for p in poses]
         self.start = (x0, y0); self.idx = 0
         self.kturn = False; self.neutral_until = None; self.last_move_dir = 0
         self.state = 'RUN'; self.t_start = self.get_clock().now()
@@ -149,9 +177,12 @@ class TrajectoryNav(Node):
         self.state = 'DONE'
         for _ in range(3): self._pub(0.0, 0.0)
         self._status()
+        self._disarm = True         # soltar odom/ultrasonidos (se re-arman con la proxima ruta)
 
     # ---------- control ----------
     def loop(self):
+        if self._disarm and self.state != 'RUN':
+            self._disarm_sensors(); self._disarm = False
         if self.state != 'RUN' or self.pose is None:
             return
         if (self.get_clock().now()-self.t_start).nanoseconds/1e9 > self.get_parameter('max_run_time').value:

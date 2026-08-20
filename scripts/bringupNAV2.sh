@@ -15,7 +15,7 @@ sleep 2
 nohup python3 ~/robocar/src/robocar_pkg/robocar_pkg/sim_motion_node.py --ros-args -p cmd_mode:=twist >/tmp/sm.log 2>&1 & disown
 nohup python3 ~/robocar/src/robocar_pkg/robocar_pkg/sim_sensors_node.py >/tmp/ss.log 2>&1 & disown   # src parcheado (obstaculos)
 nohup python3 ~/robocar/src/robocar_pkg/robocar_pkg/sim_map_grid_node.py >/tmp/smg.log 2>&1 & disown
-nohup ros2 run robocar_pkg trajectory_nav_node --ros-args -r /cmd_vel:=/cmd_vel_raw >/tmp/tn.log 2>&1 & disown   # RUTA: tambien pasa por el collision_monitor
+nohup python3 ~/robocar/src/robocar_pkg/robocar_pkg/trajectory_nav_node.py --ros-args -r /cmd_vel:=/cmd_vel_raw >/tmp/tn.log 2>&1 & disown   # RUTA: tambien pasa por el collision_monitor
 sleep 4
 # (sin mapa de arranque: la web empieza limpia; el usuario carga su mapa cuando quiere)
 # --- Nav2 ---
