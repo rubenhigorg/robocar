@@ -125,11 +125,19 @@ nodos y el perfilado de CPU medidos en la Pi el **20-ago-2026**.
 
 ### Tier 3 — CPU pesada (si necesitamos más margen)
 
-**O7 · Vectorizar el ray-cast de `sim_sensors` con numpy.**
-- *Acción:* sustituir el bucle rayo-a-rayo por intersección vectorizada (todos los rayos contra todos
-  los segmentos a la vez). Sigue en Python, **sin rebuild**.
-- *Ganancia:* ~5–10× en ese nodo (de ~47 % a ~10 %). *Esfuerzo:* medio. *Riesgo:* medio (revisar que
-  `/scan` sale idéntico). *Nota:* es simulación → **no** justificaría un port a C++.
+**O7 · Vectorizar el ray-cast de `sim_sensors` con numpy.** ✅ **HECHO (20-ago)** — con matiz importante
+- *Acción hecha:* el bucle rayo-a-rayo (120 rayos × N segmentos = ~45k llamadas Python/s) sustituido
+  por una intersección **vectorizada** (todos los rayos contra todos los segmentos en una pasada numpy).
+- *Correctitud verificada:* `/scan` idéntico físicamente (obstáculo a 1.0 m → rayo frontal = 1.00,
+  pared trasera 2.50, ultrasonidos y IR correctos). *Bug encontrado y corregido:* `cast()` devolvía
+  `np.float64` → `emergency_stop` daba `np.bool_` y el campo `bool` del mensaje lo rechazaba (crash);
+  se fuerza `float()` nativo.
+- *Resultado real:* **escala plano** (4 paredes 30.5 % → 19 paredes 31.5 %, +1 %) — con el bucle viejo
+  se habría disparado. PERO **el 31 % de base NO baja**: está dominado por la suscripción a
+  `/odometry/filtered` a **49 Hz** + el publicado (7 msgs × 12 Hz), no por el ray-cast.
+- *Conclusión:* la vectorización es correcta y **evita que los planos con muebles disparen el CPU**,
+  pero el número de cabecera de `sim_sensors` **solo baja con O8** (menos Hz de odometría). → **O8 es
+  ahora la palanca clara** (toca a sim_sensors, sim_motion consumidores, etc. a la vez).
 
 **O8 · Bajar frecuencias donde no aporten.**
 - *Acción:* revisar la tasa de integración de `sim_motion` y `controller_frequency` (20 Hz) — bajarlas
@@ -153,7 +161,7 @@ Correctness, no CPU.
 
 ## 4. Orden recomendado y objetivo
 
-**Secuencia:** ~~O1~~ ✅ → ~~O3~~ ✅ → ~~O2~~ ✅ → ~~O5~~ ✅ → ~~O4~~ ✅ → **O6** (siguiente) → O7 → (O8/O9/O10/O11).
+**Secuencia:** ~~O1~~ ✅ → ~~O3~~ ✅ → ~~O2~~ ✅ → ~~O5~~ ✅ → ~~O4~~ ✅ → ~~O7~~ ✅ → **O8** (la palanca de fondo) → O6/O10/O11.
 
 > **Progreso CPU (medido):** goal_relay 35.6→6.6 (O1) · sim_map_grid 17.8→0.2 (O3) · rosbridge
 > 79→50 (O2) · trajectory_nav 26→3 (O5) = **~98 puntos de CPU** recuperados.

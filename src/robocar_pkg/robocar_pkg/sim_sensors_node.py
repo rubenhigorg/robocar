@@ -9,23 +9,31 @@
 # Sustituye a distance_node/rplidar en modo BANCO. El coche "gira" por la odometria
 # de direccion (perfil banco), asi que navega el mapa dibujado sin entorno real.
 import json, math, rclpy
+import numpy as np
 from rclpy.node import Node
 from nav_msgs.msg import Odometry
 from sensor_msgs.msg import LaserScan, Range
 from std_msgs.msg import String
 from messages_pkg.msg import Distance
 
-def ray_seg(px, py, dx, dy, ax, ay, bx, by):
-    """Distancia t>=0 del rayo (P, D) al segmento A-B, o None."""
-    ex, ey = bx-ax, by-ay
-    den = dx*ey - dy*ex
-    if abs(den) < 1e-9:
-        return None
-    t = ((ax-px)*ey - (ay-py)*ex) / den
-    u = ((ax-px)*dy - (ay-py)*dx) / den
-    if t >= 0.0 and 0.0 <= u <= 1.0:
-        return t
-    return None
+def cast_rays(px, py, dirs, segs):
+    """Ray-casting VECTORIZADO: para R rayos (mismo origen px,py, direcciones unitarias
+    dirs (R,2)) contra S segmentos (S,4)=[ax,ay,bx,by], devuelve la distancia al mas cercano
+    de cada rayo (R,), inf si no corta ninguno. Todo en numpy (una pasada en C)."""
+    R = dirs.shape[0]
+    if segs.shape[0] == 0:
+        return np.full(R, np.inf)
+    ax, ay, bx, by = segs[:, 0], segs[:, 1], segs[:, 2], segs[:, 3]   # (S,)
+    ex, ey = bx - ax, by - ay
+    apx, apy = ax - px, ay - py
+    Dx = dirs[:, 0:1]; Dy = dirs[:, 1:2]                # (R,1)
+    den = Dx * ey[None, :] - Dy * ex[None, :]           # (R,S)
+    safe = np.abs(den) > 1e-9
+    den_s = np.where(safe, den, 1.0)
+    t = (apx * ey - apy * ex)[None, :] / den_s          # (R,S)
+    u = (apx[None, :] * Dy - apy[None, :] * Dx) / den_s # (R,S)
+    valid = safe & (t >= 0.0) & (u >= 0.0) & (u <= 1.0)
+    return np.where(valid, t, np.inf).min(axis=1)       # (R,)
 
 class SimSensors(Node):
     def __init__(self):
@@ -40,6 +48,7 @@ class SimSensors(Node):
 
         self.segs = []      # segmentos-pared en frame ODOM [(ax,ay,bx,by),...]
         self.obs = []       # obstaculos dinamicos (NO van al /map, solo al /scan)
+        self._segarr = np.zeros((0, 4))   # cache numpy de (segs+obs) para el ray-cast vectorizado
         self.pose = None
         self.pub_us = self.create_publisher(Distance, '/ultrasound_data', 10)
         self.pub_scan = self.create_publisher(LaserScan, '/scan', 10)
@@ -82,6 +91,7 @@ class SimSensors(Node):
         for seg in rel:
             ax, ay = tf(seg[0], seg[1]); bx, by = tf(seg[2], seg[3])
             self.segs.append((ax, ay, bx, by))
+        self._rebuild_arr()
         self.get_logger().info('MAPA recibido: %d paredes.' % len(self.segs))
 
     def obcb(self, msg):
@@ -96,16 +106,19 @@ class SimSensors(Node):
         c, s = math.cos(yaw0), math.sin(yaw0)
         self.obs = [(x0 + q[0]*c - q[1]*s, y0 + q[0]*s + q[1]*c,
                      x0 + q[2]*c - q[3]*s, y0 + q[2]*s + q[3]*c) for q in rel]
+        self._rebuild_arr()
         self.get_logger().info('OBSTACULOS: %d' % len(self.obs))
 
+    def _rebuild_arr(self):
+        allsegs = self.segs + self.obs
+        self._segarr = np.array(allsegs, dtype=float) if allsegs else np.zeros((0, 4))
+
     def cast(self, px, py, ang, maxd):
-        dx, dy = math.cos(ang), math.sin(ang)
-        best = maxd
-        for (ax, ay, bx, by) in self.segs + self.obs:
-            t = ray_seg(px, py, dx, dy, ax, ay, bx, by)
-            if t is not None and t < best:
-                best = t
-        return best
+        """Un solo rayo (para ultrasonidos/IR): usa el mismo ray-cast vectorizado y capa a maxd.
+        Devuelve float NATIVO (no np.float64) para no romper los campos tipados del mensaje."""
+        d = np.array([[math.cos(ang), math.sin(ang)]])
+        r = cast_rays(px, py, d, self._segarr)[0]
+        return float(maxd if r > maxd else r)
 
     def tick(self):
         if self.pose is None:
@@ -145,12 +158,11 @@ class SimSensors(Node):
         ls.angle_min = -math.pi; ls.angle_max = math.pi - (2*math.pi/n)
         ls.angle_increment = 2*math.pi/n
         ls.range_min = 0.02; ls.range_max = smax
-        ranges = []
-        for i in range(n):
-            a = yaw + ls.angle_min + i*ls.angle_increment
-            r = self.cast(x, y, a, smax)
-            ranges.append(r if r < smax else float('inf'))
-        ls.ranges = ranges
+        # 120 rayos de una vez (vectorizado): direcciones absolutas y ray-cast en numpy
+        angs = yaw + ls.angle_min + np.arange(n) * ls.angle_increment
+        dirs = np.stack([np.cos(angs), np.sin(angs)], axis=1)      # (n,2)
+        r = cast_rays(x, y, dirs, self._segarr)                    # (n,) inf donde no corta
+        ls.ranges = np.where(r < smax, r, np.inf).tolist()         # fuera de alcance -> inf
         self.pub_scan.publish(ls)
 
 def main():
