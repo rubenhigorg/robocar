@@ -95,7 +95,7 @@ controller_server:
       inflation_cost_scaling_factor: 3.00   # DEBE casar con cost_scaling_factor del local_costmap
       use_rotate_to_heading: false   # ¡el coche NO puede girar en el sitio!
       allow_reversing: true          # marcha atras activada por defecto (el planner traza rutas con reversa)
-      use_collision_detection: true
+      use_collision_detection: false  # el planner ya traza libre de colision; evita el falso "collision ahead" al rozar paredes. Seguridad: collision_monitor (IR) + replan global
       max_allowed_time_to_collision_up_to_carrot: 1.0
       min_approach_linear_velocity: 0.05
       approach_velocity_scaling_dist: 0.6
@@ -135,7 +135,7 @@ global_costmap:
           raytrace_max_range: 4.5
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
-        inflation_radius: 0.150       # margen de seguridad alrededor de obstáculos
+        inflation_radius: 0.100       # margen de seguridad alrededor de obstáculos
         cost_scaling_factor: 3.00
       always_send_full_costmap: true
 
@@ -176,7 +176,7 @@ local_costmap:
         clear_on_max_reading: true
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
-        inflation_radius: 0.150
+        inflation_radius: 0.100
         cost_scaling_factor: 3.00
       always_send_full_costmap: true
 
