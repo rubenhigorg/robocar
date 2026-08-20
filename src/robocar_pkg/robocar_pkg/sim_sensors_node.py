@@ -11,7 +11,7 @@
 import json, math, rclpy
 import numpy as np
 from rclpy.node import Node
-from nav_msgs.msg import Odometry
+from geometry_msgs.msg import PoseStamped
 from sensor_msgs.msg import LaserScan, Range
 from std_msgs.msg import String
 from messages_pkg.msg import Distance
@@ -49,11 +49,7 @@ class SimSensors(Node):
         self.segs = []      # segmentos-pared en frame ODOM [(ax,ay,bx,by),...]
         self.obs = []       # obstaculos dinamicos (NO van al /map, solo al /scan)
         self._segarr = np.zeros((0, 4))   # cache numpy de (segs+obs) para el ray-cast vectorizado
-        self.pose = None
-        # OFFSET de pose REAL (map<-odom verdadero, OCULTO a AMCL): el robot arranca en una pose
-        # del mapa distinta de lo que dice la odometria (que empieza en 0). Los sensores se lanzan
-        # desde la pose REAL = truth (+) odom, para que AMCL tenga algo que inferir. (0,0,0)=banco clasico.
-        self.truth = (0.0, 0.0, 0.0)
+        self.pose = None   # pose REAL del robot (de /truth_pose, la publica sim_motion)
         self.pub_us = self.create_publisher(Distance, '/ultrasound_data', 10)
         self.pub_scan = self.create_publisher(LaserScan, '/scan', 10)
         # ultrasonidos como sensor_msgs/Range (para la range_sensor_layer del costmap de Nav2).
@@ -65,36 +61,19 @@ class SimSensors(Node):
                           for _, _, _, n in self.us_cfg}
         self.pub_ir = self.create_publisher(Range, '/ir_range', 10)   # IR de proximidad (emergencia)
         self.ir_max = 0.5
-        self.create_subscription(Odometry, '/odometry/filtered', self.ocb, 20)
+        self.create_subscription(PoseStamped, '/truth_pose', self.tpcb, 20)   # pose REAL (sim_motion)
         self.create_subscription(String, '/sim_map', self.mcb, 10)
         self.create_subscription(String, '/sim_obstacles', self.obcb, 10)
-        self.create_subscription(String, '/sim_truth', self.tcb, 10)   # {"x":..,"y":..,"yaw":..} pose real
         rate = self.get_parameter('rate_hz').value
         self.create_timer(1.0/rate, self.tick)
         self.get_logger().info('sim_sensors listo (mapa por /sim_map, publica /ultrasound_data + /scan)')
 
-    def ocb(self, m):
-        p = m.pose.pose
-        q = p.orientation
+    def tpcb(self, m):
+        # pose REAL del robot (la publica sim_motion en /truth_pose). Los sensores se lanzan de aqui,
+        # NO de la odometria (que puede derivar). Asi AMCL tiene deriva real que corregir.
+        p = m.pose; q = p.orientation
         yaw = math.atan2(2*(q.w*q.z+q.x*q.y), 1-2*(q.y*q.y+q.z*q.z))
         self.pose = (p.position.x, p.position.y, yaw)
-
-    def tcb(self, msg):
-        try:
-            d = json.loads(msg.data)
-            self.truth = (float(d.get('x', 0.0)), float(d.get('y', 0.0)), float(d.get('yaw', 0.0)))
-            self.get_logger().info('pose REAL (oculta) fijada: (%.2f, %.2f, %.0f deg)'
-                                   % (self.truth[0], self.truth[1], math.degrees(self.truth[2])))
-        except Exception:
-            pass
-
-    def true_pose(self):
-        """Pose REAL en el mapa = truth (+) odom (composicion SE2). Los sensores se lanzan de aqui."""
-        if self.pose is None:
-            return None
-        ox, oy, oyaw = self.truth; px, py, pyaw = self.pose
-        c, s = math.cos(oyaw), math.sin(oyaw)
-        return (ox + px*c - py*s, oy + px*s + py*c, oyaw + pyaw)
 
     def mcb(self, msg):
         # segmentos relativos (x adelante, y izq) -> transformar a ODOM con la pose actual
@@ -145,7 +124,7 @@ class SimSensors(Node):
     def tick(self):
         if self.pose is None:
             return
-        x, y, yaw = self.true_pose()   # pose REAL (truth+odom): los sensores no conocen la odometria pura
+        x, y, yaw = self.pose   # pose REAL (de sim_motion): los sensores no conocen la odometria (que deriva)
         # --- ultrasonidos: castea desde la posicion/direccion REAL de cada sensor ---
         us_max = self.get_parameter('us_max_cm').value / 100.0
         now = self.get_clock().now().to_msg()

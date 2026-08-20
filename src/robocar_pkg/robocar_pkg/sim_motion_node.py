@@ -14,10 +14,11 @@
 #   angular.z se interpreta como el mando de direccion (satura a +-max_angular = tope de rueda),
 #   tan(delta) = tan_max * clamp(angular.z/max_angular, -1, 1);  yaw_rate = v * tan(delta) / L.
 #   /set_pose (PoseWithCovarianceStamped) reinicia la pose (boton "Origen" de la web).
-import math, rclpy
+import math, json, random, rclpy
 from rclpy.node import Node
-from geometry_msgs.msg import Twist, TransformStamped, PoseWithCovarianceStamped
+from geometry_msgs.msg import Twist, TransformStamped, PoseWithCovarianceStamped, PoseStamped
 from nav_msgs.msg import Odometry
+from std_msgs.msg import String
 from tf2_ros import TransformBroadcaster
 
 
@@ -35,17 +36,27 @@ class SimMotion(Node):
         self.declare_parameter('cmd_mode', 'steer_norm')
         self.declare_parameter('odom_frame', 'odom')
         self.declare_parameter('base_frame', 'base_link')
+        # DERIVA de odometria (para el test de localizacion): la ODOMETRIA publicada se aparta de
+        # la pose REAL. Sin deriva (por defecto) odom==real (banco clasico). Ajustable en caliente.
+        self.declare_parameter('drift_enabled', False)
+        self.declare_parameter('drift_yaw_per_m', 0.06)   # rad de error de rumbo por metro (deriva sistematica)
+        self.declare_parameter('drift_dist', 0.0)         # error de escala de distancia (0.05 = +5%)
+        self.declare_parameter('drift_noise', 0.0)        # ruido gaussiano por paso (rad)
 
+        # pose ODOM (publicada, puede DERIVAR) y pose REAL (verdad del mundo, exacta)
         self.x = 0.0; self.y = 0.0; self.yaw = 0.0
+        self.tx = 0.0; self.ty = 0.0; self.tyaw = 0.0
         self.v = 0.0; self.wz = 0.0
         self.last_cmd = None
 
-        self.pub = self.create_publisher(Odometry, '/odometry/filtered', 20)
+        self.pub = self.create_publisher(Odometry, '/odometry/filtered', 20)   # odom (posible deriva)
+        self.pub_truth = self.create_publisher(PoseStamped, '/truth_pose', 10)  # pose REAL (para sim_sensors y medir)
         # al teletransportar (reset del banco) avisamos a AMCL de la pose conocida (evita que se descoloque)
         self.pub_init = self.create_publisher(PoseWithCovarianceStamped, '/initialpose', 10)
         self.tfb = TransformBroadcaster(self)
         self.create_subscription(Twist, '/cmd_vel', self.ccb, 10)
         self.create_subscription(PoseWithCovarianceStamped, '/set_pose', self.rcb, 10)
+        self.create_subscription(String, '/sim_truth', self.tcb, 10)   # coloca la pose REAL (test localizacion)
 
         self.dt = 1.0 / self.get_parameter('rate_hz').value
         self.create_timer(self.dt, self.tick)
@@ -76,8 +87,10 @@ class SimMotion(Node):
 
     def rcb(self, m):
         p = m.pose.pose; q = p.orientation
-        self.x = p.position.x; self.y = p.position.y
-        self.yaw = math.atan2(2 * (q.w * q.z + q.x * q.y), 1 - 2 * (q.y * q.y + q.z * q.z))
+        yaw = math.atan2(2 * (q.w * q.z + q.x * q.y), 1 - 2 * (q.y * q.y + q.z * q.z))
+        # reset del banco: pose CONOCIDA -> odom y real coinciden
+        self.x = self.tx = p.position.x; self.y = self.ty = p.position.y
+        self.yaw = self.tyaw = yaw
         self.v = 0.0; self.wz = 0.0
         self.get_logger().info('pose reiniciada a (%.2f, %.2f, %.0f deg)' % (self.x, self.y, math.degrees(self.yaw)))
         # sincroniza AMCL: en el reset la pose es CONOCIDA (map==odom en el banco) -> initialpose
@@ -88,14 +101,38 @@ class SimMotion(Node):
         cov = [0.0]*36; cov[0] = 0.10; cov[7] = 0.10; cov[35] = 0.03; ip.pose.covariance = cov
         self.pub_init.publish(ip)
 
+    def tcb(self, msg):
+        # coloca la pose REAL sin tocar la odometria -> el robot esta "de verdad" en otro sitio
+        # que AMCL no conoce (test de pose inicial desconocida). {"x":..,"y":..,"yaw":..}
+        try:
+            d = json.loads(msg.data)
+            self.tx = float(d.get('x', 0.0)); self.ty = float(d.get('y', 0.0)); self.tyaw = float(d.get('yaw', 0.0))
+            self.get_logger().info('pose REAL (oculta) fijada: (%.2f, %.2f, %.0f deg)'
+                                   % (self.tx, self.ty, math.degrees(self.tyaw)))
+        except Exception:
+            pass
+
     def tick(self):
         to = self.get_parameter('cmd_timeout').value
         if self.last_cmd is None or (self.now_s() - self.last_cmd) > to:
             self.v = 0.0; self.wz = 0.0
-        # integracion Euler
-        self.x += self.v * math.cos(self.yaw) * self.dt
-        self.y += self.v * math.sin(self.yaw) * self.dt
-        self.yaw += self.wz * self.dt
+        # integracion Euler — pose REAL (exacta, la verdad del mundo)
+        self.tx += self.v * math.cos(self.tyaw) * self.dt
+        self.ty += self.v * math.sin(self.tyaw) * self.dt
+        self.tyaw = math.atan2(math.sin(self.tyaw + self.wz * self.dt), math.cos(self.tyaw + self.wz * self.dt))
+        # pose ODOM (lo que el robot "cree") — con DERIVA opcional respecto a la real
+        if self.get_parameter('drift_enabled').value:
+            ds = self.v * self.dt
+            vs = 1.0 + self.get_parameter('drift_dist').value
+            nz = self.get_parameter('drift_noise').value
+            yaw_err = self.get_parameter('drift_yaw_per_m').value * abs(ds) + (random.gauss(0.0, nz) if nz > 0 else 0.0)
+            self.x += self.v * vs * math.cos(self.yaw) * self.dt
+            self.y += self.v * vs * math.sin(self.yaw) * self.dt
+            self.yaw += self.wz * self.dt + yaw_err
+        else:
+            self.x += self.v * math.cos(self.yaw) * self.dt
+            self.y += self.v * math.sin(self.yaw) * self.dt
+            self.yaw += self.wz * self.dt
         self.yaw = math.atan2(math.sin(self.yaw), math.cos(self.yaw))
 
         now = self.get_clock().now().to_msg()
@@ -117,6 +154,12 @@ class SimMotion(Node):
         t.transform.translation.x = self.x; t.transform.translation.y = self.y
         t.transform.rotation.z = sy; t.transform.rotation.w = cy
         self.tfb.sendTransform(t)
+
+        # pose REAL (verdad del mundo) en frame map: la usa sim_sensors para el laser y se mide el error
+        tp = PoseStamped(); tp.header.stamp = now; tp.header.frame_id = 'map'
+        tp.pose.position.x = self.tx; tp.pose.position.y = self.ty
+        tp.pose.orientation.z = math.sin(self.tyaw * 0.5); tp.pose.orientation.w = math.cos(self.tyaw * 0.5)
+        self.pub_truth.publish(tp)
 
 
 def main():
