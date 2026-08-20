@@ -20,6 +20,12 @@ Auditoría de los **nodos** que corren en el banco (lenguaje, integración colco
 
 [Abrir documento](optimizacion-banco.md){ .md-button .md-button--primary }
 
+## Localización: pose inicial, deriva y por qué AMCL es imprescindible
+
+Los **dos** problemas que resuelve la localización: **dónde estoy al arrancar** (la cascada dock → última pose → pista → global) y **seguir sabiéndolo mientras me muevo** (la **deriva** que acumula la odometría y que **AMCL corrige** encajando láser+mapa). Explica las dos capas TF (`odom→base_link` + `map→odom`), por qué en el banco parece innecesario (odometría perfecta = espejismo) y por qué en el **robot real es imprescindible**.
+
+[Abrir documento](localizacion-amcl.md){ .md-button .md-button--primary }
+
 ## Odometría, SLAM y navegación
 
 Cómo se combinan las tres piezas para llevar el robot a un destino, y cómo se relacionan sobre el árbol TF `map → odom → base_link`.
