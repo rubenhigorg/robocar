@@ -466,15 +466,17 @@ function connect(){
     send({op:'advertise',topic:'/set_pose',type:'geometry_msgs/msg/PoseWithCovarianceStamped'});
     send({op:'advertise',topic:'/goal_pose',type:'geometry_msgs/msg/PoseStamped'});
     send({op:'advertise',topic:'/nav2_relay/cancel',type:'std_msgs/msg/Empty'});
-    send({op:'subscribe',topic:'/trajectory_nav/status',type:'std_msgs/msg/String'});
-    send({op:'subscribe',topic:'/nav2_relay/status',type:'std_msgs/msg/String'});
-    send({op:'subscribe',topic:'/odometry/filtered',type:'nav_msgs/msg/Odometry'});
-    send({op:'subscribe',topic:'/scan',type:'sensor_msgs/msg/LaserScan'});
-    send({op:'subscribe',topic:'/map',type:'nav_msgs/msg/OccupancyGrid'});
-    send({op:'subscribe',topic:'/global_costmap/costmap',type:'nav_msgs/msg/OccupancyGrid'});
+    // throttle_rate (ms entre mensajes) + queue_length:1 -> rosbridge descarta lo viejo y
+    // solo serializa a JSON lo justo para la vista. Recorta MUCHO su CPU (era ~79%).
+    send({op:'subscribe',topic:'/trajectory_nav/status',type:'std_msgs/msg/String'});           // texto, sin throttle
+    send({op:'subscribe',topic:'/nav2_relay/status',type:'std_msgs/msg/String'});                // texto, sin throttle
+    send({op:'subscribe',topic:'/odometry/filtered',type:'nav_msgs/msg/Odometry',throttle_rate:100,queue_length:1});  // 49Hz -> 10Hz
+    send({op:'subscribe',topic:'/scan',type:'sensor_msgs/msg/LaserScan',throttle_rate:200,queue_length:1});           // laser -> 5Hz
+    send({op:'subscribe',topic:'/map',type:'nav_msgs/msg/OccupancyGrid',throttle_rate:2000,queue_length:1});          // cambia rara vez
+    send({op:'subscribe',topic:'/global_costmap/costmap',type:'nav_msgs/msg/OccupancyGrid',throttle_rate:1000,queue_length:1}); // 1Hz basta
     send({op:'advertise',topic:'/nav_config/set',type:'std_msgs/msg/String'});
-    send({op:'subscribe',topic:'/nav_config',type:'std_msgs/msg/String'});
-    send({op:'subscribe',topic:'/plan',type:'nav_msgs/msg/Path'}); };
+    send({op:'subscribe',topic:'/nav_config',type:'std_msgs/msg/String'});                       // config, sin throttle
+    send({op:'subscribe',topic:'/plan',type:'nav_msgs/msg/Path',throttle_rate:300,queue_length:1}); };                 // ruta -> ~3Hz
   ws.onclose=()=>{connected=false;setConn();setTimeout(connect,1500);};
   ws.onerror=()=>ws.close();
   ws.onmessage=ev=>{ const d=JSON.parse(ev.data); if(d.op!=='publish')return;
