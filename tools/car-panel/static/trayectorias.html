@@ -281,13 +281,18 @@ $('#goArea').onclick=()=>{ if(!connected){flash('Sin conexión');return;} const 
   const gr=mapToRel(a.goal[0],a.goal[1]); if(gr){goal=gr;draw();} flash('Voy a «'+nm+'»'); };
 $('#delArea').onclick=()=>{ const nm=$('#areaSel').value; if(!nm){flash('Elige una zona');return;}
   send({op:'publish',topic:'/map_areas/set',msg:{data:JSON.stringify({op:'del',name:nm})}}); flash('Zona «'+nm+'» borrada'); };
-// "limpiar" = EMPEZAR DE NUEVO: borra el mapa, cancela Nav2 y devuelve el robot al origen.
+function clearCostmaps(){   // borra las marcas de los costmaps de Nav2 (tras teleport, si no -> "collision ahead")
+  send({op:'call_service',service:'/global_costmap/clear_entirely_global_costmap',type:'nav2_msgs/srv/ClearEntireCostmap',args:{}});
+  send({op:'call_service',service:'/local_costmap/clear_entirely_local_costmap',type:'nav2_msgs/srv/ClearEntireCostmap',args:{}}); }
+// "limpiar" = EMPEZAR DE NUEVO: borra el mapa Y sus zonas, cancela Nav2, robot al origen, limpia costmaps.
 $('#mclear').onclick=()=>{ if(!connected){flash('Sin conexión');return;}
   send({op:'publish',topic:'/sim_map',msg:{data:JSON.stringify({segments:[]})}});     // limpia /map
   send({op:'publish',topic:'/nav2_relay/cancel',msg:{}});                              // cancela Nav2
   send({op:'publish',topic:'/set_pose',msg:{header:{frame_id:'odom'},pose:{pose:{position:{x:0,y:0,z:0},orientation:{x:0,y:0,z:0,w:1}},covariance:cov0()}}});  // robot al origen
   send({op:'publish',topic:'/sim_obstacles',msg:{data:JSON.stringify({segments:[]})}});   // limpia obstaculos
-  walls=[];wps=[];obstacles=[];scanPts=[];mapImg=null;costImg=null;goal=null;navPlan=[];real=[];carRel=null;odom0=null;
+  send({op:'publish',topic:'/map_areas/set',msg:{data:JSON.stringify({op:'clear'})}});     // las zonas van CON el mapa
+  setTimeout(clearCostmaps, 700);                                                          // tras asentar pose/mapa vacio
+  walls=[];wps=[];obstacles=[];scanPts=[];mapImg=null;costImg=null;goal=null;navPlan=[];real=[];carRel=null;odom0=null;areas=[];
   flash('Limpio — robot al origen. Carga un mapa nuevo'); draw(); };
 
 // ---- plantas de piso (mapas realistas con muebles) ----
@@ -427,9 +432,9 @@ const NODES=[
   subs:[{t:'/nav_config/set',f:'String JSON',x:'← web/LLM · nuevos valores'}],
   pubs:[{t:'/nav_config',f:'String JSON',x:'→ web/LLM · parámetros autodescritos'},{t:'srv set_parameters',f:'SetParameters',x:'→ controller/costmaps · aplica en caliente'}]},
  {id:'map_areas',nm:'map_areas',emoji:'🏷️',lane:'bridge',o:'propio',lang:'Python',integ:'no — script suelto',launch:'python3 map_areas_node.py',modes:['obs'],
-  rl:'Zonas del mapa con nombre (cocina, baño…): resolución semántica nombre→pose para web y LLM',
-  subs:[{t:'/map_areas/set',f:'String JSON',x:'← web/LLM · alta/baja de zonas'}],
-  pubs:[{t:'/map_areas',f:'String JSON',x:'→ web/LLM · zonas + centroide (persiste en disco)'}]},
+  rl:'Bundle mapa+zonas: guarda y recupera el mapa dibujado y sus zonas (cocina, baño…); resolución nombre→pose para web y LLM',
+  subs:[{t:'/map_areas/set',f:'String JSON',x:'← web/LLM · alta/baja de zonas'},{t:'/sim_map',f:'String JSON',x:'← web · guarda el mapa dibujado'}],
+  pubs:[{t:'/map_areas',f:'String JSON',x:'→ web/LLM · zonas + centroide'},{t:'/sim_map',f:'String JSON',x:'→ reemite el mapa guardado al arrancar (persiste en disco)'}]},
 
  {id:'trajectory_nav',nm:'trajectory_nav',emoji:'🕹️',lane:'ruta',o:'propio',lang:'Python',integ:'colcon · ros2 run',launch:'ros2 run robocar_pkg trajectory_nav_node',modes:['wp'],
   rl:'Modo RUTA (script antiguo): sigue waypoints dibujados de forma reactiva. NO planifica',
