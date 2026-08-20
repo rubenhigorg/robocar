@@ -101,6 +101,7 @@
 
   <div class="row" id="rowMapa" style="display:none"><span class="lbl">MAPA</span>
     <select id="planta" title="Cargar planta de piso con muebles"><option value="">🏠 Plantas…</option><option value="0">Piso 100 m² · 2 dorm</option><option value="1">Piso 130 m² · 3 dorm</option><option value="2">Piso 160 m² · 4 hab</option><option value="3">Ático 200 m² · 4 hab</option></select>
+    <select id="testsc" title="Escenarios de prueba (mapa + zonas listos, se envían solos)"><option value="">🧪 Test…</option><option value="0">Piso con zonas</option><option value="1">Puerta estrecha</option><option value="2">Sala en L</option><option value="3">Sala cuadrada</option></select>
     <span class="seg" id="mtool"><button data-t="rect" class="act">▭ habitación</button><button data-t="wall">─ pared</button><button data-t="obst">▧ obstáculo</button><button data-t="goal">◎ destino</button><button data-t="area">🏷️ área</button><button data-t="truth" title="Colocar la pose REAL oculta (solo test de localización)">📍 real</button><button data-t="hint" title="Pista de localización: clic donde crees que está el robot + arrastra hacia donde mira">📌 pista</button></span>
     <button id="mundo">↶</button><button id="mclear">limpiar</button>
     <button id="sendmap" class="map">▦ Enviar mapa</button>
@@ -387,6 +388,31 @@ function loadPlan(i){ const p=PLANS[i], segs=p.f();
   setZoom(Math.min((oy-16)/p.depth,(W/2-16)/p.halfW));
   flash(p.n+' — pulsa «Enviar mapa»'); }
 $('#planta').addEventListener('change',e=>{ if(e.target.value==='')return; loadPlan(+e.target.value); e.target.selectedIndex=0; });
+
+// ---- escenarios de prueba (mapa + zonas listos, se ENVIAN solos) ----
+const SC=[
+ {n:'Piso con zonas', segs:[].concat(R(-0.5,-3,7,3),[[3.5,-3,3.5,-0.7],[3.5,0.7,3.5,3]],R(0.3,1.8,1.5,2.6),R(4.5,1.5,5.5,2.3),R(0.3,-2.6,1.8,-1.5)),
+   zones:[{name:'salon',rect:[1.8,0.3,3.2,2.7]},{name:'cocina',rect:[3.8,0.3,6.7,1.2]},{name:'dormitorio',rect:[1.9,-2.8,3.2,-0.3]},{name:'bano',rect:[3.8,-2.8,6.7,-0.3]}]},
+ {n:'Puerta estrecha', segs:[].concat(R(-0.5,-2.5,5,2.5),[[2.5,-2.5,2.5,-0.5],[2.5,0.5,2.5,2.5]]),
+   zones:[{name:'entrada',rect:[0,-2,2.2,2]},{name:'fondo',rect:[2.8,-2,4.8,2]}]},
+ {n:'Sala en L', segs:[].concat(R(-2.5,-2.5,3.5,2.5),R(1,0.5,3.5,2.5)),
+   zones:[{name:'sala',rect:[-2,-2,0.5,0]}]},
+ {n:'Sala cuadrada', segs:R(-2.5,-2.5,2.5,2.5), zones:[]},
+];
+function loadScenario(i){ if(!connected){flash('Sin conexión');return;} const sc=SC[i];
+  send({op:'publish',topic:'/nav2_relay/cancel',msg:{}});
+  send({op:'publish',topic:'/sim_obstacles',msg:{data:JSON.stringify({segments:[]})}});
+  send({op:'publish',topic:'/map_areas/set',msg:{data:JSON.stringify({op:'clear'})}});
+  send({op:'publish',topic:'/set_pose',msg:{header:{frame_id:'odom'},pose:{pose:{position:{x:0,y:0,z:0},orientation:{x:0,y:0,z:0,w:1}},covariance:cov0()}}});
+  setTimeout(clearCostmaps,700);
+  walls=sc.segs.map(s=>({x1:s[0],y1:s[1],x2:s[2],y2:s[3]})); obstacles=[]; goal=null; navPlan=[]; scanPts=[]; areas=[];
+  setTimeout(()=>{ send({op:'publish',topic:'/sim_map',msg:{data:JSON.stringify({segments:sc.segs})}});
+    sc.zones.forEach(z=>send({op:'publish',topic:'/map_areas/set',msg:{data:JSON.stringify({op:'add',name:z.name,rect:z.rect})}})); }, 450);
+  const xs=sc.segs.flatMap(s=>[s[0],s[2]]), ys=sc.segs.flatMap(s=>[s[1],s[3]]);
+  const dx=Math.max(...xs)-Math.min(...xs), dy=Math.max(...ys)-Math.min(...ys);
+  oy=H*0.6; setZoom(Math.min((W-60)/Math.max(dx,0.1),(H-60)/Math.max(dy,0.1)));
+  flash(sc.n+' — mapa y zonas cargados'); draw(); }
+$('#testsc').addEventListener('change',e=>{ if(e.target.value==='')return; loadScenario(+e.target.value); e.target.selectedIndex=0; });
 
 // ---- grafo de nodos del banco (boton "ⓘ nodos") ----
 // o = origen: 'propio' (nuestro, azul) · 'nav2' (C++ de Nav2, morado) · 'stock' (gris)

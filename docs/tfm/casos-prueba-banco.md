@@ -12,12 +12,29 @@ si pasa o falla). Los marcados con 🔥 son los que más suelen destapar problem
 ## Referencia rápida de la interfaz
 
 - **Modo:** `▦ MAPA·Nav2` (por defecto) / `◦ RUTA` (script antiguo, aparte).
-- **Fila MAPA:** `🏠 Plantas…` · `▭ habitación` · `─ pared` · `▧ obstáculo` · `◎ destino` ·
+- **Fila MAPA:** `🏠 Plantas…` · `🧪 Test…` (escenarios listos: mapa **y zonas** se cargan solos) · `▭ habitación` · `─ pared` · `▧ obstáculo` · `◎ destino` ·
   `🏷️ área` · `📍 real` · `📌 pista` · `↶` (deshacer) · `limpiar` · `▦ Enviar mapa`.
 - **Fila Nav2:** `▶ Ir a destino` · `■ Parar` · `▨ no-go`.
 - **Fila Localiz.:** `🌍 global` · `◦ partículas` · `🌀 deriva`.
 - **Fila Zonas:** `[sala ▾]` · `▶ Ir a sala` · `🗑`.
 - **Otros:** `ⓘ nodos` (grafo de nodos) · `⚙ Nav2` (config, la interfaz del LLM) · zoom · leyenda.
+
+---
+
+## Escenarios listos (`🧪 Test…`)
+
+Para no tener que dibujar el mapa a mano, el selector **`🧪 Test…`** carga un escenario completo
+(paredes, muebles **y zonas**) de un tirón: resetea al origen, limpia costmaps, envía `/sim_map` y
+publica las zonas. Los cuatro:
+
+| Escenario | Para qué | Zonas |
+|---|---|---|
+| **Piso con zonas** | Navegación multi-habitación + "ir a sala" + persistencia. Validado: las 4 zonas se alcanzan | salon · cocina · dormitorio · bano |
+| **Puerta estrecha** | Cruzar un hueco de ~1 m. Validado: entrada → fondo lo cruza | entrada · fondo |
+| **Sala en L** | Localización con geometría asimétrica (buena para `📌 pista` / global) | sala |
+| **Sala cuadrada** | Caso simétrico difícil para la localización global (suele **no** converger) | — |
+
+> Tras cargar un escenario, el robot queda en el origen `(0,0)`. Manda un destino o usa `▶ Ir a sala`.
 
 ---
 
