@@ -54,13 +54,19 @@ nodos y el perfilado de CPU medidos en la Pi el **20-ago-2026**.
 
 ### Tier 1 — Quick wins (alto valor, bajo esfuerzo)
 
-**O1 · Arreglar el pico de CPU de `goal_relay` (37 % en nav).**
-- *Problema:* un puente por eventos no debería consumir CPU; el 37 % sugiere bucle apretado o
-  `/nav2_relay/status` publicado demasiado a menudo (por cada feedback de la acción).
-- *Acción:* revisar el nodo; publicar estado solo cuando **cambia** el texto y/o limitar a ~2 Hz;
-  revisar que el spin no esté en busy-loop.
-- *Ganancia:* ~35 % CPU en nav. *Esfuerzo:* bajo. *Riesgo:* bajo.
-- *Verificación:* perfilador → `goal_relay` cae a <5 %.
+**O1 · Arreglar el pico de CPU de `goal_relay` (37 % en nav).** ✅ **HECHO (20-ago)**
+- *Problema (diagnosticado, no era lo que parecía):* el estado se publicaba a solo ~4 Hz, así que
+  **no** era sobre-publicación. El pico venía de un **busy-spin del executor de rclpy**: mientras hay
+  una acción `NavigateToPose` activa, una *guard condition* del *goal handle* queda siempre "lista"
+  y `rclpy.spin()` gira a máxima velocidad **sin publicar nada** (medido: 35.6 % con 0 mensajes/s).
+- *Solución:* bucle con frecuencia acotada (`spin_once` + `sleep 50 ms`) en vez de `rclpy.spin()`
+  — atiende feedback/resultado/cancel con <20 ms de retardo pero elimina el giro en vacío. Además
+  *dedupe* del estado + redondeo de distancia a 0.1 m (alivia también a rosbridge).
+- *Resultado medido:* **35.6 % → 6.6 %** en nav (−81 %), idle 1.8 %. Navegación de punta a punta
+  verificada (`DESTINO ALCANZADO`). Commit `2e545f46`.
+- *Hallazgo lateral:* `restart_nav2` reescribe el yaml desde `self.vals`, así que un cambio de
+  `marcha_atras`/`radio_giro_min` **persiste en disco** y cambia el comportamiento por defecto hasta
+  revertirlo (nos dejó REEDS_SHEPP+reversa, que provocaba abortos "collision ahead"). → ojo en O6/O10.
 
 **O2 · Recortar lo que la web streamea (ataca el 83 % de rosbridge).**
 - *Problema:* rosbridge serializa `/scan`, `/odometry/filtered`, costmaps y `/map` a JSON continuamente.
@@ -129,7 +135,7 @@ Correctness, no CPU.
 
 ## 4. Orden recomendado y objetivo
 
-**Secuencia:** O1 → O3 → O2 → O5 → O6 → O4 → O7 → (O8/O9/O10/O11 según haga falta).
+**Secuencia:** ~~O1~~ ✅ → **O3** (siguiente) → O2 → O5 → O6 → O4 → O7 → (O8/O9/O10/O11 según haga falta).
 
 **Objetivo cuantitativo:** bajar de **282 % (nav)** a **< 200 %** de CPU y **−150 MB** de RAM,
 manteniendo la navegación de punta a punta. Cada paso se valida con el perfilador antes de seguir.
