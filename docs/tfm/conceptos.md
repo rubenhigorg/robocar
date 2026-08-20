@@ -56,3 +56,9 @@ Qué nodos corren en el robocar, qué **publica y consume** cada uno y cómo se 
 
 [Abrir documento](nodos-ros2.html){ .md-button .md-button--primary target="_blank" }
 [Grafo interactivo](nodos-ros2-grafo.html){ .md-button target="_blank" }
+
+## Casos de prueba del banco (simulador)
+
+Batería de **pruebas manuales** del panel web: navegación, marcha atrás, config/velocidad adaptativa, obstáculos dinámicos, zonas, **localización (AMCL)** y casos de estrés. Cada caso indica qué hacer y qué debería pasar, para saber si pasa o falla.
+
+[Abrir documento](casos-prueba-banco.md){ .md-button .md-button--primary }
