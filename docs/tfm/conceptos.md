@@ -14,6 +14,12 @@ Catálogo de todo lo que un LLM podrá controlar sobre Nav2: **velocidad adaptat
 
 [Abrir documento](control-navegacion-llm.md){ .md-button .md-button--primary }
 
+## Plan de optimización del banco
+
+Auditoría de los **nodos** que corren en el banco (lenguaje, integración colcon, qué publica/escucha cada uno) + **perfilado de CPU/RAM** real en la Pi4, y un **plan priorizado por ROI** para hacerlo más eficiente y ordenado. Incluye el veredicto razonado sobre **si pasar nodos a C++** mejora (spoiler: casi nunca es la palanca).
+
+[Abrir documento](optimizacion-banco.md){ .md-button .md-button--primary }
+
 ## Odometría, SLAM y navegación
 
 Cómo se combinan las tres piezas para llevar el robot a un destino, y cómo se relacionan sobre el árbol TF `map → odom → base_link`.

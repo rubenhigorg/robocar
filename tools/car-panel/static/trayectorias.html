@@ -48,6 +48,26 @@
   .modal pre{font-family:var(--mono);font-size:.66rem;line-height:1.55;color:var(--muted);white-space:pre;background:var(--raise);border:1px solid var(--line);border-radius:9px;padding:.6rem .7rem;overflow-x:auto}
   .modal .close{float:right}
   .modal .pub{color:var(--ok)}
+  /* --- grafo de nodos (boton "nodos") --- */
+  #graphModal .box{max-width:min(96vw,820px)}
+  .glegend{display:flex;flex-wrap:wrap;gap:.35rem .8rem;font-size:.63rem;color:var(--muted);margin:.1rem 0 .55rem}
+  .gdot{display:inline-block;width:.62rem;height:.62rem;border-radius:2px;vertical-align:middle;margin-right:.28rem}
+  .glane{margin:.45rem 0}
+  .glane>h4{font-size:.72rem;color:var(--muted);margin:.2rem 0 .35rem;font-weight:600}
+  .gcards{display:flex;flex-wrap:wrap;gap:.4rem}
+  .gnode{border:1px solid var(--line2);border-left:4px solid var(--c,var(--line2));background:var(--raise);
+    border-radius:9px;padding:.4rem .55rem;cursor:pointer;flex:1 1 150px;min-width:132px;max-width:230px;transition:.12s}
+  .gnode:hover{border-color:var(--accent)}
+  .gnode.sel{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
+  .gnode.dim{opacity:.36}
+  .gnode .nm{font-family:var(--mono);font-size:.73rem;font-weight:700;color:var(--ink)}
+  .gnode .rl{font-size:.63rem;color:var(--faint);margin-top:.14rem;line-height:1.32}
+  .gbadge{display:inline-block;font-family:var(--mono);font-size:.55rem;padding:.02rem .3rem;border-radius:20px;
+    border:1px solid var(--line2);color:var(--muted);margin-top:.28rem;margin-right:.2rem}
+  .gdetail{margin-top:.55rem;border-top:1px solid var(--line);padding-top:.5rem;min-height:2rem}
+  .gio{font-family:var(--mono);font-size:.66rem;line-height:1.5;margin:.12rem 0}
+  .gio .tp{color:var(--ok)} .gio .ts{color:var(--accent)}
+  .gio .fmt{color:var(--faint)} .gwhy{color:var(--muted)}
 </style>
 </head>
 <body>
@@ -297,27 +317,118 @@ function loadPlan(i){ const p=PLANS[i], segs=p.f();
   flash(p.n+' — pulsa «Enviar mapa»'); }
 $('#planta').addEventListener('change',e=>{ if(e.target.value==='')return; loadPlan(+e.target.value); e.target.selectedIndex=0; });
 
-// ---- diagramas por modo (boton "ⓘ nodos") ----
-const GRAPHS={
-  wp:{ t:'RUTA — modo aproximación (script antiguo)', b:
-    '<p style="color:var(--muted);font-size:.74rem;margin:.2rem 0 .6rem">Tú dibujas los waypoints; el <b>script antiguo</b> (trajectory_nav) los sigue de forma reactiva (evitación + k-turn). <b>Nadie planifica</b>: el coche sigue TU camino.</p>'+
-    '<pre>web            <span class="pub">──/plan_waypoints──▶</span> trajectory_nav\n'+
-    'trajectory_nav <span class="pub">──/cmd_vel─────────▶</span> sim_motion\n'+
-    'sim_motion     <span class="pub">──/odometry/filtered▶</span> web, trajectory_nav\n'+
-    'sim_sensors    <span class="pub">──/scan────────────▶</span> trajectory_nav, web\n'+
-    'trajectory_nav <span class="pub">──/trajectory_nav/status▶</span> web</pre>'+
-    '<p style="font-size:.68rem;color:var(--faint)">Verde = quién publica · flecha = a quién le llega.</p>' },
-  obs:{ t:'MAPA — modo Nav2', b:
-    '<p style="color:var(--muted);font-size:.74rem;margin:.2rem 0 .6rem">Cargas el mapa y marcas UN <b>destino</b>; <b>Nav2</b> planifica la ruta (rodeando paredes) y conduce. Tú solo dices "ve ahí".</p>'+
-    '<pre>web         <span class="pub">──/sim_map──────▶</span> sim_map_grid\n'+
-    'sim_map_grid<span class="pub">──/map──────────▶</span> Nav2 (costmap), web\n'+
-    'web         <span class="pub">──/goal_pose────▶</span> goal_relay ─acción NavigateToPose─▶ Nav2\n'+
-    'sim_sensors <span class="pub">──/scan─────────▶</span> Nav2 (costmap), web\n'+
-    'Nav2        <span class="pub">──/cmd_vel──────▶</span> sim_motion <span class="pub">──/odometry▶</span> web, Nav2\n'+
-    'Nav2        <span class="pub">──/plan─────────▶</span> web  (ruta morada)\n'+
-    'goal_relay  <span class="pub">──/nav2_relay/status▶</span> web   web<span class="pub">──/nav2_relay/cancel▶</span>goal_relay</pre>'+
-    '<p style="font-size:.68rem;color:var(--faint)">Verde = quién publica · flecha = a quién le llega.</p>' } };
-$('#graph').onclick=()=>{ const gg=GRAPHS[mode]; $('#graphTitle').textContent=gg.t; $('#graphBody').innerHTML=gg.b; $('#graphModal').classList.add('show'); };
+// ---- grafo de nodos del banco (boton "ⓘ nodos") ----
+// o = origen: 'propio' (nuestro, azul) · 'nav2' (C++ de Nav2, morado) · 'stock' (gris)
+const LANES=[
+  ['web','🌐 Puente con la web'],
+  ['world','🗺️ Mundo simulado'],
+  ['sense','👁️ Sensores simulados'],
+  ['brain','🧠 Cerebro Nav2 · planifica y conduce'],
+  ['safe','🛡️ Seguridad'],
+  ['bridge','🔌 Puentes robocar · web/LLM ⇄ Nav2'],
+  ['ruta','🕹️ Modo RUTA · alternativo'],
+];
+const NODES=[
+ {id:'rosbridge',nm:'rosbridge',emoji:'🌐',lane:'web',o:'stock',lang:'Python',integ:'apt (stock)',launch:'ros2 launch rosbridge_server',modes:['obs','wp'],
+  rl:'Traduce la web (WebSocket) ⇄ ROS2',
+  subs:[{t:'(lo que la web publica)',f:'WS→ROS',x:'/goal_pose, /sim_map, /nav_config/set…'}],
+  pubs:[{t:'(lo que la web escucha)',f:'ROS→WS',x:'/map, /scan, /plan, /nav_config…'}]},
+
+ {id:'sim_map_grid',nm:'sim_map_grid',emoji:'🗺️',lane:'world',o:'propio',lang:'Python',integ:'no — script suelto',launch:'python3 sim_map_grid_node.py',modes:['obs'],
+  rl:'Convierte el mapa que dibujas en rejilla de ocupación',
+  subs:[{t:'/sim_map',f:'String JSON',x:'← web · los muros que dibujas'},{t:'/odometry/filtered',f:'Odometry',x:'← sim_motion · para colocar el mapa'}],
+  pubs:[{t:'/map',f:'OccupancyGrid',x:'→ costmaps Nav2 + web · el mapa como rejilla'},{t:'/tf_static',f:'TF',x:'→ todos · enlace map→odom'}]},
+ {id:'sim_motion',nm:'sim_motion',emoji:'🚗',lane:'world',o:'propio',lang:'Python',integ:'no — script suelto',launch:'python3 sim_motion_node.py (cmd_mode:=twist)',modes:['obs','wp'],
+  rl:'Modelo de bicicleta: integra la orden de velocidad y mueve el robot',
+  subs:[{t:'/cmd_vel',f:'Twist',x:'← collision_monitor · velocidad ya filtrada'},{t:'/set_pose',f:'PoseWithCov',x:'← web · teletransporte al origen'}],
+  pubs:[{t:'/odometry/filtered',f:'Odometry',x:'→ todos · posición y velocidad estimadas'},{t:'/tf',f:'TF',x:'→ todos · odom→base_link (dónde está)'}]},
+ {id:'rsp',nm:'robot_state_publisher',emoji:'🦴',lane:'world',o:'stock',lang:'C++',integ:'apt (stock)',launch:'ros2 launch robocar_description',modes:['obs','wp'],
+  rl:'Publica el esqueleto del robot (URDF) en el árbol TF',
+  subs:[{t:'/robot_description',f:'String',x:'← launch · el URDF'}],
+  pubs:[{t:'/tf_static',f:'TF',x:'→ todos · base_link→laser, ruedas, imu…'}]},
+
+ {id:'sim_sensors',nm:'sim_sensors',emoji:'👁️',lane:'sense',o:'propio',lang:'Python',integ:'colcon, pero se lanza suelto',launch:'python3 sim_sensors_node.py',modes:['obs','wp'],
+  rl:'Simula láser + 3 ultrasonidos + IR por ray-cast del mapa y obstáculos',
+  subs:[{t:'/sim_map',f:'String JSON',x:'← web · muros para el ray-cast'},{t:'/sim_obstacles',f:'String JSON',x:'← web · obstáculos dinámicos'},{t:'/odometry/filtered',f:'Odometry',x:'← sim_motion · desde dónde miran los sensores'}],
+  pubs:[{t:'/scan',f:'LaserScan',x:'→ costmaps + web · láser 2D'},{t:'/ir_range',f:'Range',x:'→ collision_monitor · IR frontal (freno de emergencia)'},{t:'/us_center · /us_left · /us_right',f:'Range',x:'→ costmap local · ultrasonidos (esquivar)'},{t:'/ultrasound_data',f:'messages_pkg/Distance',x:'→ trajectory_nav · formato del robot real'}]},
+
+ {id:'bt',nm:'bt_navigator',emoji:'🌳',lane:'brain',o:'nav2',lang:'C++',integ:'apt (paquete Nav2)',launch:'ros2 run nav2_bt_navigator',modes:['obs'],
+  rl:'Árbol de comportamiento: orquesta planificar → seguir → recuperar',
+  subs:[{t:'/odometry/filtered',f:'Odometry',x:'← sim_motion'},{t:'/goal_pose',f:'PoseStamped',x:'← destino (también directo)'}],
+  pubs:[{t:'acción /navigate_to_pose',f:'NavigateToPose',x:'← goal_relay pide "ve a X"'}]},
+ {id:'planner',nm:'planner_server',emoji:'🧭',lane:'brain',o:'nav2',lang:'C++',integ:'apt (paquete Nav2)',launch:'ros2 run nav2_planner (Smac Hybrid-A*)',modes:['obs'],
+  rl:'Smac Hybrid-A* tipo coche: calcula la RUTA global respetando el radio de giro',
+  subs:[{t:'/map + costmap global',f:'OccupancyGrid',x:'← el mundo para planificar'}],
+  pubs:[{t:'/plan',f:'Path',x:'→ controller + web · la ruta (morada)'}]},
+ {id:'controller',nm:'controller_server',emoji:'🎮',lane:'brain',o:'nav2',lang:'C++',integ:'apt (paquete Nav2)',launch:'ros2 run nav2_controller (RPP)',modes:['obs'],
+  rl:'RPP: sigue la ruta y genera la velocidad (regula en curvas y cerca de obstáculos)',
+  subs:[{t:'/odom',f:'Odometry',x:'← velocidad actual'},{t:'/speed_limit',f:'SpeedLimit',x:'← límite por zona (futuro)'}],
+  pubs:[{t:'/cmd_vel_raw',f:'Twist',x:'→ collision_monitor · velocidad propuesta'}]},
+ {id:'costmaps',nm:'global + local costmap',emoji:'🟪',lane:'brain',o:'nav2',lang:'C++',integ:'apt (paquete Nav2)',launch:'dentro de planner/controller',modes:['obs'],
+  rl:'Mapa de costes: paredes infladas + obstáculos del láser/ultrasonidos',
+  subs:[{t:'/map',f:'OccupancyGrid',x:'← sim_map_grid'},{t:'/scan',f:'LaserScan',x:'← sim_sensors'},{t:'/us_*',f:'Range',x:'← sim_sensors (solo local)'}],
+  pubs:[{t:'/global_costmap/costmap · /local_costmap/costmap',f:'OccupancyGrid',x:'→ planner/controller + web (zonas no-go)'}]},
+ {id:'behavior',nm:'behavior_server',emoji:'🔁',lane:'brain',o:'nav2',lang:'C++',integ:'apt (paquete Nav2)',launch:'ros2 run nav2_behaviors',modes:['obs'],
+  rl:'Recuperaciones. Aquí configurado solo "esperar" (sin spin/backup) para no salir del mapa',
+  subs:[{t:'/local_costmap/costmap_raw',f:'Costmap',x:'← para recuperar'}],
+  pubs:[{t:'/cmd_vel',f:'Twist',x:'→ (solo durante una recuperación)'}]},
+ {id:'lifecycle',nm:'lifecycle_manager',emoji:'⚙️',lane:'brain',o:'nav2',lang:'C++',integ:'apt (paquete Nav2)',launch:'ros2 run nav2_lifecycle_manager',modes:['obs'],
+  rl:'Arranca y activa los servidores Nav2 en el orden correcto',
+  subs:[],pubs:[{t:'srv change_state',f:'lifecycle',x:'→ configura/activa cada servidor'}]},
+
+ {id:'colmon',nm:'collision_monitor',emoji:'🛡️',lane:'safe',o:'nav2',lang:'C++',integ:'apt (paquete Nav2)',launch:'ros2 run nav2_collision_monitor',modes:['obs'],
+  rl:'Reflejo de seguridad: si el IR ve algo muy cerca, corta la velocidad a 0',
+  subs:[{t:'/cmd_vel_raw',f:'Twist',x:'← controller/trajectory_nav · velocidad propuesta'},{t:'/ir_range',f:'Range',x:'← sim_sensors · IR frontal'}],
+  pubs:[{t:'/cmd_vel',f:'Twist',x:'→ sim_motion · velocidad ya segura'}]},
+
+ {id:'goal_relay',nm:'goal_relay',emoji:'🎯',lane:'bridge',o:'propio',lang:'Python',integ:'no — script suelto',launch:'python3 goal_relay_node.py',modes:['obs'],
+  rl:'Convierte el clic de destino en la acción de Nav2 y devuelve mensajes legibles',
+  subs:[{t:'/goal_pose',f:'PoseStamped',x:'← web · dónde has pinchado'},{t:'/nav2_relay/cancel',f:'Empty',x:'← web · botón Parar'}],
+  pubs:[{t:'/nav2_relay/status',f:'String',x:'→ web · "navegando… / llegó / no pudo"'},{t:'acción /navigate_to_pose',f:'NavigateToPose',x:'→ bt_navigator'}]},
+ {id:'nav_config',nm:'nav_config',emoji:'🎛️',lane:'bridge',o:'propio',lang:'Python',integ:'no — script suelto',launch:'python3 nav_config_node.py',modes:['obs','wp'],
+  rl:'Contrato de configuración (velocidad, frenados, tolerancias…) para la web y el LLM',
+  subs:[{t:'/nav_config/set',f:'String JSON',x:'← web/LLM · nuevos valores'}],
+  pubs:[{t:'/nav_config',f:'String JSON',x:'→ web/LLM · parámetros autodescritos'},{t:'srv set_parameters',f:'SetParameters',x:'→ controller/costmaps · aplica en caliente'}]},
+
+ {id:'trajectory_nav',nm:'trajectory_nav',emoji:'🕹️',lane:'ruta',o:'propio',lang:'Python',integ:'colcon · ros2 run',launch:'ros2 run robocar_pkg trajectory_nav_node',modes:['wp'],
+  rl:'Modo RUTA (script antiguo): sigue waypoints dibujados de forma reactiva. NO planifica',
+  subs:[{t:'/plan_waypoints',f:'PoseArray',x:'← web · tu camino'},{t:'/odometry/filtered',f:'Odometry',x:'← sim_motion'},{t:'/ultrasound_data',f:'Distance',x:'← sim_sensors · evitación'}],
+  pubs:[{t:'/cmd_vel_raw',f:'Twist',x:'→ collision_monitor'},{t:'/trajectory_nav/status',f:'String',x:'→ web'}]},
+];
+const OCOL={propio:'var(--accent)',nav2:'var(--nav)',stock:'var(--faint)'};
+const byId=id=>NODES.find(n=>n.id===id);
+let gsel=null;
+function ioList(arr,cls,arrow){ return (arr&&arr.length)? arr.map(e=>
+  `<div class="gio"><span class="${cls}">${arrow} ${e.t}</span> <span class="fmt">[${e.f}]</span> <span class="gwhy">${e.x||''}</span></div>`).join('') : '<div class="gio gwhy">—</div>'; }
+function gDetail(n){ if(!n) return '<span class="lbl">Pincha un nodo para ver qué publica y a qué se suscribe, y para qué.</span>';
+  return `<div class="nm" style="font-size:.83rem">${n.emoji} ${n.nm}</div>`
+    +`<div class="rl" style="font-size:.7rem;margin:.15rem 0 .35rem">${n.rl}</div>`
+    +`<div class="gio gwhy"><b>Lenguaje:</b> ${n.lang} &nbsp;·&nbsp; <b>Integrado en colcon:</b> ${n.integ} &nbsp;·&nbsp; <b>Se lanza:</b> <code>${n.launch}</code></div>`
+    +`<div class="gio" style="margin-top:.4rem;color:var(--ok)"><b>Publica ▲</b></div>${ioList(n.pubs,'tp','▲')}`
+    +`<div class="gio" style="margin-top:.25rem;color:var(--accent)"><b>Escucha ▼</b></div>${ioList(n.subs,'ts','▼')}`; }
+function renderGraph(){
+  const modeName = mode==='obs'?'MAPA·Nav2':'RUTA';
+  let html=`<p style="color:var(--muted);font-size:.72rem;margin:.1rem 0 .5rem">Todos los nodos del banco y cómo se conectan. <b>Color</b> = quién lo hizo · <b>posición</b> = su papel · <b>atenuado</b> = no interviene en el modo actual (<b>${modeName}</b>). Pincha un nodo para su ficha.</p>`
+    +`<div class="glegend">`
+    +`<span><i class="gdot" style="background:var(--accent)"></i>Python (nuestro)</span>`
+    +`<span><i class="gdot" style="background:var(--nav)"></i>C++ Nav2 (apt)</span>`
+    +`<span><i class="gdot" style="background:var(--faint)"></i>stock (apt)</span></div>`;
+  for(const [lane,title] of LANES){
+    const ns=NODES.filter(n=>n.lane===lane); if(!ns.length) continue;
+    html+=`<div class="glane"><h4>${title}</h4><div class="gcards">`;
+    for(const n of ns){
+      const dim=n.modes.includes(mode)?'':' dim';
+      html+=`<div class="gnode${dim}${n.id===gsel?' sel':''}" style="--c:${OCOL[n.o]}" data-id="${n.id}">`
+        +`<div class="nm">${n.emoji} ${n.nm}</div><div class="rl">${n.rl}</div>`
+        +`<div><span class="gbadge">${n.lang}</span><span class="gbadge">${n.integ.startsWith('colcon')?'colcon':(n.o==='propio'?'suelto':(n.o==='nav2'?'nav2':'stock'))}</span></div></div>`;
+    }
+    html+=`</div></div>`;
+  }
+  html+=`<div class="gdetail" id="gdetail">${gDetail(byId(gsel))}</div>`;
+  $('#graphBody').innerHTML=html;
+  $('#graphBody').querySelectorAll('.gnode').forEach(el=>el.onclick=()=>{ gsel=el.dataset.id; renderGraph(); });
+}
+$('#graph').onclick=()=>{ $('#graphTitle').textContent='Nodos del banco — quién habla con quién'; renderGraph(); $('#graphModal').classList.add('show'); };
 $('#graphClose').onclick=()=>$('#graphModal').classList.remove('show');
 $('#graphModal').addEventListener('click',e=>{ if(e.target.id==='graphModal') $('#graphModal').classList.remove('show'); });
 
