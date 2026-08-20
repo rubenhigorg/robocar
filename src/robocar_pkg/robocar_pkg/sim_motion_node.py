@@ -18,7 +18,7 @@ import math, json, random, rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import Twist, TransformStamped, PoseWithCovarianceStamped, PoseStamped
 from nav_msgs.msg import Odometry
-from std_msgs.msg import String
+from std_msgs.msg import String, Bool
 from tf2_ros import TransformBroadcaster
 
 
@@ -39,7 +39,7 @@ class SimMotion(Node):
         # DERIVA de odometria (para el test de localizacion): la ODOMETRIA publicada se aparta de
         # la pose REAL. Sin deriva (por defecto) odom==real (banco clasico). Ajustable en caliente.
         self.declare_parameter('drift_enabled', False)
-        self.declare_parameter('drift_yaw_per_m', 0.06)   # rad de error de rumbo por metro (deriva sistematica)
+        self.declare_parameter('drift_yaw_per_m', 0.10)   # rad de error de rumbo por metro (deriva sistematica)
         self.declare_parameter('drift_dist', 0.0)         # error de escala de distancia (0.05 = +5%)
         self.declare_parameter('drift_noise', 0.0)        # ruido gaussiano por paso (rad)
 
@@ -48,6 +48,7 @@ class SimMotion(Node):
         self.tx = 0.0; self.ty = 0.0; self.tyaw = 0.0
         self.v = 0.0; self.wz = 0.0
         self.last_cmd = None
+        self.drift_on = self.get_parameter('drift_enabled').value   # toggle en caliente via /sim_drift (web)
 
         self.pub = self.create_publisher(Odometry, '/odometry/filtered', 20)   # odom (posible deriva)
         self.pub_truth = self.create_publisher(PoseStamped, '/truth_pose', 10)  # pose REAL (para sim_sensors y medir)
@@ -57,6 +58,7 @@ class SimMotion(Node):
         self.create_subscription(Twist, '/cmd_vel', self.ccb, 10)
         self.create_subscription(PoseWithCovarianceStamped, '/set_pose', self.rcb, 10)
         self.create_subscription(String, '/sim_truth', self.tcb, 10)   # coloca la pose REAL (test localizacion)
+        self.create_subscription(Bool, '/sim_drift', self.dcb, 10)      # ON/OFF deriva desde la web
 
         self.dt = 1.0 / self.get_parameter('rate_hz').value
         self.create_timer(self.dt, self.tick)
@@ -112,6 +114,10 @@ class SimMotion(Node):
         except Exception:
             pass
 
+    def dcb(self, m):
+        self.drift_on = bool(m.data)
+        self.get_logger().info('DERIVA de odometria %s' % ('ACTIVADA' if self.drift_on else 'desactivada'))
+
     def tick(self):
         to = self.get_parameter('cmd_timeout').value
         if self.last_cmd is None or (self.now_s() - self.last_cmd) > to:
@@ -121,7 +127,7 @@ class SimMotion(Node):
         self.ty += self.v * math.sin(self.tyaw) * self.dt
         self.tyaw = math.atan2(math.sin(self.tyaw + self.wz * self.dt), math.cos(self.tyaw + self.wz * self.dt))
         # pose ODOM (lo que el robot "cree") — con DERIVA opcional respecto a la real
-        if self.get_parameter('drift_enabled').value:
+        if self.drift_on:
             ds = self.v * self.dt
             vs = 1.0 + self.get_parameter('drift_dist').value
             nz = self.get_parameter('drift_noise').value

@@ -101,7 +101,7 @@
 
   <div class="row" id="rowMapa" style="display:none"><span class="lbl">MAPA</span>
     <select id="planta" title="Cargar planta de piso con muebles"><option value="">🏠 Plantas…</option><option value="0">Piso 100 m² · 2 dorm</option><option value="1">Piso 130 m² · 3 dorm</option><option value="2">Piso 160 m² · 4 hab</option><option value="3">Ático 200 m² · 4 hab</option></select>
-    <span class="seg" id="mtool"><button data-t="rect" class="act">▭ habitación</button><button data-t="wall">─ pared</button><button data-t="obst">▧ obstáculo</button><button data-t="goal">◎ destino</button><button data-t="area">🏷️ área</button><button data-t="truth" title="Colocar la pose REAL oculta (solo test de localización)">📍 real</button></span>
+    <span class="seg" id="mtool"><button data-t="rect" class="act">▭ habitación</button><button data-t="wall">─ pared</button><button data-t="obst">▧ obstáculo</button><button data-t="goal">◎ destino</button><button data-t="area">🏷️ área</button><button data-t="truth" title="Colocar la pose REAL oculta (solo test de localización)">📍 real</button><button data-t="hint" title="Pista de localización: clic donde crees que está el robot + arrastra hacia donde mira">📌 pista</button></span>
     <button id="mundo">↶</button><button id="mclear">limpiar</button>
     <button id="sendmap" class="map">▦ Enviar mapa</button>
   </div>
@@ -114,7 +114,8 @@
   <div class="row" id="rowLoc" style="display:none"><span class="lbl">Localiz.</span>
     <button id="globalLoc" title="Pose desconocida: reparte partículas por todo el mapa">🌍 global</button>
     <button id="togPart" class="tog on">◦ partículas</button>
-    <span class="lbl" style="min-width:0">AMCL infiere la pose (lidar+mapa). <b>📍 real</b> = colocar pose oculta (test)</span>
+    <button id="togDrift" class="tog" title="Simula deriva de odometría: la odom se aparta de la real; AMCL la corrige">🌀 deriva</button>
+    <span class="lbl" style="min-width:0"><b>📌 pista</b> = "está aquí" · <b>📍 real</b> = pose oculta (test) · <b>🌀 deriva</b> = simula error de odom</span>
   </div>
   <div class="row" id="rowArea" style="display:none"><span class="lbl">Zonas</span>
     <span class="lbl" style="min-width:0">🏷️ <b>área</b>: arrastra un rectángulo y ponle nombre</span>
@@ -256,6 +257,7 @@ function endWall(){ if(mode==='obs'&&temp){
     else if(mapTool==='area'){ if(Math.abs(x2-x1)>0.3&&Math.abs(y2-y1)>0.3){
         const nm=(prompt('Nombre de la zona (cocina, baño, salón, dormitorio, pasillo…)')||'').trim();
         if(nm) sendArea(nm,x1,y1,x2,y2); } }
+    else if(mapTool==='hint'){ sendHint(x1,y1,x2,y2); }
     else { if(Math.hypot(x2-x1,y2-y1)>0.05) walls.push({x1,y1,x2,y2}); }
     temp=null; draw(); } }
 cv.addEventListener('pointerup', endWall); cv.addEventListener('pointercancel', endWall);
@@ -552,6 +554,8 @@ function connect(){
     send({op:'advertise',topic:'/map_areas/set',type:'std_msgs/msg/String'});
     send({op:'subscribe',topic:'/map_areas',type:'std_msgs/msg/String'});                        // zonas etiquetadas
     send({op:'advertise',topic:'/sim_truth',type:'std_msgs/msg/String'});
+    send({op:'advertise',topic:'/initialpose',type:'geometry_msgs/msg/PoseWithCovarianceStamped'});
+    send({op:'advertise',topic:'/sim_drift',type:'std_msgs/msg/Bool'});
     send({op:'subscribe',topic:'/amcl_pose',type:'geometry_msgs/msg/PoseWithCovarianceStamped',throttle_rate:200,queue_length:1});
     send({op:'subscribe',topic:'/particle_cloud_viz',type:'nav2_msgs/msg/ParticleCloud',throttle_rate:300,queue_length:1}); // localizacion
     send({op:'subscribe',topic:'/plan',type:'nav_msgs/msg/Path',throttle_rate:300,queue_length:1}); };                 // ruta -> ~3Hz
@@ -619,6 +623,20 @@ $('#globalLoc').onclick=()=>{ if(!connected){flash('Sin conexión');return;}
   send({op:'call_service',service:'/reinitialize_global_localization',type:'std_srvs/srv/Empty',args:{}});
   Tmo={x:0,y:0,th:0}; flash('Localización global: partículas por todo el mapa'); };
 $('#togPart').onclick=()=>{ showParticles=!showParticles; $('#togPart').classList.toggle('on',showParticles); draw(); };
+// pista de localizacion (2D Pose Estimate): clic = posicion, arrastre = orientacion -> /initialpose
+function sendHint(x1,y1,x2,y2){ if(!odom0){flash('Aún sin odometría');return;}
+  const a=relToMap(x1,y1), b=relToMap(x2,y2);
+  const yaw=(Math.hypot(x2-x1,y2-y1)>0.15) ? Math.atan2(b.y-a.y,b.x-a.x) : 0;
+  const cov=new Array(36).fill(0); cov[0]=0.25; cov[7]=0.25; cov[35]=0.07;
+  send({op:'publish',topic:'/initialpose',msg:{header:{frame_id:'map'},
+    pose:{pose:{position:{x:a.x,y:a.y,z:0},orientation:{x:0,y:0,z:Math.sin(yaw/2),w:Math.cos(yaw/2)}},covariance:cov}}});
+  flash('Pista dada a AMCL — se re-localiza aquí'); }
+// toggle de deriva de odometria (simula el error que AMCL corrige)
+let driftOn=false;
+$('#togDrift').onclick=()=>{ if(!connected){flash('Sin conexión');return;} driftOn=!driftOn;
+  $('#togDrift').classList.toggle('on',driftOn);
+  send({op:'publish',topic:'/sim_drift',msg:{data:driftOn}});
+  flash(driftOn?'Deriva de odometría ACTIVADA (mira cómo AMCL la corrige)':'Deriva desactivada'); };
 function ensureOrigin(){ if(!odom0){ if(!odom0_last){flash('Aún sin odometría');return false;} odom0={...odom0_last}; real=[]; } return true; }
 
 $('#sendmap').onclick=()=>{ if(!connected){flash('Sin conexión');return;} if(!walls.length){flash('Dibuja o carga un mapa');return;}
