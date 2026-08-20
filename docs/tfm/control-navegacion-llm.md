@@ -20,15 +20,19 @@ La idea: rápido en rectas, lento en curvas, prudente cerca de obstáculos, desp
 | Palanca | Qué hace | Nav2 | Estado | Control LLM |
 |---|---|---|---|---|
 | **Velocidad base** | crucero en recto | `FollowPath.desired_linear_vel` | ✅ | "ve más rápido/lento" |
-| **Frenar en curvas** | baja según lo cerrada que sea la curva (regulated scaling de RPP) | `regulated_linear_scaling_min_radius` / `_min_speed` | ⚙️ **ya activo**; falta exponer intensidad | "frena más en las curvas" |
-| **Frenar cerca de obstáculos** | reduce al aproximarse a algo | RPP cost-regulated + zona **slowdown** del collision_monitor | 🔨 | "sé prudente cerca de cosas" |
-| **Aceleración / suavidad** | cómo de brusco acelera/frena | `nav2_velocity_smoother` | 🔨 (añadir nodo) | "arranca/para suave" |
+| **Frenar en curvas** | baja según lo cerrada que sea la curva (regulated scaling de RPP) | `regulated_linear_scaling_min_radius` / `_min_speed` | ✅ **expuesto** (`frenar_en_curvas`, `velocidad_min_curva`) | "frena más en las curvas" |
+| **Frenar cerca de obstáculos** | reduce al aproximarse a algo | RPP cost-regulated (`use_cost_regulated…`, `cost_scaling_dist`) | ✅ **expuesto** (`frenar_obstaculos`, `dist_frenado_obstaculo`) | "sé prudente cerca de cosas" |
+| **Aceleración / suavidad** | cómo de brusco acelera/frena | `nav2_velocity_smoother` | 🔨 (añadir nodo) — **siguiente** | "arranca/para suave" |
 | **Frenar al llegar** | reduce al aproximarse al destino | `approach_velocity_scaling_dist` | ⚙️ ya | — |
 | **Suavidad de trazado** | ceñido vs cómodo | `lookahead_dist` | ✅ (`suavidad`) | "conduce más suave" |
 | **Límite de velocidad por ZONA / global** | "en la cocina, despacio" | `SpeedFilter` + topic `/speed_limit` | 🔨 mecanismo nuevo | **muy potente**: "en el pasillo al 30%" |
 
 **Nota clave:** "más rápido en rectas, lento en curvas" **ya ocurre** — RPP regula la velocidad con
-la curvatura del camino. Lo que falta es dejar que el LLM ajuste *cuánto* frena y ponga **límites por zona**.
+la curvatura del camino, y ahora el LLM ajusta *cuánto* frena en curva (`frenar_en_curvas` +
+`velocidad_min_curva`) y *cuánto* cerca de obstáculos (`frenar_obstaculos` + `dist_frenado_obstaculo`),
+todo **en caliente**. **Verificado en banco (20-ago):** mismo arco, frenado fuerte da vx media 0.31 m/s
+vs suave 0.44 m/s (Δ 0.12), llegando al destino en ambos. Falta la **aceleración/suavidad**
+(`velocity_smoother`, nodo nuevo) y los **límites por zona** (`SpeedFilter`, máscaras).
 
 ---
 
@@ -75,9 +79,10 @@ La resolución semántica ("la cocina" → coordenada) es la pieza de la Capa 2 
 
 ## Hoja de ruta propuesta (de más valor / menos esfuerzo a más avanzado)
 
-1. **Ampliar `/nav_config`** con velocidad adaptativa: `frenar_en_curvas`, `frenar_obstaculos`
-   (slowdown del collision_monitor), `aceleracion` (velocity_smoother), y `estilo_ruta`
-   (penalties de Smac). Todo por el mismo patrón (en caliente / reinicio). **Empezar aquí.**
+1. **Ampliar `/nav_config`** con velocidad adaptativa. ✅ **HECHO (20-ago)**: `frenar_en_curvas`,
+   `velocidad_min_curva`, `frenar_obstaculos`, `dist_frenado_obstaculo` (todo en caliente, verificado).
+   Pendiente del mismo bloque: `aceleracion` (`velocity_smoother`, nodo nuevo) y `estilo_ruta`
+   (penalties de Smac, requiere reinicio). **Siguiente: `velocity_smoother`.**
 2. **NavigateThroughPoses** ("pasa por…") + exponerlo en la web y como *tool*.
 3. **Zonas keepout + speed** (máscaras): "no entres aquí" / "aquí despacio". Muy visual en la web
    (como los obstáculos) y muy potente para el LLM.

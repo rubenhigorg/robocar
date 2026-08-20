@@ -26,6 +26,19 @@ PARAMS = [
     {"key": "velocidad", "label": "Velocidad de crucero", "unit": "m/s",
      "min": 0.1, "max": 0.5, "step": 0.05, "default": 0.3, "restart": False,
      "desc": "Velocidad a la que avanza el robot. Mas alta = llega antes pero controla peor. (en caliente)"},
+    {"key": "frenar_en_curvas", "label": "Frenar en curvas", "unit": "m",
+     "min": 0.5, "max": 2.5, "step": 0.1, "default": 0.9, "restart": False,
+     "desc": "Radio de curva a partir del cual REDUCE la velocidad. Mayor = frena antes y en curvas mas "
+             "suaves (mas prudente); menor = solo frena en curvas muy cerradas. (en caliente)"},
+    {"key": "velocidad_min_curva", "label": "Velocidad minima en curva", "unit": "m/s",
+     "min": 0.1, "max": 0.4, "step": 0.05, "default": 0.15, "restart": False,
+     "desc": "Hasta que velocidad baja en las curvas mas cerradas. Menor = mas lento y seguro al girar. (en caliente)"},
+    {"key": "frenar_obstaculos", "label": "Frenar cerca de obstaculos", "type": "bool", "default": True, "restart": False,
+     "desc": "Reduce la velocidad automaticamente al pasar cerca de obstaculos o paredes (usa el coste del "
+             "costmap). Off = mantiene velocidad. (en caliente)"},
+    {"key": "dist_frenado_obstaculo", "label": "Distancia de frenado a obstaculo", "unit": "m",
+     "min": 0.2, "max": 1.5, "step": 0.1, "default": 0.6, "restart": False,
+     "desc": "A que distancia de un obstaculo empieza a frenar. Mayor = mas prudente/lento cerca de las cosas. (en caliente)"},
     {"key": "marcha_atras", "label": "Marcha atras", "type": "bool", "default": False, "restart": True,
      "desc": "Permite RETROCEDER para giros cerrados (Reeds-Shepp). Off = solo adelante (Dubin). "
              "REINICIA Nav2 (~15 s)."},
@@ -94,6 +107,14 @@ class NavConfig(Node):
     def apply_live(self, key, value):
         if key == 'velocidad':
             self._set('controller_server', 'FollowPath.desired_linear_vel', float(value))
+        elif key == 'frenar_en_curvas':
+            self._set('controller_server', 'FollowPath.regulated_linear_scaling_min_radius', float(value))
+        elif key == 'velocidad_min_curva':
+            self._set('controller_server', 'FollowPath.regulated_linear_scaling_min_speed', float(value))
+        elif key == 'frenar_obstaculos':
+            self._set('controller_server', 'FollowPath.use_cost_regulated_linear_velocity_scaling', bool(value))
+        elif key == 'dist_frenado_obstaculo':
+            self._set('controller_server', 'FollowPath.cost_scaling_dist', float(value))
         elif key == 'tolerancia_objetivo':
             self._set('controller_server', 'general_goal_checker.xy_goal_tolerance', float(value))
         elif key == 'margen_seguridad':
@@ -104,6 +125,8 @@ class NavConfig(Node):
         elif key == 'distancia_paredes':
             self._set('global_costmap/global_costmap', 'inflation_layer.cost_scaling_factor', float(value))
             self._set('local_costmap/local_costmap', 'inflation_layer.cost_scaling_factor', float(value))
+            # el frenado por obstaculos de RPP necesita el MISMO factor para leer bien el coste
+            self._set('controller_server', 'FollowPath.inflation_cost_scaling_factor', float(value))
         elif key == 'suavidad':
             self._set('controller_server', 'FollowPath.lookahead_dist', float(value))
 
@@ -118,6 +141,14 @@ class NavConfig(Node):
         s = re.sub(r'allow_reversing:\s*\w+', 'allow_reversing: %s' % rev, s)
         s = re.sub(r'minimum_turning_radius:\s*[0-9.]+', 'minimum_turning_radius: %.3f' % float(self.vals['radio_giro_min']), s)
         s = re.sub(r'desired_linear_vel:\s*[0-9.]+', 'desired_linear_vel: %.3f' % float(self.vals['velocidad']), s)
+        s = re.sub(r'regulated_linear_scaling_min_radius:\s*[0-9.]+',
+                   'regulated_linear_scaling_min_radius: %.3f' % float(self.vals['frenar_en_curvas']), s)
+        s = re.sub(r'regulated_linear_scaling_min_speed:\s*[0-9.]+',
+                   'regulated_linear_scaling_min_speed: %.3f' % float(self.vals['velocidad_min_curva']), s)
+        s = re.sub(r'use_cost_regulated_linear_velocity_scaling:\s*\w+',
+                   'use_cost_regulated_linear_velocity_scaling: %s' % ('true' if self.vals['frenar_obstaculos'] else 'false'), s)
+        s = re.sub(r'cost_scaling_dist:\s*[0-9.]+',
+                   'cost_scaling_dist: %.3f' % float(self.vals['dist_frenado_obstaculo']), s)
         s = re.sub(r'xy_goal_tolerance:\s*[0-9.]+', 'xy_goal_tolerance: %.3f' % float(self.vals['tolerancia_objetivo']), s)
         s = re.sub(r'inflation_radius:\s*[0-9.]+', 'inflation_radius: %.3f' % float(self.vals['margen_seguridad']), s)
         yt = '0.5' if self.vals['orientacion_final'] else '3.15'
@@ -140,13 +171,17 @@ class NavConfig(Node):
         for k, v in changes.items():
             if k not in self.vals:
                 continue
+            if self.vals[k] == v:
+                continue                    # sin cambio real -> no tocar nada (evita reinicios inutiles de Nav2)
             self.vals[k] = v; applied.append(k)
             if k in RESTART_KEYS:
                 need_restart = True
             else:
                 self.apply_live(k, v)
         self.get_logger().info('SET %s (restart=%s)' % (applied, need_restart))
-        if need_restart:
+        if not applied:
+            self.publish_config('Sin cambios (los valores ya estaban asi)')
+        elif need_restart:
             self.publish_config('Reiniciando Nav2 (~15 s). Cuando vuelva, reenvia el destino.')
             self.restart_nav2()
         else:
