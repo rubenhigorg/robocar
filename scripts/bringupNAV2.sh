@@ -18,14 +18,14 @@ CFG=~/robocar/src/robocar_pkg/config/nav2_bench.yaml
 pgrep -f rosbridge_websocket >/dev/null || ( nohup ros2 launch rosbridge_server rosbridge_websocket_launch.xml >/tmp/rosbridge.log 2>&1 & )
 pgrep -f "http.server 8080" >/dev/null || ( cd ~/robocar/tools/car-panel/static; nohup python3 -m http.server 8080 >/tmp/panel.log 2>&1 & )
 # limpiar todo lo que pueda chocar
-for pass in 1 2 3; do for n in collision_monitor bt_navigator controller_server planner_server behavior_server lifecycle_manager waypoint_follower velocity_smoother smoother_server nav_config map_areas goal_relay trajectory_nav sim_map_grid sim_sensors sim_motion ekf_node ekf_filter ekf.launch car_control_node encoder_node accelerometer_node steer_yaw_node robot_state_publisher; do pkill -9 -f "$n" 2>/dev/null; done; sleep 1; done
+for pass in 1 2 3; do for n in collision_monitor bt_navigator controller_server planner_server behavior_server amcl lifecycle_manager waypoint_follower velocity_smoother smoother_server nav_config map_areas goal_relay trajectory_nav sim_map_grid sim_sensors sim_motion ekf_node ekf_filter ekf.launch car_control_node encoder_node accelerometer_node steer_yaw_node robot_state_publisher; do pkill -9 -f "$n" 2>/dev/null; done; sleep 1; done
 sleep 2
 # --- banco (planta simulada) ---
 nohup ros2 launch robocar_description description.launch.py >/tmp/desc.log 2>&1 & disown
 sleep 2
 nohup python3 ~/robocar/src/robocar_pkg/robocar_pkg/sim_motion_node.py --ros-args -p cmd_mode:=twist -p rate_hz:=20.0 >/tmp/sm.log 2>&1 & disown
 nohup python3 ~/robocar/src/robocar_pkg/robocar_pkg/sim_sensors_node.py >/tmp/ss.log 2>&1 & disown   # src parcheado (obstaculos)
-nohup python3 ~/robocar/src/robocar_pkg/robocar_pkg/sim_map_grid_node.py >/tmp/smg.log 2>&1 & disown
+nohup python3 ~/robocar/src/robocar_pkg/robocar_pkg/sim_map_grid_node.py --ros-args -p publish_map_tf:=false >/tmp/smg.log 2>&1 & disown   # AMCL publica map->odom, no la identidad
 nohup python3 ~/robocar/src/robocar_pkg/robocar_pkg/trajectory_nav_node.py --ros-args -r /cmd_vel:=/cmd_vel_raw >/tmp/tn.log 2>&1 & disown   # RUTA: tambien pasa por el collision_monitor
 sleep 4
 # (sin mapa de arranque: la web empieza limpia; el usuario carga su mapa cuando quiere)
@@ -35,8 +35,10 @@ nohup /opt/ros/humble/lib/nav2_controller/controller_server --ros-args -r /cmd_v
 nohup /opt/ros/humble/lib/nav2_behaviors/behavior_server --ros-args --params-file $CFG >/tmp/behavior.log 2>&1 & disown
 nohup /opt/ros/humble/lib/nav2_bt_navigator/bt_navigator --ros-args --params-file $CFG >/tmp/btnav.log 2>&1 & disown
 nohup /opt/ros/humble/lib/nav2_collision_monitor/collision_monitor --ros-args --params-file $CFG >/tmp/colmon.log 2>&1 & disown   # reflejo IR
+nohup /opt/ros/humble/lib/nav2_amcl/amcl --ros-args --params-file $CFG >/tmp/amcl.log 2>&1 & disown   # LOCALIZACION (map->odom)
 sleep 4
 nohup /opt/ros/humble/lib/nav2_lifecycle_manager/lifecycle_manager --ros-args -r __node:=lifecycle_manager_navigation --params-file $CFG >/tmp/lifecycle.log 2>&1 & disown
+nohup /opt/ros/humble/lib/nav2_lifecycle_manager/lifecycle_manager --ros-args -r __node:=lifecycle_manager_localization --params-file $CFG >/tmp/lifeloc.log 2>&1 & disown
 sleep 12
 # relay del destino: /goal_pose (web) -> accion NavigateToPose (Nav2)
 nohup python3 ~/robocar/src/robocar_pkg/robocar_pkg/goal_relay_node.py >/tmp/gr.log 2>&1 & disown
