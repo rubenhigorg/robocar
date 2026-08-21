@@ -103,10 +103,11 @@ class SimSensors(Node):
             rel = json.loads(msg.data).get('segments', [])
         except Exception:
             return
-        x0, y0, yaw0 = self.pose
-        c, s = math.cos(yaw0), math.sin(yaw0)
-        self.obs = [(x0 + q[0]*c - q[1]*s, y0 + q[0]*s + q[1]*c,
-                     x0 + q[2]*c - q[3]*s, y0 + q[2]*s + q[3]*c) for q in rel]
+        # el web envia coords ABSOLUTAS (frame odom0/map, igual que /truth_pose): NO re-transformar
+        # por la pose actual. Si no, un obstaculo pintado a media navegacion queda desplazado lo que el
+        # robot lleva avanzado y el robot pasa por encima. (El mapa se libra porque se envia con el robot
+        # en el origen -> transform identidad.)
+        self.obs = [(q[0], q[1], q[2], q[3]) for q in rel]
         self._rebuild_arr()
         self.get_logger().info('OBSTACULOS: %d' % len(self.obs))
 
