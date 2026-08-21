@@ -47,6 +47,7 @@ nohup python3 ~/robocar/src/robocar_pkg/robocar_pkg/nav_config_node.py >/tmp/nc.
 nohup python3 ~/robocar/src/robocar_pkg/robocar_pkg/map_areas_node.py >/tmp/ma.log 2>&1 & disown   # zonas del mapa (cocina, bano...)
 nohup python3 ~/robocar/src/robocar_pkg/robocar_pkg/particle_relay_node.py >/tmp/pr.log 2>&1 & disown   # relay QoS de particulas
 nohup python3 ~/robocar/src/robocar_pkg/robocar_pkg/sim_map_loader_node.py >/tmp/sml.log 2>&1 & disown   # cargar mapa REAL en el banco (Fase B)
+nohup python3 ~/robocar/src/robocar_pkg/robocar_pkg/map_edit_node.py >/tmp/me.log 2>&1 & disown   # soporte del editor de mapa (tambien util en el banco)
 sleep 2
 echo "=== nodos Nav2 ==="; ros2 node list 2>/dev/null | grep -iE 'planner|controller|behavior|bt_nav|lifecycle|goal_relay|trajectory' | sort
 echo "=== estado lifecycle ==="
