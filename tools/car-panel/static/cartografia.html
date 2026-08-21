@@ -32,29 +32,30 @@
   .zoom{position:absolute;top:.5rem;right:.6rem;display:flex;flex-direction:column;gap:.35rem}
   .zoom button{width:38px;height:38px;font-size:1.2rem;font-weight:700;border-radius:10px;border:1px solid var(--line);
     background:var(--surface);color:var(--ink)}
-  .foot{border-top:1px solid var(--line);padding:.5rem 1rem calc(.6rem + env(safe-area-inset-bottom));
-    display:flex;align-items:center;gap:1rem}
-  .pad{position:relative;width:132px;height:132px;border-radius:50%;flex:none;
+  .foot{border-top:1px solid var(--line);padding:.45rem .7rem calc(.5rem + env(safe-area-inset-bottom));
+    display:flex;align-items:center;gap:.7rem}
+  .pad{position:relative;width:clamp(150px,46vw,240px);height:clamp(150px,46vw,240px);border-radius:50%;flex:none;
     background:radial-gradient(circle at 50% 45%, var(--raise), var(--pad));border:2px solid var(--line);touch-action:none}
-  .pad .fwd,.pad .rev{position:absolute;left:50%;transform:translateX(-50%);font-size:.6rem;color:var(--faint);font-family:var(--mono)}
-  .pad .fwd{top:6px} .pad .rev{bottom:6px}
-  .knob{position:absolute;width:34%;height:34%;border-radius:50%;left:33%;top:33%;
+  .pad .fwd,.pad .rev{position:absolute;left:50%;transform:translateX(-50%);font-size:.62rem;color:var(--faint);font-family:var(--mono)}
+  .pad .fwd{top:8px} .pad .rev{bottom:8px}
+  .knob{position:absolute;width:36%;height:36%;border-radius:50%;left:32%;top:32%;
     background:radial-gradient(circle at 40% 35%, #5b9bea, var(--knob));
     box-shadow:0 6px 20px rgba(0,0,0,.5), inset 0 2px 4px rgba(255,255,255,.25);transition:transform .04s linear}
   .pad.idle .knob{transition:transform .18s cubic-bezier(.2,.8,.3,1)}
-  .ctrl{flex:1;display:flex;flex-direction:column;gap:.5rem;min-width:0}
-  .row{display:flex;gap:.5rem}
-  .row button{flex:1;font:inherit;font-weight:700;font-size:.85rem;padding:.6rem;border-radius:11px;border:1px solid var(--line);
+  .ctrl{flex:1;display:flex;flex-direction:column;gap:.4rem;min-width:0}
+  .row{display:flex;gap:.4rem}
+  .row button{flex:1;font:inherit;font-weight:700;border-radius:10px;border:1px solid var(--line);
     background:var(--surface);color:var(--ink)}
+  .row.main button{font-size:.8rem;padding:.55rem .3rem}
+  .row.mini button{font-size:1.1rem;padding:.34rem 0;line-height:1;background:var(--raise);color:var(--muted)}
   .row .toggle.on{background:var(--good);border-color:var(--good);color:#04160d}
   .row .stop{background:var(--bad);border-color:var(--bad);color:#fff}
-  .row .save{background:var(--accent);border-color:var(--accent);color:#04121f}
-  .row .reinit{background:transparent;border-color:var(--warn);color:var(--warn)}
-  .readout{display:flex;gap:1rem;font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:.72rem;color:var(--muted)}
-  .readout b{color:var(--accent);font-size:1rem}
-  .cap{display:flex;align-items:center;gap:.5rem;font-size:.74rem;color:var(--muted)}
-  .cap input{flex:1;accent-color:var(--accent)} .cap .val{font-family:var(--mono);color:var(--ink);min-width:3em;text-align:right}
-  .ckstat{font-family:var(--mono);font-size:.68rem;color:var(--faint);text-align:center}
+  .row.mini .reinit{background:transparent;border-color:var(--warn);color:var(--warn)}
+  .readout{display:flex;gap:1rem;font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:.7rem;color:var(--muted)}
+  .readout b{color:var(--accent);font-size:.95rem}
+  .cap{display:flex;align-items:center;gap:.5rem;font-size:.7rem;color:var(--muted)}
+  .cap input{flex:1;accent-color:var(--accent)} .cap .val{font-family:var(--mono);color:var(--ink);min-width:2.6em;text-align:right}
+  .ckstat{font-family:var(--mono);font-size:.6rem;color:var(--faint);text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 </style>
 </head>
 <body>
@@ -79,22 +80,20 @@
       <div class="knob" id="knob"></div>
     </div>
     <div class="ctrl">
-      <div class="readout"><span>v <b id="vVal">0.00</b> m/s</span><span>ω <b id="wVal">0.00</b> rad/s</span></div>
-      <div class="row">
-        <button class="toggle" id="arm">Activar control</button>
+      <div class="readout"><span>v <b id="vVal">0.00</b></span><span>ω <b id="wVal">0.00</b></span></div>
+      <div class="row main">
+        <button class="toggle" id="arm">Activar</button>
         <button class="stop" id="stop">STOP</button>
       </div>
-      <div class="row">
-        <button class="save" id="ckpt">💾 Checkpoint</button>
-        <button class="toggle" id="ckptAuto" title="guarda un checkpoint cada 30 s">⏱ auto</button>
+      <div class="row mini">
+        <button id="ckpt" title="Guardar checkpoint ahora">💾</button>
+        <button class="toggle" id="ckptAuto" title="Auto-checkpoint cada 30 s">⏱</button>
+        <button class="reinit" id="reinit" title="Reiniciar cartografía (mapa vacío, 0,0)">🔄</button>
+        <button id="resume" title="Volver al último checkpoint">⤾</button>
       </div>
-      <div class="ckstat" id="ckstat">checkpoints: — &nbsp;·&nbsp; guarda antes de zonas difíciles (derrapes)</div>
-      <div class="row">
-        <button class="reinit" id="reinit">🔄 Reiniciar (0,0)</button>
-        <button class="save" id="resume">⤾ Último checkpoint</button>
-      </div>
+      <div class="cap"><input type="range" id="cap" min="10" max="100" value="25"><span class="val" id="capVal">25%</span></div>
+      <div class="ckstat" id="ckstat">checkpoints: —</div>
       <div class="ckstat" id="rstat"></div>
-      <div class="cap"><span>Máx.</span><input type="range" id="cap" min="10" max="100" value="25"><span class="val" id="capVal">25%</span></div>
     </div>
   </div>
 </div>
@@ -249,7 +248,7 @@ pad.addEventListener("pointermove", e=>{ if(!active||e.pointerId!==pid) return; 
 function release(e){ if(e&&pid!==null&&e.pointerId!==pid) return; active=false; pid=null; pad.classList.add("idle");
   setKnob(0,0); lin=0; ang=0; $("#vVal").textContent="0.00"; $("#wVal").textContent="0.00"; if(connected&&armed) pubCmd(0,0); }
 pad.addEventListener("pointerup", release); pad.addEventListener("pointercancel", release); pad.addEventListener("lostpointercapture", release);
-function updateArm(){ const b=$("#arm"); if(!b) return; b.classList.toggle("on",armed); b.textContent=armed?"Control activo — desactivar":"Activar control"; }
+function updateArm(){ const b=$("#arm"); if(!b) return; b.classList.toggle("on",armed); b.textContent=armed?"Desactivar":"Activar"; }
 $("#arm").addEventListener("click", ()=>{ if(!connected){ flash("Sin conexión"); return; } pubJoyToggle(); armed=!armed; updateArm(); if(!armed) pubCmd(0,0); });
 $("#stop").addEventListener("click", ()=>{ active=false; setKnob(0,0); lin=0; ang=0; $("#vVal").textContent="0.00"; $("#wVal").textContent="0.00";
   if(connected) pubCmd(0,0); if(armed){ pubJoyToggle(); armed=false; updateArm(); } flash("STOP — coche a neutro"); });
