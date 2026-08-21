@@ -25,7 +25,7 @@ for n in sim_motion_node sim_sensors_node sim_map_grid_node trajectory_nav_node 
          nav2_lifecycle_manager cartographer_node occupancy_grid_node rplidar_node \
          encoder_node accelerometer_node car_control_node ekf_node rf2o_laser_odometry \
          wheel_twistcov_node odom_cov_node steer_yaw_node robot_state_publisher \
-         slam_checkpoint_node map_edit_node rosbridge_websocket "http.server 8080"; do
+         slam_checkpoint_node map_edit_node sim_map_loader_node rosbridge_websocket "http.server 8080"; do
   pkill -9 -f "$n" 2>/dev/null
 done
 sleep 2
