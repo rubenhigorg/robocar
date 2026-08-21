@@ -237,7 +237,7 @@ function draw(){
     g.fillText((loc?'◉ LOCALIZADO':'◌ localizando…')+'  σ='+amclConf.sig.toFixed(2)+' m', 10, 18); g.textAlign='start'; }
 }
 // dibuja una rejilla de ocupacion (mapImg/costImg) con el mismo afin celda->pantalla via odom0
-function drawGrid(gi){ if(!gi || !odom0) return; const A=-(odom0.yaw+Tmo.th), ca=Math.cos(A), sa=Math.sin(A), res=gi.res, Hc=gi.H;
+function drawGrid(gi){ if(!gi) return; const A=0, ca=1, sa=0, res=gi.res, Hc=gi.H;   // REFACTOR: mapa fijo (sin Tmo)
   const a=-PPM*res*sa, b=-PPM*res*ca, cc=PPM*res*ca, dd=-PPM*res*sa;
   const r0=mapToRel(gi.ox+0.5*res, gi.oy+(Hc-0.5)*res);   // origen del grid (map) -> rel, con Tmo
   const e=ox-r0.y*PPM, f=oy-r0.x*PPM;
@@ -300,9 +300,8 @@ function se2c(A,B){ const c=Math.cos(A.th),s=Math.sin(A.th); return {x:A.x+B.x*c
 function se2i(A){ const c=Math.cos(A.th),s=Math.sin(A.th); return {x:-(A.x*c+A.y*s), y:A.x*s-A.y*c, th:-A.th}; }
 function odomToRel(ox_,oy_){ const c=Math.cos(-odom0.yaw),s=Math.sin(-odom0.yaw),dx=ox_-odom0.x,dy=oy_-odom0.y; return {x:dx*c-dy*s,y:dx*s+dy*c}; }
 function relToOdom(rx,ry){ const c=Math.cos(odom0.yaw),s=Math.sin(odom0.yaw); return {x:odom0.x+rx*c-ry*s, y:odom0.y+rx*s+ry*c}; }
-function mapToRel(mx,my){ if(!odom0)return null; const i=se2i(Tmo), c=Math.cos(i.th),s=Math.sin(i.th);
-  return odomToRel(i.x+mx*c-my*s, i.y+mx*s+my*c); }                 // map -> odom -> rel
-function relToMap(rx,ry){ const o=relToOdom(rx,ry); return se2c(Tmo,{x:o.x,y:o.y,th:0}); }   // rel -> odom -> map
+function mapToRel(mx,my){ return {x:mx, y:my}; }   // REFACTOR: pantalla anclada al frame del MAPA (identidad)
+function relToMap(rx,ry){ return {x:rx, y:ry}; }   // REFACTOR: rel == map (identidad)
 function onAreas(m){ try{ areas=(JSON.parse(m.data).areas)||[]; }catch(e){ return; } fillAreaSel(); draw(); }
 function fillAreaSel(){ const sel=$('#areaSel'); if(!sel)return; const cur=sel.value;
   sel.innerHTML='<option value="">— zona —</option>'+areas.map(a=>'<option>'+a.name+'</option>').join('');
@@ -620,7 +619,8 @@ function relPose(p,q){ const yaw=Math.atan2(2*(q.w*q.z+q.x*q.y),1-2*(q.y*q.y+q.z
 function onOdom(m){ const p=m.pose.pose.position,q=m.pose.pose.orientation;
   const yaw=Math.atan2(2*(q.w*q.z+q.x*q.y),1-2*(q.y*q.y+q.z*q.z)); odom0_last={x:p.x,y:p.y,yaw:yaw};
   if(!odom0){ odom0={x:p.x,y:p.y,yaw:yaw}; real=[]; }
-  const rp=relPose(p,q); if(rp){ carRel=rp; real.push({x:rp.x,y:rp.y}); if(real.length>4000)real.shift(); draw(); } }
+  const cm=se2c(Tmo,{x:p.x,y:p.y,th:0}); carRel={x:cm.x,y:cm.y,yaw:yaw+Tmo.th};   // REFACTOR: odom -> map (Tmo). Salta el coche al corregir; el mapa queda fijo
+  real.push({x:carRel.x,y:carRel.y}); if(real.length>4000)real.shift(); draw(); }
 function onMap(m){ const W=m.info.width,H=m.info.height,res=m.info.resolution,d=m.data;
   if(!W||!H) return; const oc=document.createElement('canvas'); oc.width=W; oc.height=H;
   const g2=oc.getContext('2d'), img=g2.createImageData(W,H);
@@ -690,9 +690,7 @@ $('#send').onclick=()=>{ if(!connected){flash('Sin conexión');return;} if(!wps.
   send({op:'publish',topic:'/plan_waypoints',msg:{header:{frame_id:'base_link'},poses}}); flash('Ruta enviada ('+wps.length+' wp)'); };
 $('#stop').onclick=()=>{ send({op:'publish',topic:'/plan_waypoints',msg:{header:{frame_id:'base_link'},poses:[]}}); flash('Ruta parada'); };
 $('#go').onclick=()=>{ if(!connected){flash('Sin conexión');return;} if(!goal){flash('Marca un destino (◎)');return;}
-  if(!ensureOrigin())return;
-  const c=Math.cos(odom0.yaw), s=Math.sin(odom0.yaw);            // rel -> odom(=map)
-  const mx=odom0.x + goal.x*c - goal.y*s, my=odom0.y + goal.x*s + goal.y*c;
+  const mx=goal.x, my=goal.y;            // REFACTOR: el destino ya esta en frame del mapa
   const now=Date.now();
   send({op:'publish',topic:'/goal_pose',msg:{header:{stamp:{sec:Math.floor(now/1000),nanosec:0},frame_id:'map'},pose:{position:{x:mx,y:my,z:0},orientation:{x:0,y:0,z:0,w:1}}}});
   flash('Destino enviado a Nav2'); };

@@ -113,10 +113,27 @@ class SimMapGrid(Node):
             og.data = [0]
             self.grid = og; self.publish_change()
             self.get_logger().info('/map limpiado (mapa vacio recibido)'); return
-        # Necesitamos la pose AHORA: suscripcion efimera a odometria (un mensaje y fuera).
-        self._pending = rel
-        if self._odom_sub is None:
-            self._odom_sub = self.create_subscription(Odometry, '/odometry/filtered', self._on_odom_once, 1)
+        # REFACTOR frames: /sim_map llega en coords ABSOLUTAS (frame del mapa). Se rasteriza tal cual,
+        # sin transformar por la pose del robot -> el mapa no depende de donde este el robot al enviarlo.
+        segs = [(seg[0], seg[1], seg[2], seg[3]) for seg in rel]
+        res = self.get_parameter('resolution').value
+        margin = self.get_parameter('margin').value
+        wc = self.get_parameter('wall_cells').value
+        r = rasterize(segs, res, margin, wc)
+        if r is None:
+            return
+        minx, miny, W, H, data = r
+        og = OccupancyGrid()
+        og.header.frame_id = self.get_parameter('map_frame').value
+        og.info.resolution = float(res)
+        og.info.width = W; og.info.height = H
+        og.info.origin.position.x = float(minx)
+        og.info.origin.position.y = float(miny)
+        og.info.origin.orientation.w = 1.0
+        og.data = data
+        self.grid = og
+        self.publish_change()
+        self.get_logger().info('/map publicado: %dx%d celdas @ %.2f m (%d paredes)' % (W, H, res, len(segs)))
 
     def _on_odom_once(self, m):
         if self._pending is None:

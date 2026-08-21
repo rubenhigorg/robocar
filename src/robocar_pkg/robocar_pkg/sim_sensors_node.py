@@ -84,14 +84,9 @@ class SimSensors(Node):
             rel = data.get('segments', [])
         except Exception as e:
             self.get_logger().warn('mapa JSON invalido: %s' % e); return
-        x0, y0, yaw0 = self.pose
-        c, s = math.cos(yaw0), math.sin(yaw0)
-        def tf(rx, ry):
-            return (x0 + rx*c - ry*s, y0 + rx*s + ry*c)
-        self.segs = []
-        for seg in rel:
-            ax, ay = tf(seg[0], seg[1]); bx, by = tf(seg[2], seg[3])
-            self.segs.append((ax, ay, bx, by))
+        # REFACTOR frames: /sim_map llega en coords ABSOLUTAS (frame del mapa); NO transformar por la pose
+        # (coherente con los obstaculos y con sim_map_grid). El mapa no depende de donde este el robot.
+        self.segs = [(seg[0], seg[1], seg[2], seg[3]) for seg in rel]
         self._rebuild_arr()
         self.get_logger().info('MAPA recibido: %d paredes.' % len(self.segs))
 
