@@ -49,6 +49,7 @@
   .row .toggle.on{background:var(--good);border-color:var(--good);color:#04160d}
   .row .stop{background:var(--bad);border-color:var(--bad);color:#fff}
   .row .save{background:var(--accent);border-color:var(--accent);color:#04121f}
+  .row .reinit{background:transparent;border-color:var(--warn);color:var(--warn)}
   .readout{display:flex;gap:1rem;font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:.72rem;color:var(--muted)}
   .readout b{color:var(--accent);font-size:1rem}
   .cap{display:flex;align-items:center;gap:.5rem;font-size:.74rem;color:var(--muted)}
@@ -88,6 +89,10 @@
         <button class="toggle" id="ckptAuto" title="guarda un checkpoint cada 30 s">⏱ auto</button>
       </div>
       <div class="ckstat" id="ckstat">checkpoints: — &nbsp;·&nbsp; guarda antes de zonas difíciles (derrapes)</div>
+      <div class="row">
+        <button class="reinit" id="reinit">🔄 Reiniciar cartografía + chequeo</button>
+      </div>
+      <div class="ckstat" id="rstat"></div>
       <div class="cap"><span>Máx.</span><input type="range" id="cap" min="10" max="100" value="25"><span class="val" id="capVal">25%</span></div>
     </div>
   </div>
@@ -111,7 +116,9 @@ function connect(){
     send({op:"subscribe", topic:"/scan",      type:"sensor_msgs/msg/LaserScan",   throttle_rate:150,  queue_length:1});
     send({op:"advertise", topic:"/slam/checkpoint",        type:"std_msgs/msg/Empty"});
     send({op:"advertise", topic:"/slam/checkpoint_auto",   type:"std_msgs/msg/Bool"});
+    send({op:"advertise", topic:"/slam/reinit",            type:"std_msgs/msg/Empty"});
     send({op:"subscribe", topic:"/slam/checkpoint_status", type:"std_msgs/msg/String", queue_length:1});
+    send({op:"subscribe", topic:"/slam/reinit_status",     type:"std_msgs/msg/String", queue_length:1});
   };
   ws.onclose=()=>{ connected=false; setConn(false); retry(); };
   ws.onerror=()=>{ try{ws.close();}catch(e){} };
@@ -121,6 +128,7 @@ function connect(){
     else if(d.topic==="/tf" || d.topic==="/tf_static") onTF(d.msg);
     else if(d.topic==="/scan") onScan(d.msg);
     else if(d.topic==="/slam/checkpoint_status") onCkpt(d.msg);
+    else if(d.topic==="/slam/reinit_status") onReinit(d.msg);
   };
 }
 function retry(){ setTimeout(connect,1500); }
@@ -201,6 +209,18 @@ $("#ckptAuto").addEventListener("click", ()=>{ if(!connected){flash("Sin conexi�
   ckptAuto=!ckptAuto; $("#ckptAuto").classList.toggle("on",ckptAuto);
   send({op:"publish", topic:"/slam/checkpoint_auto", msg:{data:ckptAuto}});
   flash(ckptAuto?"Auto-checkpoint ON (cada 30 s)":"Auto-checkpoint OFF"); });
+
+/* ================= reiniciar cartografia + chequeo ================= */
+function onReinit(m){ const s=m.data||"", el=$("#rstat"); if(el){ el.textContent=s;
+  el.style.color = s.indexOf("PREPARADO")===0 ? "var(--good)"
+                 : (s.indexOf("NO listo")===0||s.indexOf("ERROR")===0) ? "var(--bad)" : "var(--warn)"; }
+  flash(s); }
+$("#reinit").addEventListener("click", ()=>{ if(!connected){flash("Sin conexión");return;}
+  if(!confirm("¿Reiniciar la cartografía?\nSe BORRA el mapa actual y se empieza de 0 en la posición actual del robot."))return;
+  send({op:"publish", topic:"/slam/reinit", msg:{}});
+  mapImg=null; scan=null; draw();                         // limpia la vista al instante
+  const el=$("#rstat"); if(el){ el.style.color="var(--warn)"; el.textContent="reiniciando…"; }
+  flash("Reiniciando cartografía…"); });
 
 /* ================= joystick -> /cmd_vel (mando verbatim) ================= */
 let armed=false, active=false, lin=0, ang=0, cap=0.25;
