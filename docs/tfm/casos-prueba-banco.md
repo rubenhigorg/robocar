@@ -99,7 +99,7 @@ retornos de **láser + ultrasonidos + IR**, y el robot reacciona por **tres vía
 
 | Test | Acción | Esperado |
 |---|---|---|
-| Estado localizado | Carga mapa | Badge **◉ LOCALIZADO** (verde), partículas apiñadas en el robot |
+| Estado localizado | Carga mapa (parado) → luego manda un destino | Partículas **apiñadas** en el robot. Parado el badge puede quedar en **◌ localizando… σ≈0.4** (AMCL no aprieta la covarianza sin moverse); al **conducir**, σ baja y pasa a **◉ LOCALIZADO** (verde) — con histéresis, ya no parpadea |
 | 🔥 Pista | `🌍 global` (se dispersan) → `📌 pista` clic donde está + arrastra rumbo | Partículas **saltan** a la pista, badge verde |
 | 🔥 Deriva + AMCL corrige | `🌀 deriva` ON → manda un destino | **Llega igual de bien** (AMCL corrige la deriva) |
 | Ver corrección | `🌀 deriva` ON + observa `map→odom` recolocando | La corrección se ve a saltos |
