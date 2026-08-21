@@ -62,3 +62,9 @@ Qué nodos corren en el robocar, qué **publica y consume** cada uno y cómo se 
 Batería de **pruebas manuales** del panel web: navegación, marcha atrás, config/velocidad adaptativa, obstáculos dinámicos, zonas, **localización (AMCL)** y casos de estrés. Cada caso indica qué hacer y qué debería pasar, para saber si pasa o falla.
 
 [Abrir documento](casos-prueba-banco.md){ .md-button .md-button--primary }
+
+## Plan · Capa 1: mapa real y migración a la realidad
+
+Plan en tres saltos para pasar del banco al robot real: **cartografiar el piso** con el mando (Cartographer/SLAM), **meter el mapa real en el simulador** para repetir las pruebas sobre geometría realista, y **migrar la navegación a la realidad** adaptando la web para observar al robot navegando el mapa generado. Aterrizado en lo que ya existe (RPLIDAR, `robocar_slam`, EKF), con los huecos a cubrir y las decisiones abiertas.
+
+[Abrir documento](plan-capa1-mapa-real.md){ .md-button .md-button--primary }
