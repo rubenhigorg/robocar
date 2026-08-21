@@ -90,7 +90,8 @@
       </div>
       <div class="ckstat" id="ckstat">checkpoints: — &nbsp;·&nbsp; guarda antes de zonas difíciles (derrapes)</div>
       <div class="row">
-        <button class="reinit" id="reinit">🔄 Reiniciar cartografía + chequeo</button>
+        <button class="reinit" id="reinit">🔄 Reiniciar (0,0)</button>
+        <button class="save" id="resume">⤾ Último checkpoint</button>
       </div>
       <div class="ckstat" id="rstat"></div>
       <div class="cap"><span>Máx.</span><input type="range" id="cap" min="10" max="100" value="25"><span class="val" id="capVal">25%</span></div>
@@ -117,6 +118,7 @@ function connect(){
     send({op:"advertise", topic:"/slam/checkpoint",        type:"std_msgs/msg/Empty"});
     send({op:"advertise", topic:"/slam/checkpoint_auto",   type:"std_msgs/msg/Bool"});
     send({op:"advertise", topic:"/slam/reinit",            type:"std_msgs/msg/Empty"});
+    send({op:"advertise", topic:"/slam/resume",            type:"std_msgs/msg/Empty"});
     send({op:"subscribe", topic:"/slam/checkpoint_status", type:"std_msgs/msg/String", queue_length:1});
     send({op:"subscribe", topic:"/slam/reinit_status",     type:"std_msgs/msg/String", queue_length:1});
   };
@@ -221,6 +223,12 @@ $("#reinit").addEventListener("click", ()=>{ if(!connected){flash("Sin conexión
   mapImg=null; scan=null; draw();                         // limpia la vista al instante
   const el=$("#rstat"); if(el){ el.style.color="var(--warn)"; el.textContent="reiniciando…"; }
   flash("Reiniciando cartografía…"); });
+$("#resume").addEventListener("click", ()=>{ if(!connected){flash("Sin conexión");return;}
+  if(!confirm("¿Volver al último checkpoint?\nSe descarta lo mapeado desde entonces y se retoma desde ahí."))return;
+  send({op:"publish", topic:"/slam/resume", msg:{}});
+  mapImg=null; scan=null; draw();
+  const el=$("#rstat"); if(el){ el.style.color="var(--warn)"; el.textContent="volviendo al checkpoint…"; }
+  flash("Volviendo al último checkpoint…"); });
 
 /* ================= joystick -> /cmd_vel (mando verbatim) ================= */
 let armed=false, active=false, lin=0, ang=0, cap=0.25;

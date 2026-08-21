@@ -40,6 +40,7 @@ class Ckpt(Node):
         self.create_subscription(Empty, '/slam/checkpoint', lambda m: self.save('manual'), 10)
         self.create_subscription(Bool, '/slam/checkpoint_auto', self._toggle, 10)
         self.create_subscription(Empty, '/slam/reinit', lambda m: self.reinit(), 10)
+        self.create_subscription(Empty, '/slam/resume', lambda m: self.resume(), 10)
 
         # liveness de la cadena (para el chequeo de salud)
         self._seen = {}
@@ -116,36 +117,52 @@ class Ckpt(Node):
             except Exception:
                 pass
 
-    # ---------- reiniciar + chequeo ----------
+    # ---------- reiniciar / volver a checkpoint + chequeo ----------
     def reinit(self):
+        self._start_restart(resume=False)
+
+    def resume(self):
+        self._start_restart(resume=True)
+
+    def _start_restart(self, resume):
         if self._reiniting:
             return
         self._reiniting = True
-        threading.Thread(target=self._do_reinit, daemon=True).start()
+        threading.Thread(target=lambda: self._do_restart(resume), daemon=True).start()
 
-    def _do_reinit(self):
+    def _do_restart(self, resume):
         try:
-            self.rstatus('reiniciando cartografia (mapa vacio, nuevo 0,0)...')
-            # Reinicia SOLO Cartographer (mantiene rplidar/EKF/sensores). Rapido.
+            load = ''
+            if resume:
+                files = sorted(glob.glob(os.path.join(self.dir, 'ckpt_*.pbstream')))
+                if not files:
+                    self.rstatus('NO hay checkpoints guardados para volver.'); return
+                load = files[-1]
+                self.rstatus('volviendo al ultimo checkpoint (%s)...' % os.path.basename(load))
+            else:
+                self.rstatus('reiniciando cartografia (mapa vacio, nuevo 0,0)...')
+            # Reinicia SOLO Cartographer (mantiene rplidar/EKF/sensores). Rapido, ~6 s.
             for p in ('robocar_slam slam.launch', 'cartographer_occupancy_grid_node', 'cartographer_node'):
                 subprocess.run(['pkill', '-9', '-f', p], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             time.sleep(2.5)
             env = dict(os.environ)
-            env.pop('SLAM_LOAD_STATE', None)   # fresco: sin cargar checkpoint
+            if load:
+                env['SLAM_LOAD_STATE'] = load      # cargar el checkpoint y continuar
+            else:
+                env.pop('SLAM_LOAD_STATE', None)   # fresco: mapa vacio
             log = open(os.path.expanduser('~/robocar/logs/slam.log'), 'ab', buffering=0)
             subprocess.Popen(['ros2', 'launch', 'robocar_slam', 'slam.launch.py'],
                              env=env, stdout=log, stderr=log, start_new_session=True)
             self.rstatus('cartografia arrancando, comprobando la cadena...')
             # Espera a que cartographer publique de nuevo y chequea (hasta ~15 s)
-            t0 = time.time(); ok = False
+            t0 = time.time()
             while time.time() - t0 < 15:
                 time.sleep(2.0)
-                ok = self._health_check(final=False)
-                if ok:
+                if self._health_check(final=False):
                     break
             self._health_check(final=True)
         except Exception as e:
-            self.rstatus('ERROR reinit: %s' % str(e)[:70])
+            self.rstatus('ERROR: %s' % str(e)[:70])
         finally:
             self._reiniting = False
 
