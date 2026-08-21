@@ -68,3 +68,9 @@ Batería de **pruebas manuales** del panel web: navegación, marcha atrás, conf
 Plan en tres saltos para pasar del banco al robot real: **cartografiar el piso** con el mando (Cartographer/SLAM), **meter el mapa real en el simulador** para repetir las pruebas sobre geometría realista, y **migrar la navegación a la realidad** adaptando la web para observar al robot navegando el mapa generado. Aterrizado en lo que ya existe (RPLIDAR, `robocar_slam`, EKF), con los huecos a cubrir y las decisiones abiertas.
 
 [Abrir documento](plan-capa1-mapa-real.md){ .md-button .md-button--primary }
+
+## Del banco a la realidad: simulación vs mundo real
+
+Documento de estudio de la migración **sim → real**: qué del banco se traslada tal cual, qué eran **espejismos** (láser perfecto, odometría perfecta, sin colisiones) y qué problemas nuevos aparecen con el robot físico (deriva, derrapes, ruido). El marco conceptual de la Capa 1.
+
+[Abrir documento](del-banco-a-la-realidad.md){ .md-button .md-button--primary }
