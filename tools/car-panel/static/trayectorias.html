@@ -160,7 +160,7 @@ let ox=W/2, oy=H*0.62;           // origen (robot) abajo-centro, con sitio detra
 const cv=$('#c'), g=cv.getContext('2d');
 let wps=[], walls=[], obstacles=[], real=[], scanPts=[], carRel=null, temp=null, mapImg=null, costImg=null, goal=null, navPlan=[];
 let mode='obs', mapTool='rect', connected=false, odom0=null, odom0_last=null, showCost=true, navCfg=null;   // por defecto MAPA·Nav2
-let Tmo={x:0,y:0,th:0}, particles=[], amclConf=null, showParticles=true;   // estado de localizacion (AMCL) — arriba para evitar TDZ en draw()
+let Tmo={x:0,y:0,th:0}, particles=[], amclConf=null, showParticles=true, locStable=false;   // estado de localizacion (AMCL) — arriba para evitar TDZ en draw()
 
 function toM(px,py){ return {x:(oy-py)/PPM, y:(ox-px)/PPM}; }
 function toPx(m){ return {x:ox-m.y*PPM, y:oy-m.x*PPM}; }
@@ -220,7 +220,7 @@ function draw(){
     particles.forEach(pt=>{ const r=mapToRel(pt.x,pt.y); if(!r)return; const p=toPx(r); g.fillRect(p.x-1,p.y-1,2,2); }); }
   // AMCL: elipse de confianza alrededor de la pose estimada (radio = desviacion)
   if(map && amclConf){ const rr=mapToRel(amclConf.x,amclConf.y);
-    if(rr){ const p=toPx(rr), rad=Math.max(4,amclConf.sig*PPM), loc=amclConf.sig<0.25;
+    if(rr){ const p=toPx(rr), rad=Math.max(4,amclConf.sig*PPM), loc=locStable;
       g.strokeStyle=loc?'#2fae6a':'#e0a24a'; g.lineWidth=1.5; g.setLineDash([3,3]);
       g.beginPath();g.arc(p.x,p.y,rad,0,7);g.stroke(); g.setLineDash([]); } }
   // coche
@@ -228,7 +228,7 @@ function draw(){
   g.save(); g.translate(o.x,o.y); g.rotate(-cp.yaw); g.fillStyle='#e6ecf3';
   g.beginPath();g.moveTo(0,-10);g.lineTo(-7,7);g.lineTo(7,7);g.closePath();g.fill(); g.restore();
   // badge de confianza de localizacion
-  if(map && amclConf){ const loc=amclConf.sig<0.25;
+  if(map && amclConf){ const loc=locStable;
     g.font='bold 11px monospace'; g.fillStyle=loc?'#2fae6a':'#e0a24a'; g.textAlign='left';
     g.fillText((loc?'◉ LOCALIZADO':'◌ localizando…')+'  σ='+amclConf.sig.toFixed(2)+' m', 10, 18); g.textAlign='start'; }
 }
@@ -637,6 +637,7 @@ function onAmcl(m){ const p=m.pose.pose.position, q=m.pose.pose.orientation, cov
   const yaw=Math.atan2(2*(q.w*q.z+q.x*q.y),1-2*(q.y*q.y+q.z*q.z));
   const sig=Math.sqrt(Math.max(0,cov[0])+Math.max(0,cov[7]));      // desviacion de posicion (m)
   amclConf={x:p.x,y:p.y,yaw:yaw,sig:sig,sigyaw:Math.sqrt(Math.max(0,cov[35]))};
+  if(sig<0.25) locStable=true; else if(sig>0.35) locStable=false;   // histeresis: no parpadear en el umbral
   // Tmo (map->odom) SOLO si localizado, y con HISTERESIS: se actualiza si cambia de verdad
   // (correccion real de deriva), no con el temblor de cada frame -> el mapa no baila.
   if(odom0_last && sig<0.5){ const amcl={x:p.x,y:p.y,th:yaw}, od={x:odom0_last.x,y:odom0_last.y,th:odom0_last.yaw};
