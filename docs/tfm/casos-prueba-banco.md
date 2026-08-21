@@ -65,12 +65,25 @@ publica las zonas. Los cuatro:
 | Tolerancia | **tolerancia_objetivo** grande vs pequeña | Con grande llega antes / más fácil |
 | Reinicio vs caliente | Cambia velocidad (caliente) vs marcha_atrás (reinicia) | Los "🔄" avisan de reinicio; el resto se aplica al instante |
 
-## 4 · Obstáculos dinámicos
+## 4 · Obstáculos dinámicos y sensores de proximidad
+
+Todo lo que **no está en el mapa** (lo que pintas con `▧ obstáculo`) el simulador lo convierte en
+retornos de **láser + ultrasonidos + IR**, y el robot reacciona por **tres vías** distintas:
+
+| Sensor | Camino | Reacción | Alcance |
+|---|---|---|---|
+| **Láser** `/scan` | costmap global + local | Nav2 **replanifica** y rodea | 4 m, 360° |
+| **Ultrasonidos** `/us_center·left·right` | `range_layer` del costmap **local** | **esquiva** local (el controlador se aparta) | cono corto frontal |
+| **IR frontal** `/ir_range` | `collision_monitor` (`StopZone`) | **parada de emergencia** (corta `/cmd_vel`, sin esperar a replanificar) | detecta ≤0.5 m; para a **0.38 m** |
 
 | Test | Acción | Esperado |
 |---|---|---|
 | 🔥 Obstáculo en la ruta | Carga mapa → `▶ Ir` → **mientras navega**, pinta `▧ obstáculo` en el camino | Nav2 **replanifica** rodeándolo |
 | Obstáculo NO en /map | Pinta obstáculo → mira el `/map` (gris) | El láser lo ve, pero **no está en el gris** (canal aparte) |
+| 🔥 Parada de emergencia (IR) | `▶ Ir` a un destino recto → mientras avanza, pinta `▧ obstáculo` **justo delante**, cruzando su morro | Se **para en seco** ~0.36 m antes de tocarlo (no espera a replanificar) |
+| 🔥 Reanudar tras emergencia | Con el robot parado por el caso anterior, **borra el obstáculo** (`↶` deshacer) | **Reanuda** la marcha y sigue al destino |
+| Esquiva sin parar | Pinta un obstáculo que tape **media ruta** dejando hueco al lado | Se **aparta** y pasa por el hueco **sin llegar a pararse** |
+| Muro de frente | `▶ Ir` a un destino al otro lado de una pared sin puerta | **No embiste**: para/replanifica |
 
 ## 5 · Zonas (áreas) + "ir a sala"
 
@@ -123,3 +136,8 @@ publica las zonas. Los cuatro:
 - La **localización global desde cero** es el caso difícil: puede no converger sin mucho movimiento;
   usa `📌 pista` (método fiable).
 - Cambiar el mapa **re-localiza AMCL** solo (tras el arreglo del *map-lock*).
+- El **láser simulado es 360°**, así que ya "ve" todo lo que ven los ultrasonidos: en el banco la
+  **esquiva por ultrasonidos** es algo **redundante** con el láser. Lo que **sí** aporta algo propio
+  aquí es el **IR → parada de emergencia** (`collision_monitor`): corta la velocidad al instante sin
+  esperar a que Nav2 replanifique. En el **robot real** (sin láser 360°, con puntos ciegos de cerca)
+  ultrasonidos e IR son los que evitan el choque a corta distancia.
