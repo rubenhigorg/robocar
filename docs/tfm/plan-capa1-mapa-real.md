@@ -75,6 +75,33 @@ inicial de AMCL es trivial (o le das la `📌 pista` ahí). Por eso el (0,0) deb
 **Decisiones Fase A:** (a) ¿mando PS3 o web para cartografiar? (b) ¿una sola pasada o varias sesiones
 fusionadas? (c) resolución del mapa (0.05 por defecto — ¿suficiente para el piso?).
 
+### A4 · Robustez ante DERRAPES: checkpoints y reanudación  🔴 (el problema nº1)
+**El gran problema de cartografiar con un Ackermann son los derrapes.** En cuanto la rueda patina
+(arranque, curva cerrada, suelo resbaladizo), la **odometría miente**, Cartographer da un **salto de
+pose** y a partir de ahí **el mapa deja de ser válido** — se dobla o se solapa. Y por mucho cuidado
+que se tenga, un derrape **es cuestión de tiempo**. Sin red de seguridad, un solo patinazo **destroza
+toda la sesión** (media hora de mapeo a la basura).
+
+**Solución: guardar el mapa por partes y poder continuar** — que un derrape cueste solo lo mapeado
+desde el último guardado, no todo. Cartographer lo permite serializando su estado en `.pbstream` y
+**reanudando el mapeo** cargándolo.
+
+**Mecanismo a habilitar:**
+1. **Checkpoints frecuentes** — guardar el estado de Cartographer (`/write_state` → `.pbstream`)
+   cada X (temporizado y/o botón en `cartografia.html`), con nombres con marca de tiempo y
+   conservando los últimos N. Barato y no interrumpe el mapeo.
+2. **Reanudar mapeando** — un `slam_continue.launch.py` (o `bringupSLAM.sh --resume <pbstream>`) que
+   lance `cartographer_node` con `-load_state_filename <checkpoint.pbstream>`: carga el mapa ya hecho
+   y **añade** los nuevos escaneos (re-localiza por scan-matching contra lo cargado y sigue).
+3. **Flujo ante un derrape:** ves que el mapa "salta" → paras → relanzas desde el **último checkpoint
+   bueno** → recolocas el robot cerca de donde estaba y continúas. Solo pierdes el último tramo.
+
+> Esto convierte la cartografía de "una toma perfecta o nada" en un proceso **incremental y a prueba
+> de fallos**. Es prerequisito práctico para mapear un piso entero.
+
+**A construir:** botón/temporizador de checkpoint en la web + helper de guardado incremental +
+`slam_continue.launch.py` + documentar el flujo de reanudación.
+
 ---
 
 ## Fase B — El mapa real dentro del simulador
