@@ -7,7 +7,6 @@
 # Uso:  bash ~/robocar/scripts/bringupSLAM.sh
 # Luego: abrir  http://<IP-del-robot>:8080/cartografia.html  y conducir para ir dibujando el mapa.
 # Guardar:  bash ~/robocar/scripts/save_map.sh piso_real
-set -u
 source /opt/ros/humble/setup.bash
 source ~/robocar/src/install/setup.bash 2>/dev/null
 export ROS_DOMAIN_ID=0 ROS_LOCALHOST_ONLY=1
@@ -18,7 +17,8 @@ for n in sim_motion_node sim_sensors_node sim_map_grid_node trajectory_nav_node 
          nav2_amcl goal_relay_node nav_config_node map_areas_node particle_relay_node \
          nav2_lifecycle_manager cartographer_node occupancy_grid_node rplidar_node \
          encoder_node accelerometer_node car_control_node ekf_node rf2o_laser_odometry \
-         wheel_twistcov_node odom_cov_node steer_yaw_node; do
+         wheel_twistcov_node odom_cov_node steer_yaw_node robot_state_publisher \
+         rosbridge_websocket "http.server 8080"; do
   pkill -9 -f "$n" 2>/dev/null
 done
 sleep 2
