@@ -4,6 +4,10 @@ Requiere: TF del modelo (description.launch.py), /scan (rplidar) y la odometria
 del EKF (/odometry/filtered, ekf.launch.py) ya corriendo.
 
     ros2 launch robocar_slam slam.launch.py
+
+REANUDAR desde un checkpoint (sobrevivir a derrapes): exportar SLAM_LOAD_STATE con la
+ruta a un .pbstream antes de lanzar -> Cartographer carga ese mapa y CONTINUA mapeando.
+Lo hace por ti  bash ~/robocar/scripts/bringupSLAM.sh --resume-latest
 """
 import os
 
@@ -15,15 +19,22 @@ from launch_ros.actions import Node
 def generate_launch_description():
     config_dir = os.path.join(get_package_share_directory('robocar_slam'), 'config')
 
+    carto_args = [
+        '-configuration_directory', config_dir,
+        '-configuration_basename', 'robocar_2d.lua',
+    ]
+    load_state = os.environ.get('SLAM_LOAD_STATE', '').strip()
+    if load_state:
+        # Carga un checkpoint y CONTINUA el mapeo (los submaps cargados quedan congelados;
+        # se re-localiza contra ellos por scan-matching y anade los nuevos escaneos).
+        carto_args += ['-load_state_filename', load_state]
+
     return LaunchDescription([
         Node(
             package='cartographer_ros',
             executable='cartographer_node',
             name='cartographer_node',
-            arguments=[
-                '-configuration_directory', config_dir,
-                '-configuration_basename', 'robocar_2d.lua',
-            ],
+            arguments=carto_args,
             remappings=[('scan', '/scan'), ('odom', '/odometry/filtered')],
         ),
         # Convierte los submaps en /map (nav_msgs/OccupancyGrid) para Nav2 y el panel

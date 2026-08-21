@@ -53,6 +53,7 @@
   .readout b{color:var(--accent);font-size:1rem}
   .cap{display:flex;align-items:center;gap:.5rem;font-size:.74rem;color:var(--muted)}
   .cap input{flex:1;accent-color:var(--accent)} .cap .val{font-family:var(--mono);color:var(--ink);min-width:3em;text-align:right}
+  .ckstat{font-family:var(--mono);font-size:.68rem;color:var(--faint);text-align:center}
 </style>
 </head>
 <body>
@@ -83,8 +84,10 @@
         <button class="stop" id="stop">STOP</button>
       </div>
       <div class="row">
-        <button class="save" id="save">💾 Guardar mapa</button>
+        <button class="save" id="ckpt">💾 Checkpoint</button>
+        <button class="toggle" id="ckptAuto" title="guarda un checkpoint cada 30 s">⏱ auto</button>
       </div>
+      <div class="ckstat" id="ckstat">checkpoints: — &nbsp;·&nbsp; guarda antes de zonas difíciles (derrapes)</div>
       <div class="cap"><span>Máx.</span><input type="range" id="cap" min="10" max="100" value="25"><span class="val" id="capVal">25%</span></div>
     </div>
   </div>
@@ -106,6 +109,9 @@ function connect(){
     send({op:"subscribe", topic:"/tf",        type:"tf2_msgs/msg/TFMessage",      throttle_rate:100,  queue_length:1});
     send({op:"subscribe", topic:"/tf_static", type:"tf2_msgs/msg/TFMessage",      queue_length:1});
     send({op:"subscribe", topic:"/scan",      type:"sensor_msgs/msg/LaserScan",   throttle_rate:150,  queue_length:1});
+    send({op:"advertise", topic:"/slam/checkpoint",        type:"std_msgs/msg/Empty"});
+    send({op:"advertise", topic:"/slam/checkpoint_auto",   type:"std_msgs/msg/Bool"});
+    send({op:"subscribe", topic:"/slam/checkpoint_status", type:"std_msgs/msg/String", queue_length:1});
   };
   ws.onclose=()=>{ connected=false; setConn(false); retry(); };
   ws.onerror=()=>{ try{ws.close();}catch(e){} };
@@ -114,6 +120,7 @@ function connect(){
     if(d.topic==="/map") onMap(d.msg);
     else if(d.topic==="/tf" || d.topic==="/tf_static") onTF(d.msg);
     else if(d.topic==="/scan") onScan(d.msg);
+    else if(d.topic==="/slam/checkpoint_status") onCkpt(d.msg);
   };
 }
 function retry(){ setTimeout(connect,1500); }
@@ -185,12 +192,15 @@ $("#zin").onclick =()=>{ autofit=false; PPM=Math.min(300,PPM*1.25); draw(); };
 $("#zout").onclick=()=>{ autofit=false; PPM=Math.max(4,PPM/1.25); draw(); };
 $("#fit").onclick =()=>{ autofit=true; fit(); draw(); };
 
-/* ================= guardar mapa ================= */
-$("#save").addEventListener("click", ()=>{
-  send({op:"call_service", service:"/write_state", type:"cartographer_ros_msgs/srv/WriteState",
-        args:{filename:"/home/lab/robocar/maps/piso_real.pbstream", include_unfinished_submaps:true}});
-  flash("Guardando… en el robot corre: save_map.sh piso_real (crea .pgm/.yaml para la Fase B)");
-});
+/* ================= checkpoints (sobrevivir a derrapes) ================= */
+let ckptAuto=false;
+function onCkpt(m){ const s=m.data||""; const el=$("#ckstat"); if(el) el.textContent="checkpoints: "+s; flash("Checkpoint: "+s); }
+$("#ckpt").addEventListener("click", ()=>{ if(!connected){flash("Sin conexión");return;}
+  send({op:"publish", topic:"/slam/checkpoint", msg:{}}); flash("Guardando checkpoint…"); });
+$("#ckptAuto").addEventListener("click", ()=>{ if(!connected){flash("Sin conexión");return;}
+  ckptAuto=!ckptAuto; $("#ckptAuto").classList.toggle("on",ckptAuto);
+  send({op:"publish", topic:"/slam/checkpoint_auto", msg:{data:ckptAuto}});
+  flash(ckptAuto?"Auto-checkpoint ON (cada 30 s)":"Auto-checkpoint OFF"); });
 
 /* ================= joystick -> /cmd_vel (mando verbatim) ================= */
 let armed=false, active=false, lin=0, ang=0, cap=0.25;

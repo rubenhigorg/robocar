@@ -11,6 +11,13 @@ source /opt/ros/humble/setup.bash
 source ~/robocar/src/install/setup.bash 2>/dev/null
 export ROS_DOMAIN_ID=0 ROS_LOCALHOST_ONLY=1
 
+# --- Reanudar desde un checkpoint (sobrevivir a derrapes) ---
+#   bash bringupSLAM.sh --resume-latest        -> el ultimo .pbstream bueno
+#   bash bringupSLAM.sh --resume <fichero.pbstream>
+RESUME=""
+[ "${1:-}" = "--resume" ] && RESUME="${2:-}"
+[ "${1:-}" = "--resume-latest" ] && RESUME="$(ls -t ~/robocar/maps/checkpoints/ckpt_*.pbstream 2>/dev/null | head -1)"
+
 # 0) Matar cualquier sim/Nav2/SLAM previo (chocan por /scan, odometria, TF y /cmd_vel).
 for n in sim_motion_node sim_sensors_node sim_map_grid_node trajectory_nav_node \
          planner_server controller_server behavior_server bt_navigator collision_monitor \
@@ -18,7 +25,7 @@ for n in sim_motion_node sim_sensors_node sim_map_grid_node trajectory_nav_node 
          nav2_lifecycle_manager cartographer_node occupancy_grid_node rplidar_node \
          encoder_node accelerometer_node car_control_node ekf_node rf2o_laser_odometry \
          wheel_twistcov_node odom_cov_node steer_yaw_node robot_state_publisher \
-         rosbridge_websocket "http.server 8080"; do
+         slam_checkpoint_node rosbridge_websocket "http.server 8080"; do
   pkill -9 -f "$n" 2>/dev/null
 done
 sleep 2
@@ -41,7 +48,15 @@ sleep 2
 run ekf        ros2 launch robocar_pkg ekf.launch.py
 sleep 3
 # 5) Cartographer -> /map (OccupancyGrid) + TF map->odom
+if [ -n "$RESUME" ] && [ -f "$RESUME" ]; then
+  export SLAM_LOAD_STATE="$RESUME"; echo "  -> REANUDANDO mapeo desde $(basename "$RESUME")"
+else
+  unset SLAM_LOAD_STATE
+  [ -n "$RESUME" ] && echo "  (aviso: checkpoint '$RESUME' no existe -> arranco con mapa vacio)"
+fi
 run slam       ros2 launch robocar_slam slam.launch.py
+# 5b) Checkpoints del estado de Cartographer (.pbstream) para sobrevivir a derrapes
+run checkpoint python3 ~/robocar/src/robocar_pkg/robocar_pkg/slam_checkpoint_node.py
 # 6) Control del motor/direccion (teleop por /cmd_vel; deadman 0.5 s -> neutro)
 run car_control ros2 run robocar_pkg car_control_node
 # 7) Web: rosbridge (:9090) + panel (:8080)
