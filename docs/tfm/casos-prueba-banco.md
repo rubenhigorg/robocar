@@ -136,6 +136,13 @@ retornos de **láser + ultrasonidos + IR**, y el robot reacciona por **tres vía
 - La **localización global desde cero** es el caso difícil: puede no converger sin mucho movimiento;
   usa `📌 pista` (método fiable).
 - Cambiar el mapa **re-localiza AMCL** solo (tras el arreglo del *map-lock*).
+- La **deriva agresiva** (`🌀` ON + conducir mucho) puede dejar el banco en mal estado: la odometría
+  se va varios metros y el costmap acumula **paredes fantasma** (con deriva rápida el láser se marca
+  en posiciones que AMCL aún no ha corregido). Síntoma: "**ningún destino es alcanzable**" aunque
+  arranque y destino estén en libre. **Recuperación:** `limpiar` o `🧪 Test…` (resetea pose + limpia
+  costmaps), y apaga `🌀 deriva`. En el robot real no pasa (la deriva es lenta y AMCL la sigue).
+- Con el render en **frame del mapa** (mapa fijo), el que **salta al corregir es el coche**, no el
+  mapa (estilo RViz). Si ves el coche "saltar" con la deriva, es AMCL corrigiendo — correcto.
 - El **láser simulado es 360°**, así que ya "ve" todo lo que ven los ultrasonidos: en el banco la
   **esquiva por ultrasonidos** es algo **redundante** con el láser. Lo que **sí** aporta algo propio
   aquí es el **IR → parada de emergencia** (`collision_monitor`): corta la velocidad al instante sin
