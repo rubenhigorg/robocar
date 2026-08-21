@@ -31,6 +31,7 @@ class MapEdit(Node):
         self.create_subscription(String, '/slam/edit_load', self._on_load, 10)
         self.create_subscription(OccupancyGrid, '/edited_map', self._on_edited, 1)
         self.create_subscription(String, '/slam/edit_save', self._on_save, 10)
+        self.create_subscription(String, '/slam/edit_delete', self._on_delete, 10)
         self._edited = None
         self._busy = False
         self.create_timer(3.0, self._publish_list)
@@ -134,6 +135,26 @@ class MapEdit(Node):
         og.info.origin.orientation.w = 1.0
         og.data = grid_data
         return og
+
+    # ---------- borrar ----------
+    def _on_delete(self, msg):
+        try:
+            kind, raw = msg.data.strip().split(':', 1)
+            name = ''.join(c for c in raw if c.isalnum() or c in '_-')   # sin rutas
+            if not name:
+                return
+            if kind == 'ckpt':
+                paths = [os.path.join(CKDIR, name + '.pbstream'), os.path.join(CKDIR, name + '.json')]
+            else:
+                paths = [os.path.join(MAPDIR, name + '.pgm'), os.path.join(MAPDIR, name + '.yaml')]
+            n = 0
+            for p in paths:
+                if os.path.exists(p):
+                    os.remove(p); n += 1
+            self.st('borrado %s (%d ficheros)' % (msg.data.strip(), n))
+            self._publish_list()
+        except Exception as e:
+            self.st('ERROR borrar: ' + str(e)[:60])
 
     # ---------- guardar el editado ----------
     def _on_edited(self, m):

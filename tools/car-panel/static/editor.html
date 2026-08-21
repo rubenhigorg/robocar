@@ -54,6 +54,7 @@
   <div class="bar">
     <select id="sel"><option value="">— elige checkpoint / mapa —</option></select>
     <button id="load" class="pri">Cargar</button>
+    <button id="del" title="borrar del robot el seleccionado">🗑</button>
     <div class="sep"></div>
     <button id="tWall" class="tool wall on" title="pintar pared">✏️ pared</button>
     <button id="tFree" class="tool" title="borrar (libre)">🧽 libre</button>
@@ -62,6 +63,7 @@
     <div class="sep"></div>
     <button id="pan" class="tool" title="mover/desplazar el mapa">✋</button>
     <button id="zin">＋</button><button id="zout">－</button><button id="fit">⊡</button>
+    <button id="rL" title="girar el mapa −2° (enderezar)">↺</button><button id="rR" title="girar el mapa +2°">↻</button>
     <div class="sep"></div>
     <button id="save" class="pri" title="guardar el mapa editado en el robot">💾 Guardar como…</button>
   </div>
@@ -89,6 +91,7 @@ function connect(){
   ws.onopen=()=>{ connected=true; setConn(true);
     send({op:"advertise", topic:"/slam/edit_load", type:"std_msgs/msg/String"});
     send({op:"advertise", topic:"/slam/edit_save", type:"std_msgs/msg/String"});
+    send({op:"advertise", topic:"/slam/edit_delete", type:"std_msgs/msg/String"});
     send({op:"advertise", topic:"/edited_map",     type:"nav_msgs/msg/OccupancyGrid"});
     send({op:"subscribe", topic:"/slam/maps_list",   type:"std_msgs/msg/String"});
     send({op:"subscribe", topic:"/edit_map",         type:"nav_msgs/msg/OccupancyGrid"});
@@ -183,10 +186,32 @@ $("#zin").onclick=()=>{ const cx=cv.width/2,cy=cv.height/2; SX=cx-(cx-SX)*1.3; S
 $("#zout").onclick=()=>{ const cx=cv.width/2,cy=cv.height/2; SX=cx-(cx-SX)/1.3; SY=cy-(cy-SY)/1.3; cs/=1.3; draw(); };
 $("#fit").onclick=()=>{ fit(); draw(); };
 
+/* ---------- girar el mapa (enderezar los tilteados) ---------- */
+function rotateGrid(gr, deg){
+  const rad=deg*Math.PI/180, c=Math.cos(rad), s=Math.sin(rad), W=gr.W, H=gr.H, cx=W/2, cy=H/2;
+  let minx=Infinity,maxx=-Infinity,miny=Infinity,maxy=-Infinity;
+  [[0,0],[W,0],[0,H],[W,H]].forEach(([x,y])=>{ const dx=x-cx,dy=y-cy,rx=dx*c-dy*s,ry=dx*s+dy*c;
+    minx=Math.min(minx,rx);maxx=Math.max(maxx,rx);miny=Math.min(miny,ry);maxy=Math.max(maxy,ry); });
+  const nW=Math.max(1,Math.ceil(maxx-minx)), nH=Math.max(1,Math.ceil(maxy-miny)), ncx=nW/2, ncy=nH/2;
+  const nd=new Int8Array(nW*nH).fill(-1);
+  for(let row=0;row<nH;row++)for(let col=0;col<nW;col++){
+    const ox=col+0.5-ncx, oy=row+0.5-ncy;
+    const ic=Math.floor(ox*c+oy*s+cx), ir=Math.floor(-ox*s+oy*c+cy);
+    if(ic>=0&&ic<W&&ir>=0&&ir<H) nd[row*nW+col]=gr.data[ir*W+ic];
+  }
+  return {W:nW,H:nH,res:gr.res,ox:gr.ox,oy:gr.oy,data:nd};
+}
+function rot(deg){ if(!grid){flash("Carga un mapa");return;} grid=rotateGrid(grid,deg); fit(); draw(); flash("girado "+(deg>0?"+":"")+deg+"°"); }
+$("#rL").onclick=()=>rot(-2); $("#rR").onclick=()=>rot(2);
+
 /* ---------- cargar / guardar ---------- */
 $("#load").onclick=()=>{ if(!connected){flash("Sin conexión");return;} const v=$("#sel").value;
   if(!v){flash("Elige un checkpoint o mapa");return;} loadedName=v.split(":")[1];
   send({op:"publish", topic:"/slam/edit_load", msg:{data:v}}); flash("Cargando "+v+"…"); };
+$("#del").onclick=()=>{ if(!connected){flash("Sin conexión");return;} const v=$("#sel").value;
+  if(!v){flash("Elige qué borrar en el desplegable");return;}
+  if(!confirm("¿Borrar «"+v.split(":")[1]+"» del robot? No se puede deshacer."))return;
+  send({op:"publish", topic:"/slam/edit_delete", msg:{data:v}}); flash("Borrando "+v.split(":")[1]+"…"); };
 $("#save").onclick=()=>{ if(!grid){flash("Nada que guardar");return;} if(!connected){flash("Sin conexión");return;}
   const name=(prompt("Guardar mapa como (nombre sin extensión):", loadedName||"habitacion")||"").trim();
   if(!name) return;
