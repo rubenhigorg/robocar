@@ -40,6 +40,25 @@ Cadena mínima, en orden (cada uno depende del anterior):
 - **Verificaciones antes de mover:** `/scan` a >5 Hz y sin huecos; TF `map→odom→base_link→laser`
   completa (`ros2 run tf2_tools view_frames`); `/odometry/filtered` avanza al empujar el coche.
 
+### El origen (0,0) del mapa — lo fija el robot al arrancar
+En SLAM **no se configura (0,0) a mano**: Cartographer ancla el frame `map` en la **pose (posición +
+rumbo) donde está el robot al lanzar `bringupSLAM.sh`**. Ese instante pasa a ser el **(0, 0, 0)**; el eje
+**+X** del mapa es hacia donde **mira** el robot al arrancar. (El EKF también arranca en 0 ahí; no hay
+pose inicial que dar — eso es de **AMCL**, no de SLAM.)
+
+**Elige el «punto base» a propósito ANTES de lanzar:**
+- **Sitio fijo y repetible** (una esquina, la puerta de entrada, un dock) y **márcalo físicamente**
+  (cinta en el suelo) — lo reusarás en la Fase C.
+- **Rumbo alineado con la casa** (arranca mirando a lo largo de un pasillo/pared) → el mapa sale
+  «recto», con los ejes paralelos a las paredes, en vez de torcido.
+- **Robot quieto los primeros ~2 s**: el `accelerometer_node` calibra el bias del giróscopo asumiendo
+  que no se mueve.
+
+**Por qué importa aguas abajo:** en la **Fase B** el simulador también arranca en el origen (encaja
+directo); en la **Fase C**, si **siempre colocas el robot en ese mismo punto base marcado**, la pose
+inicial de AMCL es trivial (o le das la `📌 pista` ahí). Por eso el (0,0) debe ser un sitio
+**reconocible y repetible**.
+
 ### A2 · Teleoperar para cartografiar
 - **Mando:** PS3 por BT (recipe ya documentada) **o** el mando web (`:8080/mando.html`).
 - **Buenas prácticas SLAM (Ackermann):** velocidad baja y constante; **bucles cerrados** (volver a
