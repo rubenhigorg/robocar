@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Robocar · Editor de mapa</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧹</text></svg>">
+<style>
+  :root{
+    --bg:#0b0f16; --surface:#141c26; --raise:#1b2634; --ink:#e6ecf3; --muted:#93a1b2; --faint:#5c6a7c;
+    --line:#26323f; --accent:#3f8ae0; --good:#39c07f; --warn:#e0a24a; --bad:#e05a5a;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --mono:ui-monospace,"SF Mono","Cascadia Code",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--ink);
+    font-family:var(--sans);touch-action:none;-webkit-user-select:none;user-select:none}
+  .app{height:100%;display:flex;flex-direction:column;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+  header{display:flex;align-items:center;gap:.6rem;padding:.5rem 1rem;border-bottom:1px solid var(--line);flex-wrap:wrap}
+  .title{font-family:var(--mono);font-weight:700}
+  .title span{color:var(--accent)}
+  .conn{margin-left:auto;font-size:.74rem;color:var(--muted);font-family:var(--mono)}
+  .conn.ok{color:var(--good)}
+  .bar{display:flex;gap:.4rem;align-items:center;flex-wrap:wrap;padding:.5rem 1rem;border-bottom:1px solid var(--line)}
+  select,button,input{font:inherit}
+  select{background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:9px;padding:.4rem .5rem;font-size:.8rem;max-width:48vw}
+  button{background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:9px;padding:.42rem .7rem;font-size:.82rem;font-weight:600;cursor:pointer}
+  button.pri{background:var(--accent);border-color:var(--accent);color:#04121f}
+  button.tool.on{background:var(--good);border-color:var(--good);color:#04160d}
+  button.tool.wall.on{background:#cdd6e2;border-color:#cdd6e2;color:#0b0f16}
+  button.tool.unk.on{background:var(--faint);border-color:var(--faint);color:#0b0f16}
+  .sep{width:1px;align-self:stretch;background:var(--line);margin:0 .2rem}
+  .brush{display:flex;align-items:center;gap:.4rem;font-size:.72rem;color:var(--muted)}
+  .brush input{width:80px;accent-color:var(--accent)}
+  .stage{flex:1;position:relative;min-height:0;background:#070b11;overflow:hidden}
+  #c{width:100%;height:100%;display:block;touch-action:none;cursor:crosshair}
+  .hud{position:absolute;left:.6rem;top:.5rem;font-family:var(--mono);font-size:.68rem;color:var(--muted);
+    background:rgba(8,12,18,.6);border:1px solid var(--line);border-radius:8px;padding:.3rem .5rem;line-height:1.5;pointer-events:none}
+  .legend{position:absolute;right:.6rem;bottom:.5rem;font-family:var(--mono);font-size:.64rem;color:var(--muted);
+    background:rgba(8,12,18,.6);border:1px solid var(--line);border-radius:8px;padding:.3rem .5rem;line-height:1.7;pointer-events:none}
+  .legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:.35rem;vertical-align:-1px}
+  .banner{position:absolute;left:50%;top:.5rem;transform:translateX(-50%);display:none;background:var(--warn);color:#1a1206;
+    font-size:.78rem;font-weight:600;padding:.35rem .7rem;border-radius:8px;max-width:90vw;text-align:center}
+  .banner.show{display:block}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="title">robo<span>car</span> · editor de mapa</div>
+    <div class="conn" id="conn">conectando…</div>
+  </header>
+
+  <div class="bar">
+    <select id="sel"><option value="">— elige checkpoint / mapa —</option></select>
+    <button id="load" class="pri">Cargar</button>
+    <div class="sep"></div>
+    <button id="tWall" class="tool wall on" title="pintar pared">✏️ pared</button>
+    <button id="tFree" class="tool" title="borrar (libre)">🧽 libre</button>
+    <button id="tUnk" class="tool unk" title="marcar desconocido">❓ desconoc.</button>
+    <div class="brush">pincel <input type="range" id="brush" min="0" max="6" value="1"><span id="brushV">3px</span></div>
+    <div class="sep"></div>
+    <button id="pan" class="tool" title="mover/desplazar el mapa">✋</button>
+    <button id="zin">＋</button><button id="zout">－</button><button id="fit">⊡</button>
+    <div class="sep"></div>
+    <button id="save" class="pri" title="guardar el mapa editado en el robot">💾 Guardar como…</button>
+  </div>
+
+  <div class="stage">
+    <canvas id="c"></canvas>
+    <div class="hud" id="hud">carga un checkpoint o mapa para editarlo</div>
+    <div class="legend">
+      <div><i style="background:#cdd6e2"></i>pared</div>
+      <div><i style="background:#0f1620"></i>libre</div>
+      <div><i style="background:#5c6a7c"></i>desconocido</div>
+    </div>
+    <div class="banner" id="banner"></div>
+  </div>
+</div>
+
+<script>
+const HOST = location.hostname || "robocar.local";
+const $ = s => document.querySelector(s);
+
+/* ---------- rosbridge ---------- */
+let ws=null, connected=false;
+function connect(){
+  try{ ws=new WebSocket(`ws://${HOST}:9090`); }catch(e){ retry(); return; }
+  ws.onopen=()=>{ connected=true; setConn(true);
+    send({op:"advertise", topic:"/slam/edit_load", type:"std_msgs/msg/String"});
+    send({op:"advertise", topic:"/slam/edit_save", type:"std_msgs/msg/String"});
+    send({op:"advertise", topic:"/edited_map",     type:"nav_msgs/msg/OccupancyGrid"});
+    send({op:"subscribe", topic:"/slam/maps_list",   type:"std_msgs/msg/String"});
+    send({op:"subscribe", topic:"/edit_map",         type:"nav_msgs/msg/OccupancyGrid"});
+    send({op:"subscribe", topic:"/slam/edit_status", type:"std_msgs/msg/String"});
+  };
+  ws.onclose=()=>{ connected=false; setConn(false); retry(); };
+  ws.onerror=()=>{ try{ws.close();}catch(e){} };
+  ws.onmessage=(ev)=>{ let d; try{ d=JSON.parse(ev.data); }catch(e){ return; }
+    if(d.op!=="publish") return;
+    if(d.topic==="/slam/maps_list") onList(d.msg);
+    else if(d.topic==="/edit_map") onEditMap(d.msg);
+    else if(d.topic==="/slam/edit_status") onStatus(d.msg);
+  };
+}
+function retry(){ setTimeout(connect,1500); }
+function send(o){ if(ws&&ws.readyState===1) ws.send(JSON.stringify(o)); }
+function setConn(ok){ const e=$("#conn"); e.classList.toggle("ok",ok); e.textContent=ok?"conectado":"desconectado"; }
+
+/* ---------- estado ---------- */
+let grid=null;              // {W,H,res,ox,oy,data:Int8Array}  data fila0=abajo (orden OccupancyGrid)
+let loadedName="";
+let tool="wall", brush=1, panMode=false;
+let cs=6, SX=0, SY=0;      // px/celda, offset
+const VAL={wall:100, free:0, unk:-1};
+const cv=$("#c"), g=cv.getContext("2d");
+
+function onList(m){ let d; try{ d=JSON.parse(m.data); }catch(e){ return; }
+  const sel=$("#sel"), cur=sel.value;
+  let html='<option value="">— elige checkpoint / mapa —</option>';
+  if(d.checkpoints&&d.checkpoints.length){ html+='<optgroup label="checkpoints">';
+    d.checkpoints.forEach(c=>{ const p=c.pose?` (${c.pose.x.toFixed(1)},${c.pose.y.toFixed(1)})`:''; html+=`<option value="ckpt:${c.name}">${c.name}${p}</option>`; });
+    html+='</optgroup>'; }
+  if(d.maps&&d.maps.length){ html+='<optgroup label="mapas guardados">';
+    d.maps.forEach(n=>{ html+=`<option value="map:${n}">${n}</option>`; }); html+='</optgroup>'; }
+  sel.innerHTML=html; if(cur) sel.value=cur;
+}
+function onStatus(m){ flash(m.data); $("#hud").textContent=m.data; }
+function onEditMap(m){
+  const W=m.info.width, H=m.info.height, data=Int8Array.from(m.data);
+  grid={W,H,res:m.info.resolution, ox:m.info.origin.position.x, oy:m.info.origin.position.y, data};
+  fit(); draw(); flash(`cargado ${W}×${H} — pinta para retocar`);
+}
+
+/* ---------- vista ---------- */
+function resize(){ const r=cv.getBoundingClientRect(); cv.width=r.width; cv.height=r.height; if(grid){fit();draw();} }
+window.addEventListener("resize", resize);
+function fit(){ if(!grid)return; const aw=cv.width-30, ah=cv.height-30;
+  cs=Math.max(1, Math.min(aw/grid.W, ah/grid.H));
+  SX=(cv.width-grid.W*cs)/2; SY=(cv.height-grid.H*cs)/2; }
+function cellAt(px,py){ if(!grid)return null;
+  const col=Math.floor((px-SX)/cs), row=grid.H-1-Math.floor((py-SY)/cs);
+  if(col<0||col>=grid.W||row<0||row>=grid.H) return null; return {col,row}; }
+function draw(){ g.setTransform(1,0,0,1,0,0); g.clearRect(0,0,cv.width,cv.height); if(!grid) return;
+  for(let row=0;row<grid.H;row++)for(let col=0;col<grid.W;col++){
+    const v=grid.data[row*grid.W+col];
+    g.fillStyle = v>=50 ? "#cdd6e2" : (v>=0 ? "#0f1620" : "#5c6a7c");
+    g.fillRect(SX+col*cs, SY+(grid.H-1-row)*cs, Math.ceil(cs), Math.ceil(cs));
+  }
+  if(cs>=9){ g.strokeStyle="rgba(90,106,124,.25)"; g.lineWidth=1;
+    for(let c=0;c<=grid.W;c++){ g.beginPath(); g.moveTo(SX+c*cs,SY); g.lineTo(SX+c*cs,SY+grid.H*cs); g.stroke(); }
+    for(let r=0;r<=grid.H;r++){ g.beginPath(); g.moveTo(SX,SY+r*cs); g.lineTo(SX+grid.W*cs,SY+r*cs); g.stroke(); } }
+  $("#hud").textContent = `${grid.W}×${grid.H} @ ${grid.res}m · ${(grid.W*grid.res).toFixed(1)}×${(grid.H*grid.res).toFixed(1)} m`;
+}
+
+/* ---------- pintar ---------- */
+function paintAt(px,py){ const c=cellAt(px,py); if(!c) return; const v=VAL[tool];
+  for(let dr=-brush;dr<=brush;dr++)for(let dc=-brush;dc<=brush;dc++){
+    if(dr*dr+dc*dc>brush*brush+1) continue;
+    const col=c.col+dc, row=c.row+dr;
+    if(col>=0&&col<grid.W&&row>=0&&row<grid.H) grid.data[row*grid.W+col]=v;
+  }
+  draw();
+}
+let drawing=false, panning=false, last=null;
+function evPx(e){ const r=cv.getBoundingClientRect(),sx=cv.width/r.width,sy=cv.height/r.height;
+  const cx=(e.touches?e.touches[0].clientX:e.clientX)-r.left, cy=(e.touches?e.touches[0].clientY:e.clientY)-r.top;
+  return {x:cx*sx, y:cy*sy}; }
+cv.addEventListener("pointerdown", e=>{ if(!grid)return; const p=evPx(e); cv.setPointerCapture(e.pointerId);
+  if(panMode){ panning=true; last=p; } else { drawing=true; paintAt(p.x,p.y); } });
+cv.addEventListener("pointermove", e=>{ if(!grid)return; const p=evPx(e);
+  if(panning){ SX+=p.x-last.x; SY+=p.y-last.y; last=p; draw(); }
+  else if(drawing){ paintAt(p.x,p.y); } });
+function up(){ drawing=false; panning=false; }
+cv.addEventListener("pointerup", up); cv.addEventListener("pointercancel", up); cv.addEventListener("lostpointercapture", up);
+
+/* ---------- herramientas ---------- */
+function setTool(t){ tool=t; $("#tWall").classList.toggle("on",t==="wall"); $("#tFree").classList.toggle("on",t==="free"); $("#tUnk").classList.toggle("on",t==="unk"); }
+$("#tWall").onclick=()=>setTool("wall"); $("#tFree").onclick=()=>setTool("free"); $("#tUnk").onclick=()=>setTool("unk");
+$("#pan").onclick=()=>{ panMode=!panMode; $("#pan").classList.toggle("on",panMode); cv.style.cursor=panMode?"grab":"crosshair"; };
+const bEl=$("#brush"); function setBrush(){ brush=+bEl.value; $("#brushV").textContent=(brush*2+1)+"px"; } bEl.addEventListener("input",setBrush); setBrush();
+$("#zin").onclick=()=>{ const cx=cv.width/2,cy=cv.height/2; SX=cx-(cx-SX)*1.3; SY=cy-(cy-SY)*1.3; cs*=1.3; draw(); };
+$("#zout").onclick=()=>{ const cx=cv.width/2,cy=cv.height/2; SX=cx-(cx-SX)/1.3; SY=cy-(cy-SY)/1.3; cs/=1.3; draw(); };
+$("#fit").onclick=()=>{ fit(); draw(); };
+
+/* ---------- cargar / guardar ---------- */
+$("#load").onclick=()=>{ if(!connected){flash("Sin conexión");return;} const v=$("#sel").value;
+  if(!v){flash("Elige un checkpoint o mapa");return;} loadedName=v.split(":")[1];
+  send({op:"publish", topic:"/slam/edit_load", msg:{data:v}}); flash("Cargando "+v+"…"); };
+$("#save").onclick=()=>{ if(!grid){flash("Nada que guardar");return;} if(!connected){flash("Sin conexión");return;}
+  const name=(prompt("Guardar mapa como (nombre sin extensión):", loadedName||"habitacion")||"").trim();
+  if(!name) return;
+  send({op:"publish", topic:"/edited_map", msg:{
+    header:{frame_id:"map", stamp:{sec:0,nanosec:0}},
+    info:{resolution:grid.res, width:grid.W, height:grid.H,
+      origin:{position:{x:grid.ox,y:grid.oy,z:0}, orientation:{x:0,y:0,z:0,w:1}}},
+    data:Array.from(grid.data)}});
+  setTimeout(()=>send({op:"publish", topic:"/slam/edit_save", msg:{data:name}}), 300);
+  flash("Guardando "+name+"…");
+};
+
+/* ---------- go ---------- */
+let bt=null; function flash(msg){ const b=$("#banner"); b.textContent=msg; b.classList.add("show"); clearTimeout(bt); bt=setTimeout(()=>b.classList.remove("show"),2600); }
+resize(); connect();
+</script>
+</body>
+</html>

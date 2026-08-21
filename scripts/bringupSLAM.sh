@@ -25,7 +25,7 @@ for n in sim_motion_node sim_sensors_node sim_map_grid_node trajectory_nav_node 
          nav2_lifecycle_manager cartographer_node occupancy_grid_node rplidar_node \
          encoder_node accelerometer_node car_control_node ekf_node rf2o_laser_odometry \
          wheel_twistcov_node odom_cov_node steer_yaw_node robot_state_publisher \
-         slam_checkpoint_node rosbridge_websocket "http.server 8080"; do
+         slam_checkpoint_node map_edit_node rosbridge_websocket "http.server 8080"; do
   pkill -9 -f "$n" 2>/dev/null
 done
 sleep 2
@@ -57,6 +57,8 @@ fi
 run slam       ros2 launch robocar_slam slam.launch.py
 # 5b) Checkpoints del estado de Cartographer (.pbstream) para sobrevivir a derrapes
 run checkpoint python3 ~/robocar/src/robocar_pkg/robocar_pkg/slam_checkpoint_node.py
+# 5c) Soporte del editor de mapa web (listar/cargar/guardar mapas)
+run map_edit   python3 ~/robocar/src/robocar_pkg/robocar_pkg/map_edit_node.py
 # 6) Control del motor/direccion (teleop por /cmd_vel; deadman 0.5 s -> neutro)
 run car_control ros2 run robocar_pkg car_control_node
 # 7) Web: rosbridge (:9090) + panel (:8080)
