@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Robocar · Panel de control</title>
+  <link rel="stylesheet" href="style.css?v=2">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚗</text></svg>">
+</head>
+<body>
+  <header>
+    <h1>🚗 Robocar</h1>
+    <div class="head-right">
+      <div id="batt" class="batt unknown" title="batería del coche">
+        <svg width="30" height="14" viewBox="0 0 30 14">
+          <rect x="0.5" y="0.5" width="26" height="13" rx="3" fill="none" stroke="currentColor" stroke-width="1.4"/>
+          <rect x="27.5" y="4" width="2.5" height="6" rx="1" fill="currentColor"/>
+          <rect id="battFill" x="2.5" y="2.5" width="0" height="9" rx="1.5" fill="currentColor"/>
+        </svg>
+        <span id="battPct">—</span>
+      </div>
+      <div class="conn">
+        <span id="connDot" class="dot red"></span>
+        <span id="connText">conectando…</span>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="panel view-panel">
+      <div class="panel-head">
+        <h2>Vista cenital</h2>
+        <div class="zoom">
+          <button data-r="0.6">0.6 m</button>
+          <button data-r="1.5" class="active">1.5 m</button>
+          <button data-r="4">4 m</button>
+          <button data-r="8">8 m</button>
+        </div>
+      </div>
+      <div class="view-wrap">
+        <canvas id="view" width="640" height="640"></canvas>
+      </div>
+      <div class="legend">
+        <span><i class="sw us"></i> ultrasonidos</span>
+        <span><i class="sw scan"></i> LIDAR /scan</span>
+        <span><i class="sw trail"></i> trayectoria (EKF)</span>
+        <span id="scanInfo" class="muted"></span>
+      </div>
+    </section>
+
+    <section class="side">
+      <div class="panel">
+        <div class="panel-head"><h2>Velocidad</h2><span id="speedDot" class="dot red"></span></div>
+        <div class="speed-row">
+          <span id="speedVal" class="speed-big">—</span>
+          <span class="speed-unit">m/s</span>
+          <span id="speedKmh" class="speed-kmh"></span>
+        </div>
+        <canvas id="speedSpark" width="300" height="46"></canvas>
+        <div class="speed-meta">
+          <span id="odomPose" class="muted small">—</span>
+          <span id="speedRaw" class="muted small"></span>
+        </div>
+        <div class="muted small">odometría EKF (encoder+IMU) · PPR=20 placeholder — calibrar dientes</div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><h2>Odometría · frame odom</h2><span id="odomDot" class="dot red"></span></div>
+        <div id="odomBig" class="odom-big">—</div>
+        <canvas id="odomWorld" width="320" height="320" class="odom-canvas"></canvas>
+        <div class="muted small">posición (x,y) fusionada por el EKF en el plano · el coche se mueve, la rejilla es fija</div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><h2>IMU</h2><span id="imuDot" class="dot red"></span></div>
+        <div class="spark-block">
+          <div class="spark-title">aceleración (m/s²) <span id="accVals" class="vals"></span></div>
+          <canvas id="accSpark" width="300" height="60"></canvas>
+        </div>
+        <div class="spark-block">
+          <div class="spark-title">giro (rad/s) <span id="gyroVals" class="vals"></span></div>
+          <canvas id="gyroSpark" width="300" height="60"></canvas>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><h2>Ultrasonidos</h2><span id="usDot" class="dot red"></span></div>
+        <div class="us-grid">
+          <div class="us-cell"><div class="us-label">izq</div><div id="usL" class="us-val">—</div></div>
+          <div class="us-cell"><div class="us-label">centro</div><div id="usC" class="us-val">—</div></div>
+          <div class="us-cell"><div class="us-label">der</div><div id="usR" class="us-val">—</div></div>
+        </div>
+        <div id="usStop" class="alert hidden">🛑 parada de emergencia activa</div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><h2>Energía</h2><span id="energyDot" class="dot red"></span></div>
+        <div class="energy-grid">
+          <div><span class="e-label">bat 1</span><span id="v1" class="e-val">—</span></div>
+          <div><span class="e-label">bat 2</span><span id="v2" class="e-val">—</span></div>
+          <div><span class="e-label">bat 3</span><span id="v3" class="e-val">—</span></div>
+          <div><span class="e-label">corriente</span><span id="cur" class="e-val">—</span></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><h2>Topics</h2></div>
+        <ul id="topicList" class="topics"></ul>
+      </div>
+    </section>
+  </main>
+
+  <footer>panel del Robocar · rosbridge ws://<span id="host"></span>:9090 · hecho en casa, sin dependencias</footer>
+  <script src="app.js?v=2"></script>
+</body>
+</html>
