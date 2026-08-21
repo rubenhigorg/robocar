@@ -189,7 +189,11 @@ function draw(){
     g.strokeStyle=(mapTool==='obst')?'#ff8c42':'#e0a24a'; g.lineWidth=2;
     if(mapTool==='area') g.strokeStyle='#5b9bea';
     if(mapTool==='rect'||mapTool==='obst'||mapTool==='area') g.strokeRect(Math.min(a.x,b.x),Math.min(a.y,b.y),Math.abs(b.x-a.x),Math.abs(b.y-a.y));
-    else { g.beginPath();g.moveTo(a.x,a.y);g.lineTo(b.x,b.y);g.stroke(); } }
+    else { g.beginPath();g.moveTo(a.x,a.y);g.lineTo(b.x,b.y);g.stroke();
+      if(mapTool==="hint"){ const ang=Math.atan2(b.y-a.y,b.x-a.x), hl=11;   // cabeza de flecha = rumbo
+        g.beginPath(); g.moveTo(b.x,b.y); g.lineTo(b.x-hl*Math.cos(ang-0.42),b.y-hl*Math.sin(ang-0.42));
+        g.moveTo(b.x,b.y); g.lineTo(b.x-hl*Math.cos(ang+0.42),b.y-hl*Math.sin(ang+0.42)); g.stroke();
+        g.fillStyle="#e0a24a"; g.beginPath(); g.arc(a.x,a.y,4,0,7); g.fill(); } } }
   }
   // real
   if(real.length>1){ g.strokeStyle='#e0a24a'; g.lineWidth=2.5; g.beginPath(); real.forEach((m,i)=>{let p=toPx(m);i?g.lineTo(p.x,p.y):g.moveTo(p.x,p.y);}); g.stroke(); }
