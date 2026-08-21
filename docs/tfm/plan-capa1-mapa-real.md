@@ -99,8 +99,16 @@ desde el último guardado, no todo. Cartographer lo permite serializando su esta
 > Esto convierte la cartografía de "una toma perfecta o nada" en un proceso **incremental y a prueba
 > de fallos**. Es prerequisito práctico para mapear un piso entero.
 
-**A construir:** botón/temporizador de checkpoint en la web + helper de guardado incremental +
-`slam_continue.launch.py` + documentar el flujo de reanudación.
+**✅ IMPLEMENTADO** (validado en el robot):
+- `slam_checkpoint_node.py` guarda el estado de Cartographer (`.pbstream`) vía `/write_state`:
+  **manual** (`/slam/checkpoint`) o **automático cada 30 s** (`/slam/checkpoint_auto`), rota los
+  últimos 8, publica `/slam/checkpoint_status`. Lo lanza `bringupSLAM.sh`.
+- **Web** (`cartografia.html`): botones **💾 Checkpoint** y **⏱ auto** con estado en pantalla.
+- **Reanudar:** `slam.launch.py` lee `SLAM_LOAD_STATE` → `cartographer_node -load_state_filename`
+  (carga y continúa mapeando). Atajo: `bash bringupSLAM.sh --resume-latest` (o `--resume <fichero>`).
+- **Flujo:** al mapear en serio, activa **⏱ auto** al empezar; si derrapas y el mapa salta, paras y
+  `bringupSLAM.sh --resume-latest` — solo pierdes lo mapeado desde el último checkpoint.
+- Checkpoints en `~/robocar/maps/checkpoints/ckpt_<fecha>.pbstream`.
 
 ---
 
