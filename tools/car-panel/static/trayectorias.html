@@ -101,7 +101,7 @@
 
   <div class="row" id="rowMapa" style="display:none"><span class="lbl">MAPA</span>
     <select id="planta" title="Cargar planta de piso con muebles"><option value="">🏠 Plantas…</option><option value="0">Piso 100 m² · 2 dorm</option><option value="1">Piso 130 m² · 3 dorm</option><option value="2">Piso 160 m² · 4 hab</option><option value="3">Ático 200 m² · 4 hab</option></select>
-    <select id="testsc" title="Escenarios de prueba (mapa + zonas listos, se envían solos)"><option value="">🧪 Test…</option><option value="0">Piso con zonas</option><option value="1">Puerta estrecha</option><option value="2">Sala en L</option><option value="3">Sala cuadrada</option></select>
+    <select id="testsc" title="Escenarios de prueba (mapa + zonas listos, se envían solos)"><option value="">🧪 Test…</option><option value="0">Piso con zonas</option><option value="1">Puerta estrecha</option><option value="2">Sala en L</option><option value="3">Sala cuadrada</option></select><select id="realmap" title="Cargar un mapa REAL (cartografiado y limpiado) en el banco"><option value="">🗺️ Mapa real…</option></select>
     <span class="seg" id="mtool"><button data-t="rect" class="act">▭ habitación</button><button data-t="wall">─ pared</button><button data-t="obst">▧ obstáculo</button><button data-t="goal">◎ destino</button><button data-t="area">🏷️ área</button><button data-t="truth" title="Colocar la pose REAL oculta (solo test de localización)">📍 real</button><button data-t="hint" title="Pista de localización: clic donde crees que está el robot + arrastra hacia donde mira">📌 pista</button></span>
     <button id="mundo">↶</button><button id="mclear">limpiar</button>
     <button id="sendmap" class="map">▦ Enviar mapa</button>
@@ -417,6 +417,21 @@ function loadScenario(i){ if(!connected){flash('Sin conexión');return;} const s
   flash(sc.n+' — mapa y zonas cargados'); draw(); }
 $('#testsc').addEventListener('change',e=>{ if(e.target.value==='')return; loadScenario(+e.target.value); e.target.selectedIndex=0; });
 
+// ---- cargar un MAPA REAL (cartografiado) en el banco: el nodo sim_map_loader lo vectoriza -> /sim_map ----
+function onRealMaps(m){ try{ const d=JSON.parse(m.data), sel=$('#realmap'), cur=sel.value;
+  sel.innerHTML='<option value="">🗺️ Mapa real…</option>'+(d.maps||[]).map(n=>'<option>'+n+'</option>').join('');
+  if(cur && (d.maps||[]).includes(cur)) sel.value=cur; }catch(e){} }
+function loadRealMap(name){ if(!connected){flash('Sin conexión');return;}
+  send({op:'publish',topic:'/nav2_relay/cancel',msg:{}});
+  send({op:'publish',topic:'/sim_obstacles',msg:{data:JSON.stringify({segments:[]})}});
+  send({op:'publish',topic:'/map_areas/set',msg:{data:JSON.stringify({op:'clear'})}});
+  send({op:'publish',topic:'/set_pose',msg:{header:{frame_id:'odom'},pose:{pose:{position:{x:0,y:0,z:0},orientation:{x:0,y:0,z:0,w:1}},covariance:cov0()}}});
+  setTimeout(clearCostmaps,700);
+  walls=[]; obstacles=[]; goal=null; navPlan=[]; scanPts=[]; areas=[]; mapImg=null;
+  send({op:'publish',topic:'/sim/load_map',msg:{data:name}});   // vectoriza -> /sim_map -> /map (raster)
+  flash('Cargando mapa real «'+name+'» en el banco…'); draw(); }
+$('#realmap').addEventListener('change',e=>{ if(e.target.value==='')return; loadRealMap(e.target.value); e.target.selectedIndex=0; });
+
 // ---- grafo de nodos del banco (boton "ⓘ nodos") ----
 // o = origen: 'propio' (nuestro, azul) · 'nav2' (C++ de Nav2, morado) · 'stock' (gris)
 const LANES=[
@@ -596,7 +611,9 @@ function connect(){
     send({op:'advertise',topic:'/sim_drift',type:'std_msgs/msg/Bool'});
     send({op:'subscribe',topic:'/amcl_pose',type:'geometry_msgs/msg/PoseWithCovarianceStamped',throttle_rate:200,queue_length:1});
     send({op:'subscribe',topic:'/particle_cloud_viz',type:'nav2_msgs/msg/ParticleCloud',throttle_rate:300,queue_length:1}); // localizacion
-    send({op:'subscribe',topic:'/plan',type:'nav_msgs/msg/Path',throttle_rate:300,queue_length:1}); };                 // ruta -> ~3Hz
+    send({op:'subscribe',topic:'/plan',type:'nav_msgs/msg/Path',throttle_rate:300,queue_length:1});
+    send({op:'advertise',topic:'/sim/load_map',type:'std_msgs/msg/String'});
+    send({op:'subscribe',topic:'/sim/maps_list',type:'std_msgs/msg/String'}); };                 // ruta -> ~3Hz
   ws.onclose=()=>{connected=false;setConn();setTimeout(connect,1500);};
   ws.onerror=()=>ws.close();
   ws.onmessage=ev=>{ const d=JSON.parse(ev.data); if(d.op!=='publish')return;
@@ -607,6 +624,7 @@ function connect(){
     else if(d.topic==='/map') onMap(d.msg);
     else if(d.topic==='/plan') onPlan(d.msg);
     else if(d.topic==='/global_costmap/costmap') onCostmap(d.msg);
+    else if(d.topic==='/sim/maps_list') onRealMaps(d.msg);
     else if(d.topic==='/nav_config') onNavConfig(d.msg);
     else if(d.topic==='/map_areas') onAreas(d.msg);
     else if(d.topic==='/amcl_pose') onAmcl(d.msg);
