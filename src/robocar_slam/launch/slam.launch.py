@@ -25,9 +25,12 @@ def generate_launch_description():
     ]
     load_state = os.environ.get('SLAM_LOAD_STATE', '').strip()
     if load_state:
-        # Carga un checkpoint y CONTINUA el mapeo (los submaps cargados quedan congelados;
-        # se re-localiza contra ellos por scan-matching y anade los nuevos escaneos).
+        # Carga un checkpoint y CONTINUA el mapeo (los submaps cargados quedan congelados).
         carto_args += ['-load_state_filename', load_state]
+    if os.environ.get('SLAM_NO_AUTOSTART', '').strip():
+        # No arranca la trayectoria sola: la lanza slam_checkpoint_node con la POSE del checkpoint
+        # (start_trajectory con initial_pose) para reengancharse justo donde se guardo.
+        carto_args += ['-start_trajectory_with_default_topics=false']
 
     return LaunchDescription([
         Node(
