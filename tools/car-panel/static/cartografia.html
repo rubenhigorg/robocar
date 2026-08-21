@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Robocar · Cartografía</title>
+<style>
+  :root{
+    --bg:#0b0f16; --surface:#141c26; --raise:#1b2634; --ink:#e6ecf3; --muted:#93a1b2; --faint:#5c6a7c;
+    --line:#26323f; --accent:#3f8ae0; --good:#39c07f; --warn:#e0a24a; --bad:#e05a5a;
+    --pad:#0e1520; --knob:#3f8ae0;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --mono:ui-monospace,"SF Mono","Cascadia Code",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--ink);
+    font-family:var(--sans);overscroll-behavior:none;touch-action:none;-webkit-user-select:none;user-select:none}
+  .app{height:100%;display:flex;flex-direction:column;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+  header{display:flex;align-items:center;gap:.6rem;padding:.55rem 1rem;border-bottom:1px solid var(--line)}
+  header .title{font-family:var(--mono);font-weight:700;letter-spacing:.02em}
+  header .title span{color:var(--accent)}
+  .conn{margin-left:auto;display:flex;align-items:center;gap:.4rem;font-size:.74rem;color:var(--muted);font-family:var(--mono)}
+  .conn .dot{width:9px;height:9px;border-radius:50%;background:var(--bad)}
+  .conn.ok .dot{background:var(--good)} .conn.ok{color:var(--good)}
+  .banner{display:none;background:var(--warn);color:#1a1206;font-size:.8rem;font-weight:600;text-align:center;padding:.5rem}
+  .banner.show{display:block}
+  .stage{flex:1;position:relative;min-height:0;background:#070b11}
+  #c{width:100%;height:100%;display:block;touch-action:none}
+  .hud{position:absolute;top:.5rem;left:.6rem;font-family:var(--mono);font-size:.7rem;color:var(--muted);
+    background:rgba(8,12,18,.6);border:1px solid var(--line);border-radius:8px;padding:.35rem .5rem;line-height:1.5;pointer-events:none}
+  .hud b{color:var(--ink)} .hud .ok{color:var(--good)} .hud .no{color:var(--bad)}
+  .zoom{position:absolute;top:.5rem;right:.6rem;display:flex;flex-direction:column;gap:.35rem}
+  .zoom button{width:38px;height:38px;font-size:1.2rem;font-weight:700;border-radius:10px;border:1px solid var(--line);
+    background:var(--surface);color:var(--ink)}
+  .foot{border-top:1px solid var(--line);padding:.5rem 1rem calc(.6rem + env(safe-area-inset-bottom));
+    display:flex;align-items:center;gap:1rem}
+  .pad{position:relative;width:132px;height:132px;border-radius:50%;flex:none;
+    background:radial-gradient(circle at 50% 45%, var(--raise), var(--pad));border:2px solid var(--line);touch-action:none}
+  .pad .fwd,.pad .rev{position:absolute;left:50%;transform:translateX(-50%);font-size:.6rem;color:var(--faint);font-family:var(--mono)}
+  .pad .fwd{top:6px} .pad .rev{bottom:6px}
+  .knob{position:absolute;width:34%;height:34%;border-radius:50%;left:33%;top:33%;
+    background:radial-gradient(circle at 40% 35%, #5b9bea, var(--knob));
+    box-shadow:0 6px 20px rgba(0,0,0,.5), inset 0 2px 4px rgba(255,255,255,.25);transition:transform .04s linear}
+  .pad.idle .knob{transition:transform .18s cubic-bezier(.2,.8,.3,1)}
+  .ctrl{flex:1;display:flex;flex-direction:column;gap:.5rem;min-width:0}
+  .row{display:flex;gap:.5rem}
+  .row button{flex:1;font:inherit;font-weight:700;font-size:.85rem;padding:.6rem;border-radius:11px;border:1px solid var(--line);
+    background:var(--surface);color:var(--ink)}
+  .row .toggle.on{background:var(--good);border-color:var(--good);color:#04160d}
+  .row .stop{background:var(--bad);border-color:var(--bad);color:#fff}
+  .row .save{background:var(--accent);border-color:var(--accent);color:#04121f}
+  .readout{display:flex;gap:1rem;font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:.72rem;color:var(--muted)}
+  .readout b{color:var(--accent);font-size:1rem}
+  .cap{display:flex;align-items:center;gap:.5rem;font-size:.74rem;color:var(--muted)}
+  .cap input{flex:1;accent-color:var(--accent)} .cap .val{font-family:var(--mono);color:var(--ink);min-width:3em;text-align:right}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="title">robo<span>car</span> · cartografía</div>
+    <div class="conn" id="conn"><span class="dot"></span><span id="connTxt">conectando…</span></div>
+  </header>
+  <div class="banner" id="banner"></div>
+
+  <div class="stage">
+    <canvas id="c"></canvas>
+    <div class="hud" id="hud">esperando /map…</div>
+    <div class="zoom">
+      <button id="zin">+</button><button id="zout">−</button><button id="fit" title="encuadrar">⊡</button>
+    </div>
+  </div>
+
+  <div class="foot">
+    <div class="pad idle" id="pad">
+      <div class="fwd">▲</div><div class="rev">▼</div>
+      <div class="knob" id="knob"></div>
+    </div>
+    <div class="ctrl">
+      <div class="readout"><span>v <b id="vVal">0.00</b> m/s</span><span>ω <b id="wVal">0.00</b> rad/s</span></div>
+      <div class="row">
+        <button class="toggle" id="arm">Activar control</button>
+        <button class="stop" id="stop">STOP</button>
+      </div>
+      <div class="row">
+        <button class="save" id="save">💾 Guardar mapa</button>
+      </div>
+      <div class="cap"><span>Máx.</span><input type="range" id="cap" min="10" max="100" value="25"><span class="val" id="capVal">25%</span></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const HOST = location.hostname || "robocar.local";
+const MAX_LIN=0.7, MAX_LIN_REV=0.5, MAX_ANG=0.4, RATE_MS=60;
+const $ = s => document.querySelector(s);
+
+/* ================= rosbridge ================= */
+let ws=null, connected=false;
+function connect(){
+  try{ ws=new WebSocket(`ws://${HOST}:9090`); }catch(e){ retry(); return; }
+  ws.onopen=()=>{ connected=true; setConn(true);
+    send({op:"advertise", topic:"/cmd_vel", type:"geometry_msgs/msg/Twist"});
+    send({op:"advertise", topic:"/joy",     type:"sensor_msgs/msg/Joy"});
+    send({op:"subscribe", topic:"/map",       type:"nav_msgs/msg/OccupancyGrid", throttle_rate:1000, queue_length:1});
+    send({op:"subscribe", topic:"/tf",        type:"tf2_msgs/msg/TFMessage",      throttle_rate:100,  queue_length:1});
+    send({op:"subscribe", topic:"/tf_static", type:"tf2_msgs/msg/TFMessage",      queue_length:1});
+    send({op:"subscribe", topic:"/scan",      type:"sensor_msgs/msg/LaserScan",   throttle_rate:150,  queue_length:1});
+  };
+  ws.onclose=()=>{ connected=false; setConn(false); retry(); };
+  ws.onerror=()=>{ try{ws.close();}catch(e){} };
+  ws.onmessage=(ev)=>{ let d; try{ d=JSON.parse(ev.data); }catch(e){ return; }
+    if(d.op!=="publish") return;
+    if(d.topic==="/map") onMap(d.msg);
+    else if(d.topic==="/tf" || d.topic==="/tf_static") onTF(d.msg);
+    else if(d.topic==="/scan") onScan(d.msg);
+  };
+}
+function retry(){ setTimeout(connect,1500); }
+function send(o){ if(ws&&ws.readyState===1) ws.send(JSON.stringify(o)); }
+function setConn(ok){ const c=$("#conn"); c.classList.toggle("ok",ok);
+  $("#connTxt").textContent=ok?"conectado":"desconectado"; if(!ok){ armed=false; updateArm(); } }
+
+/* ================= TF (map->odom->base->laser) ================= */
+const TF={};
+function quatYaw(q){ return Math.atan2(2*(q.w*q.z+q.x*q.y), 1-2*(q.y*q.y+q.z*q.z)); }
+function se2c(A,B){ const c=Math.cos(A.th),s=Math.sin(A.th);
+  return {x:A.x+B.x*c-B.y*s, y:A.y+B.x*s+B.y*c, th:A.th+B.th}; }
+function onTF(m){ (m.transforms||[]).forEach(t=>{ const tr=t.transform.translation, q=t.transform.rotation;
+  TF[t.header.frame_id+">"+t.child_frame_id]={x:tr.x, y:tr.y, th:quatYaw(q)}; }); draw(); }
+function chain(){ let r={x:0,y:0,th:0};
+  for(const k of arguments){ const t=TF[k]; if(!t) return null; r=se2c(r,t); } return r; }
+function robotPose(){ return chain("map>odom","odom>base_link"); }
+function laserPose(){ return chain("map>odom","odom>base_link","base_link>laser"); }
+
+/* ================= mapa + laser (render en frame del MAPA, fijo) ================= */
+const cv=$("#c"), g=cv.getContext("2d");
+let PPM=40, SX=0, SY=0, autofit=true;
+let mapImg=null, scan=null;
+function resize(){ const r=cv.getBoundingClientRect(); cv.width=r.width; cv.height=r.height; if(autofit) fit(); draw(); }
+window.addEventListener("resize", resize);
+function toPx(mx,my){ return {x:SX - my*PPM, y:SY - mx*PPM}; }
+function onMap(m){ const W=m.info.width,H=m.info.height,res=m.info.resolution,d=m.data;
+  if(!W||!H) return; const oc=document.createElement("canvas"); oc.width=W; oc.height=H;
+  const g2=oc.getContext("2d"), img=g2.createImageData(W,H);
+  for(let r=0;r<H;r++)for(let c=0;c<W;c++){ const v=d[r*W+c]; const i=((H-1-r)*W+c)*4;
+    if(v<0){ img.data[i+3]=0; }
+    else if(v>=50){ img.data[i]=232; img.data[i+1]=236; img.data[i+2]=244; img.data[i+3]=255; }   // pared
+    else { img.data[i]=30; img.data[i+1]=44; img.data[i+2]=60; img.data[i+3]=170; } }              // libre
+  g2.putImageData(img,0,0);
+  mapImg={canvas:oc, gx:m.info.origin.position.x, gy:m.info.origin.position.y, res:res, W:W, H:H, cells:W*H};
+  if(autofit) fit(); draw(); }
+function onScan(m){ scan={ranges:m.ranges, amin:m.angle_min, ainc:m.angle_increment}; draw(); }
+function fit(){ if(!mapImg||!cv.width) return; const mw=mapImg.W*mapImg.res, mh=mapImg.H*mapImg.res;
+  PPM=Math.max(6, Math.min((cv.width-40)/Math.max(mw,0.5), (cv.height-40)/Math.max(mh,0.5)));
+  const ccx=mapImg.gx+mw/2, ccy=mapImg.gy+mh/2;      // centro del mapa
+  SX=cv.width/2 + ccy*PPM; SY=cv.height/2 + ccx*PPM; }
+function drawGrid(gi){ if(!gi) return; const res=gi.res, H=gi.H;
+  const a=0, b=-PPM*res, c=PPM*res, d=0;
+  const topX=gi.gx+0.5*res, topY=gi.gy+(H-0.5)*res;
+  const e=SX - topY*PPM, f=SY - topX*PPM;
+  g.save(); g.imageSmoothingEnabled=false; g.setTransform(a,b,c,d,e,f); g.drawImage(gi.canvas,0,0); g.restore(); }
+function drawScan(){ if(!scan) return; const lp=laserPose(); if(!lp) return;
+  const R=scan.ranges; g.fillStyle="#4bd0d0";
+  for(let i=0;i<R.length;i+=2){ const r=R[i]; if(!(r>0.05&&r<25)) continue;
+    const ang=scan.amin+i*scan.ainc, lx=r*Math.cos(ang), ly=r*Math.sin(ang);
+    const mp=se2c(lp,{x:lx,y:ly,th:0}), p=toPx(mp.x,mp.y); g.fillRect(p.x-1,p.y-1,2,2); } }
+function drawRobot(){ const rp=robotPose(); if(!rp) return; const p=toPx(rp.x,rp.y);
+  const hx=-Math.sin(rp.th), hy=-Math.cos(rp.th), px=-hy, py=hx, L=13, Wd=7;
+  g.beginPath(); g.moveTo(p.x+hx*L,p.y+hy*L);
+  g.lineTo(p.x-hx*L*0.6+px*Wd, p.y-hy*L*0.6+py*Wd);
+  g.lineTo(p.x-hx*L*0.6-px*Wd, p.y-hy*L*0.6-py*Wd);
+  g.closePath(); g.fillStyle="#ffcf4a"; g.fill();
+  g.strokeStyle="rgba(255,207,74,.35)"; g.lineWidth=1; g.beginPath(); g.arc(p.x,p.y,6,0,7); g.stroke(); }
+function draw(){ if(!cv.width) return; g.setTransform(1,0,0,1,0,0); g.clearRect(0,0,cv.width,cv.height);
+  drawGrid(mapImg); drawScan(); drawRobot(); hud(); }
+function hud(){ const rp=robotPose(), tfok=!!TF["map>odom"];
+  $("#hud").innerHTML =
+    (mapImg? "celdas <b>"+mapImg.cells.toLocaleString()+"</b> · "+(mapImg.W)+"×"+(mapImg.H)+" @"+mapImg.res+"m" : "esperando /map…")
+    + "<br>TF map→odom: "+(tfok?"<span class='ok'>sí</span>":"<span class='no'>no</span>")
+    + (rp? "<br>robot <b>"+rp.x.toFixed(2)+", "+rp.y.toFixed(2)+"</b> m · "+(rp.th*180/Math.PI).toFixed(0)+"°" : "<br>robot: <span class='no'>sin pose</span>"); }
+
+/* ================= zoom ================= */
+$("#zin").onclick =()=>{ autofit=false; PPM=Math.min(300,PPM*1.25); draw(); };
+$("#zout").onclick=()=>{ autofit=false; PPM=Math.max(4,PPM/1.25); draw(); };
+$("#fit").onclick =()=>{ autofit=true; fit(); draw(); };
+
+/* ================= guardar mapa ================= */
+$("#save").addEventListener("click", ()=>{
+  send({op:"call_service", service:"/write_state", type:"cartographer_ros_msgs/srv/WriteState",
+        args:{filename:"/home/lab/robocar/maps/piso_real.pbstream", include_unfinished_submaps:true}});
+  flash("Guardando… en el robot corre: save_map.sh piso_real (crea .pgm/.yaml para la Fase B)");
+});
+
+/* ================= joystick -> /cmd_vel (mando verbatim) ================= */
+let armed=false, active=false, lin=0, ang=0, cap=0.25;
+function pubCmd(vx,wz){ send({op:"publish", topic:"/cmd_vel", msg:{linear:{x:vx,y:0,z:0}, angular:{x:0,y:0,z:wz}}}); }
+function pubJoyToggle(){ const axes=[0.0,0.0,1.0,0.0,0.0,1.0]; const btn=Array(17).fill(0); btn[0]=1; const now=Date.now();
+  send({op:"publish", topic:"/joy", msg:{header:{stamp:{sec:Math.floor(now/1000),nanosec:0},frame_id:""}, axes:axes, buttons:btn}}); }
+setInterval(()=>{ if(!connected||!armed) return; if(active) pubCmd(lin,ang); }, RATE_MS);
+const pad=$("#pad"), knob=$("#knob"); let pid=null;
+function setKnob(nx,ny){ const R=pad.clientWidth*0.33; knob.style.transform=`translate(${nx*R}px, ${ny*R}px)`; }
+function computeCmd(nx,ny){ const drive=-ny, scale=drive>=0?MAX_LIN:MAX_LIN_REV;
+  lin=drive*scale*cap; ang=-nx*MAX_ANG; $("#vVal").textContent=lin.toFixed(2); $("#wVal").textContent=ang.toFixed(2); }
+function fromEvent(e){ const r=pad.getBoundingClientRect(), cx=r.left+r.width/2, cy=r.top+r.height/2;
+  let dx=(e.clientX-cx)/(r.width/2), dy=(e.clientY-cy)/(r.height/2); const m=Math.hypot(dx,dy); if(m>1){dx/=m;dy/=m;} return [dx,dy]; }
+pad.addEventListener("pointerdown", e=>{ if(!armed){ flash("Pulsa «Activar control» primero"); return; }
+  pid=e.pointerId; pad.setPointerCapture(pid); pad.classList.remove("idle"); active=true;
+  const [nx,ny]=fromEvent(e); setKnob(nx,ny); computeCmd(nx,ny); });
+pad.addEventListener("pointermove", e=>{ if(!active||e.pointerId!==pid) return; const [nx,ny]=fromEvent(e); setKnob(nx,ny); computeCmd(nx,ny); });
+function release(e){ if(e&&pid!==null&&e.pointerId!==pid) return; active=false; pid=null; pad.classList.add("idle");
+  setKnob(0,0); lin=0; ang=0; $("#vVal").textContent="0.00"; $("#wVal").textContent="0.00"; if(connected&&armed) pubCmd(0,0); }
+pad.addEventListener("pointerup", release); pad.addEventListener("pointercancel", release); pad.addEventListener("lostpointercapture", release);
+function updateArm(){ const b=$("#arm"); if(!b) return; b.classList.toggle("on",armed); b.textContent=armed?"Control activo — desactivar":"Activar control"; }
+$("#arm").addEventListener("click", ()=>{ if(!connected){ flash("Sin conexión"); return; } pubJoyToggle(); armed=!armed; updateArm(); if(!armed) pubCmd(0,0); });
+$("#stop").addEventListener("click", ()=>{ active=false; setKnob(0,0); lin=0; ang=0; $("#vVal").textContent="0.00"; $("#wVal").textContent="0.00";
+  if(connected) pubCmd(0,0); if(armed){ pubJoyToggle(); armed=false; updateArm(); } flash("STOP — coche a neutro"); });
+const capEl=$("#cap"); capEl.addEventListener("input", ()=>{ cap=capEl.value/100; $("#capVal").textContent=capEl.value+"%"; });
+cap=capEl.value/100; $("#capVal").textContent=capEl.value+"%";
+document.addEventListener("visibilitychange", ()=>{ if(document.hidden) release(); });
+window.addEventListener("blur", ()=>release());
+
+/* ================= go ================= */
+let bt=null; function flash(msg){ const b=$("#banner"); b.textContent=msg; b.classList.add("show"); clearTimeout(bt); bt=setTimeout(()=>b.classList.remove("show"),2600); }
+resize(); connect(); updateArm();
+</script>
+</body>
+</html>
