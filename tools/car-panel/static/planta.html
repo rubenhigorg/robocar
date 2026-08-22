@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Robocar · Plano → mapa</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📐</text></svg>">
+<style>
+  :root{--bg:#0b0f16;--surface:#141c26;--raise:#1b2634;--ink:#e6ecf3;--muted:#93a1b2;--faint:#5c6a7c;
+    --line:#26323f;--accent:#3f8ae0;--ok:#39c07f;--warn:#e0a24a;--danger:#e06a6a;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;--mono:ui-monospace,Consolas,Menlo,monospace;}
+  *{box-sizing:border-box}
+  html,body{margin:0;min-height:100%;background:var(--bg);color:var(--ink);font-family:var(--sans);
+    padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+  .wrap{max-width:1080px;margin:0 auto;padding:1.4rem 1rem 3rem}
+  a.back{color:var(--muted);text-decoration:none;font-size:.85rem}
+  h1{font-family:var(--mono);font-size:1.35rem;margin:.3rem 0 .2rem}
+  .sub{color:var(--muted);font-size:.85rem;margin-bottom:1rem;line-height:1.5}
+  .bar{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;background:var(--surface);border:1px solid var(--line);
+    border-radius:12px;padding:.7rem .8rem;margin-bottom:.7rem}
+  .bar .grp{display:flex;gap:.35rem;align-items:center;padding-right:.6rem;margin-right:.2rem;border-right:1px solid var(--line)}
+  .bar .grp:last-child{border-right:none}
+  button,input,select{font:inherit}
+  button{font-weight:600;font-size:.82rem;padding:.5rem .8rem;border-radius:9px;border:1px solid var(--line);
+    background:var(--raise);color:var(--ink);cursor:pointer}
+  button:hover{border-color:var(--accent)}
+  button.act{background:var(--accent);border-color:var(--accent);color:#fff}
+  button.go{background:var(--ok);border-color:var(--ok);color:#04140c}
+  button.danger{border-color:var(--danger);color:var(--danger)}
+  label.lbl{font-size:.78rem;color:var(--muted)}
+  input.num{width:4.2rem;text-align:right;background:var(--bg);border:1px solid var(--line);color:var(--ink);border-radius:7px;padding:.35rem .4rem}
+  input.txt{width:9rem;background:var(--bg);border:1px solid var(--line);color:var(--ink);border-radius:7px;padding:.35rem .5rem}
+  .canvaswrap{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:.5rem;overflow:auto}
+  canvas{display:block;max-width:100%;border-radius:6px;cursor:crosshair;background:#fff}
+  .pill{font-family:var(--mono);font-size:.72rem;padding:.2rem .5rem;border-radius:20px;border:1px solid var(--line);color:var(--muted)}
+  .pill.on{color:var(--ok);border-color:var(--ok)}
+  #status{font-family:var(--mono);font-size:.76rem;color:var(--faint);min-height:1.2em;margin:.6rem 0}
+  .furns{display:flex;flex-wrap:wrap;gap:.4rem;margin-top:.5rem}
+  .furn{display:flex;gap:.4rem;align-items:center;background:var(--raise);border:1px solid var(--line);border-radius:20px;
+    padding:.15rem .3rem .15rem .7rem;font-size:.78rem}
+  .furn button{padding:.05rem .4rem;border-radius:50%;border:none;background:transparent;color:var(--danger)}
+  .help{color:var(--faint);font-size:.75rem;margin-top:.9rem;line-height:1.6}
+  .help b{color:var(--muted)}
+  .step{display:inline-block;width:1.3rem;height:1.3rem;line-height:1.3rem;text-align:center;border-radius:50%;
+    background:var(--raise);border:1px solid var(--line);font-family:var(--mono);font-size:.72rem;margin-right:.3rem;color:var(--accent)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="index.html">← inicio</a>
+  <h1>📐 Plano → mapa</h1>
+  <div class="sub">Convierte un plano de planta (imagen) en un mapa de navegación: escala real, paredes automáticas y muebles como obstáculos. Se guarda en <code>~/robocar/maps/</code> y aparece en <b>🗺️ Mapa real…</b> del Panel Nav2.</div>
+
+  <div class="bar">
+    <div class="grp">
+      <button id="btnLoad">📂 Cargar plano</button>
+      <input type="file" id="file" accept="image/*" style="display:none">
+    </div>
+    <div class="grp">
+      <button id="tScale" class="tool">📏 Escala</button>
+      <button id="tOrigin" class="tool">📍 Origen (0,0)</button>
+      <button id="tFurn" class="tool">▭ Mueble</button>
+      <button id="tWalls">👁️ Ver paredes</button>
+    </div>
+    <div class="grp">
+      <span class="pill" id="pScale">escala: —</span>
+      <label class="lbl">resol. <input class="num" id="res" type="number" step="0.01" min="0.01" value="0.05"> m/celda</label>
+    </div>
+    <div class="grp">
+      <input class="txt" id="name" value="planta-piso" title="nombre del mapa">
+      <button id="save" class="go">💾 Generar y guardar</button>
+    </div>
+  </div>
+
+  <div id="status">Carga un plano para empezar.</div>
+
+  <div class="canvaswrap"><canvas id="c" width="900" height="560"></canvas></div>
+  <div class="furns" id="furns"></div>
+
+  <div class="help">
+    <div><span class="step">1</span><b>📏 Escala:</b> pincha en dos puntos de una distancia que conozcas (p.ej. el ancho del salón) y escribe los metros. Sin esto no hay escala real.</div>
+    <div><span class="step">2</span><b>📍 Origen:</b> pincha en el <b>pasillo</b> (zona blanca libre): ahí nacerá el coche (0,0), para que NO aparezca dentro de una pared.</div>
+    <div><span class="step">3</span><b>▭ Mueble:</b> arrastra un rectángulo sobre un mueble (cama, sofá, armario…) y ponle nombre. Serán obstáculos que Nav2 esquiva.</div>
+    <div><span class="step">4</span><b>💾 Guardar:</b> genera el mapa y lo manda al robot. Necesita el <b>Banco</b> arrancado (badge verde). Luego: Panel Nav2 → 🗺️ Mapa real… → tu mapa.</div>
+  </div>
+</div>
+
+<script>window.RC_NEED="BANCO";</script>
+<script src="health-badge.js"></script>
+<script>
+const $=s=>document.querySelector(s);
+const cv=$('#c'), g=cv.getContext('2d');
+const host=location.hostname||'192.168.1.102';
+let img=null, imgW=0, imgH=0, vs=1;           // vs = escala de vista (px pantalla / px imagen)
+let tool=null;                                 // 'scale' | 'origin' | 'furn'
+let calib=[], mppx=0;                          // puntos de calibracion (px imagen) y metros/px
+let originPx=null;                             // punto origen (px imagen)
+let furniture=[];                              // {x,y,w,h,label} en px imagen
+let drag=null, showWalls=false;
+const st=m=>{$('#status').textContent=m;};
+
+// ---------- cargar imagen ----------
+$('#btnLoad').onclick=()=>$('#file').click();
+$('#file').onchange=e=>{
+  const f=e.target.files[0]; if(!f)return;
+  const im=new Image();
+  im.onload=()=>{ img=im; imgW=im.naturalWidth; imgH=im.naturalHeight;
+    const dw=Math.min(imgW,1000); cv.width=dw; cv.height=Math.round(dw*imgH/imgW); vs=dw/imgW;
+    calib=[];mppx=0;originPx=null;furniture=[];updScale();renderFurns();render();
+    st('Plano cargado ('+imgW+'×'+imgH+' px). Ahora 1) calibra la escala.'); };
+  im.src=URL.createObjectURL(f);
+};
+
+// ---------- herramientas ----------
+function setTool(t){ tool=(tool===t?null:t);
+  ['tScale','tOrigin','tFurn'].forEach(id=>$('#'+id).classList.toggle('act',
+    (id==='tScale'&&tool==='scale')||(id==='tOrigin'&&tool==='origin')||(id==='tFurn'&&tool==='furn')));
+  cv.style.cursor = tool?'crosshair':'default';
+}
+$('#tScale').onclick=()=>{ calib=[]; setTool('scale'); st('Escala: pincha el PRIMER punto de una distancia conocida.'); };
+$('#tOrigin').onclick=()=>{ setTool('origin'); st('Origen: pincha en el pasillo (zona libre) donde nace el coche.'); };
+$('#tFurn').onclick=()=>{ setTool('furn'); st('Mueble: arrastra un rectángulo sobre el mueble.'); };
+$('#tWalls').onclick=()=>{ showWalls=!showWalls; $('#tWalls').classList.toggle('act',showWalls); render(); };
+
+// ---------- raton ----------
+const toImg=ev=>{ const r=cv.getBoundingClientRect();
+  return { x:(ev.clientX-r.left)*(cv.width/r.width)/vs, y:(ev.clientY-r.top)*(cv.height/r.height)/vs }; };
+cv.addEventListener('mousedown',ev=>{ if(!img)return; const p=toImg(ev);
+  if(tool==='furn'){ drag={x0:p.x,y0:p.y,x1:p.x,y1:p.y}; }
+  else if(tool==='scale'){ calib.push(p); if(calib.length>=2){ askMeters(); } render(); }
+  else if(tool==='origin'){ originPx=p; st('Origen fijado. El coche nacerá aquí (0,0).'); render(); }
+});
+cv.addEventListener('mousemove',ev=>{ if(drag){ const p=toImg(ev); drag.x1=p.x; drag.y1=p.y; render(); }});
+window.addEventListener('mouseup',()=>{ if(drag){
+  const x=Math.min(drag.x0,drag.x1),y=Math.min(drag.y0,drag.y1),w=Math.abs(drag.x1-drag.x0),h=Math.abs(drag.y1-drag.y0);
+  drag=null;
+  if(w>4&&h>4){ const label=prompt('Nombre del mueble (cama, sofá, armario…):','mueble')||'mueble';
+    furniture.push({x,y,w,h,label}); renderFurns(); }
+  render();
+}});
+function askMeters(){
+  const dx=calib[1].x-calib[0].x, dy=calib[1].y-calib[0].y, dpx=Math.hypot(dx,dy);
+  const m=parseFloat(prompt('¿Cuántos METROS hay entre esos dos puntos?','4.5'));
+  if(m>0&&dpx>0){ mppx=m/dpx; updScale(); st('Escala fijada: '+m+' m = '+Math.round(dpx)+' px  →  '+mppx.toFixed(4)+' m/px.'); }
+  else { calib=[]; st('Escala cancelada. Vuelve a pinchar dos puntos.'); }
+  setTool(null); render();
+}
+function updScale(){ const p=$('#pScale');
+  if(mppx){ p.textContent='escala: '+mppx.toFixed(4)+' m/px'; p.classList.add('on'); }
+  else { p.textContent='escala: —'; p.classList.remove('on'); } }
+
+// ---------- muebles (lista) ----------
+function renderFurns(){ const c=$('#furns'); c.innerHTML='';
+  furniture.forEach((f,i)=>{ const el=document.createElement('div'); el.className='furn';
+    const dim = mppx ? ' ('+(f.w*mppx).toFixed(2)+'×'+(f.h*mppx).toFixed(2)+' m)' : '';
+    el.innerHTML='<span>▭ '+f.label+dim+'</span>';
+    const b=document.createElement('button'); b.textContent='✕'; b.title='quitar';
+    b.onclick=()=>{ furniture.splice(i,1); renderFurns(); render(); };
+    el.appendChild(b); c.appendChild(el); });
+}
+
+// ---------- dibujo ----------
+function render(){
+  if(!img){ g.clearRect(0,0,cv.width,cv.height); return; }
+  g.clearRect(0,0,cv.width,cv.height);
+  g.drawImage(img,0,0,cv.width,cv.height);
+  if(showWalls){ // tinta de rojo el negro detectado como pared
+    const d=g.getImageData(0,0,cv.width,cv.height), a=d.data;
+    for(let i=0;i<a.length;i+=4){ if(a[i]<80&&a[i+1]<80&&a[i+2]<80){ a[i]=224;a[i+1]=64;a[i+2]=64; } }
+    g.putImageData(d,0,0);
+  }
+  // muebles
+  g.lineWidth=2;
+  furniture.forEach(f=>{ g.fillStyle='rgba(224,106,106,.35)'; g.strokeStyle='#e06a6a';
+    g.fillRect(f.x*vs,f.y*vs,f.w*vs,f.h*vs); g.strokeRect(f.x*vs,f.y*vs,f.w*vs,f.h*vs);
+    g.fillStyle='#fff'; g.font='12px sans-serif'; g.fillText(f.label,f.x*vs+3,f.y*vs+13); });
+  if(drag){ const x=Math.min(drag.x0,drag.x1),y=Math.min(drag.y0,drag.y1),w=Math.abs(drag.x1-drag.x0),h=Math.abs(drag.y1-drag.y0);
+    g.fillStyle='rgba(224,106,106,.25)'; g.strokeStyle='#e06a6a'; g.fillRect(x*vs,y*vs,w*vs,h*vs); g.strokeRect(x*vs,y*vs,w*vs,h*vs); }
+  // escala
+  if(calib.length){ g.strokeStyle='#3f8ae0'; g.fillStyle='#3f8ae0'; g.lineWidth=2;
+    calib.forEach(p=>{ g.beginPath(); g.arc(p.x*vs,p.y*vs,4,0,7); g.fill(); });
+    if(calib.length===2){ g.beginPath(); g.moveTo(calib[0].x*vs,calib[0].y*vs); g.lineTo(calib[1].x*vs,calib[1].y*vs); g.stroke(); } }
+  // origen
+  if(originPx){ const x=originPx.x*vs,y=originPx.y*vs; g.strokeStyle='#39c07f'; g.lineWidth=2;
+    g.beginPath(); g.moveTo(x-9,y); g.lineTo(x+9,y); g.moveTo(x,y-9); g.lineTo(x,y+9); g.stroke();
+    g.fillStyle='#39c07f'; g.font='bold 12px monospace'; g.fillText('0,0',x+11,y-6); }
+}
+
+// ---------- generar el grid de ocupacion ----------
+function buildGrid(){
+  if(!img){ alert('Carga un plano primero.'); return null; }
+  if(!mppx){ alert('Calibra la escala (📏) primero.'); return null; }
+  const res=parseFloat($('#res').value)||0.05;
+  const cellpx=res/mppx;
+  if(cellpx<1.2 && !confirm('La resolución es muy fina para esta escala; el mapa saldrá enorme y lento. ¿Seguir igualmente?')) return null;
+  const gW=Math.max(1,Math.floor(imgW/cellpx)), gH=Math.max(1,Math.floor(imgH/cellpx));
+  // pixeles a resolucion nativa
+  const off=document.createElement('canvas'); off.width=imgW; off.height=imgH;
+  const oc=off.getContext('2d'); oc.drawImage(img,0,0);
+  const px=oc.getImageData(0,0,imgW,imgH).data;
+  const isWall=(ix,iy)=>{ const i=(iy*imgW+ix)*4; return px[i]<80&&px[i+1]<80&&px[i+2]<80&&px[i+3]>40; };
+  const inFurn=(ix,iy)=>furniture.some(f=>ix>=f.x&&ix<f.x+f.w&&iy>=f.y&&iy<f.y+f.h);
+  // clasificar (gyTop=0 arriba): 1 pared, 0 no-pared
+  const cls=new Uint8Array(gW*gH);
+  for(let gy=0;gy<gH;gy++)for(let gx=0;gx<gW;gx++){
+    const x0=Math.floor(gx*cellpx),x1=Math.min(imgW,Math.floor((gx+1)*cellpx));
+    const y0=Math.floor(gy*cellpx),y1=Math.min(imgH,Math.floor((gy+1)*cellpx));
+    let wall=inFurn((x0+x1)>>1,(y0+y1)>>1);
+    if(!wall){ for(let iy=y0;iy<y1&&!wall;iy++)for(let ix=x0;ix<x1;ix++){ if(isWall(ix,iy)){wall=true;break;} } }
+    cls[gy*gW+gx]=wall?1:0;
+  }
+  // exterior = flood-fill de no-pared desde los bordes
+  const ext=new Uint8Array(gW*gH), stack=[];
+  const pushIf=(x,y)=>{ if(x<0||y<0||x>=gW||y>=gH)return; const k=y*gW+x; if(!ext[k]&&cls[k]===0){ext[k]=1;stack.push(k);} };
+  for(let x=0;x<gW;x++){pushIf(x,0);pushIf(x,gH-1);} for(let y=0;y<gH;y++){pushIf(0,y);pushIf(gW-1,y);}
+  while(stack.length){ const k=stack.pop(),x=k%gW,y=(k/gW)|0; pushIf(x+1,y);pushIf(x-1,y);pushIf(x,y+1);pushIf(x,y-1); }
+  // origen: el punto marcado, o el centro de la mayor zona libre interior
+  let ogx,ogyTop;
+  if(originPx){ ogx=Math.min(gW-1,Math.max(0,Math.floor(originPx.x/cellpx))); ogyTop=Math.min(gH-1,Math.max(0,Math.floor(originPx.y/cellpx)));
+    if(cls[ogyTop*gW+ogx]===1||ext[ogyTop*gW+ogx]) st('⚠ El origen cae en pared/exterior; lo reubico a zona libre.');
+  }
+  if(!originPx || cls[ogyTop*gW+ogx]===1 || ext[ogyTop*gW+ogx]){
+    let sx=0,sy=0,n=0; for(let k=0;k<gW*gH;k++){ if(cls[k]===0&&!ext[k]){ sx+=k%gW; sy+=(k/gW)|0; n++; } }
+    if(n){ const mx=sx/n,my=sy/n; let best=1e18; for(let k=0;k<gW*gH;k++){ if(cls[k]===0&&!ext[k]){ const x=k%gW,y=(k/gW)|0,dd=(x-mx)*(x-mx)+(y-my)*(y-my); if(dd<best){best=dd;ogx=x;ogyTop=y;} } } }
+  }
+  const ogyBot=gH-1-ogyTop, originX=-ogx*res, originY=-ogyBot*res;
+  // datos con fila 0 = abajo (origen), como espera map_edit
+  const data=new Array(gW*gH);
+  for(let gyBot=0;gyBot<gH;gyBot++){ const gyTop=gH-1-gyBot;
+    for(let gx=0;gx<gW;gx++){ const k=gyTop*gW+gx; data[gyBot*gW+gx]= cls[k]===1?100:(ext[k]?-1:0); } }
+  const occ=data.filter(v=>v===100).length;
+  return {res,gW,gH,originX,originY,data,occ};
+}
+
+// ---------- guardar via rosbridge (map_edit) ----------
+let ws=null,wsReady=false;
+function connect(cb){
+  if(wsReady){cb();return;}
+  ws=new WebSocket('ws://'+host+':9090');
+  ws.onopen=()=>{ wsReady=true;
+    ws.send(JSON.stringify({op:'advertise',topic:'/edited_map',type:'nav_msgs/msg/OccupancyGrid'}));
+    ws.send(JSON.stringify({op:'advertise',topic:'/slam/edit_save',type:'std_msgs/msg/String'}));
+    ws.send(JSON.stringify({op:'subscribe',topic:'/slam/edit_status',type:'std_msgs/msg/String'}));
+    setTimeout(cb,150);
+  };
+  ws.onmessage=e=>{ const d=JSON.parse(e.data); if(d.topic==='/slam/edit_status') st('robot: '+d.msg.data); };
+  ws.onerror=()=>st('⚠ Sin conexión con el robot (:9090). ¿Está el Banco arrancado? Mira el badge de arriba.');
+  ws.onclose=()=>{ wsReady=false; };
+}
+$('#save').onclick=()=>{
+  const grid=buildGrid(); if(!grid)return;
+  const name=($('#name').value||'planta-piso').trim().replace(/[^a-zA-Z0-9_-]/g,'-');
+  st('Generado '+grid.gW+'×'+grid.gH+' celdas · '+grid.occ+' ocupadas · origen ('+grid.originX.toFixed(2)+', '+grid.originY.toFixed(2)+'). Enviando…');
+  connect(()=>{
+    if(!wsReady){ st('⚠ No hay conexión. Arranca el Banco desde inicio y reintenta.'); return; }
+    const msg={ header:{frame_id:'map',stamp:{sec:0,nanosec:0}},
+      info:{resolution:grid.res,width:grid.gW,height:grid.gH,
+            origin:{position:{x:grid.originX,y:grid.originY,z:0.0},orientation:{x:0,y:0,z:0,w:1.0}}},
+      data:grid.data };
+    ws.send(JSON.stringify({op:'publish',topic:'/edited_map',msg}));
+    setTimeout(()=>{ ws.send(JSON.stringify({op:'publish',topic:'/slam/edit_save',msg:{data:name}}));
+      st('Guardando "'+name+'"… (espera el mensaje del robot). Luego: Panel Nav2 → 🗺️ Mapa real… → '+name); },700);
+  });
+};
+render();
+</script>
+</body>
+</html>
