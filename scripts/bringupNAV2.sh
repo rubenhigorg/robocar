@@ -17,7 +17,7 @@ CFG=~/robocar/src/robocar_pkg/config/nav2_bench.yaml
 # rosbridge + panel
 pgrep -f rosbridge_websocket >/dev/null || ( nohup ros2 launch rosbridge_server rosbridge_websocket_launch.xml >/tmp/rosbridge.log 2>&1 & )
 # limpiar todo lo que pueda chocar
-for pass in 1 2 3; do for n in collision_monitor bt_navigator controller_server planner_server behavior_server amcl lifecycle_manager waypoint_follower velocity_smoother smoother_server nav_config map_areas particle_relay sim_map_loader goal_relay trajectory_nav cartographer_node cartographer_occupancy_grid_node map_edit_node slam_checkpoint_node rplidar_node rf2o_laser_odometry sim_map_grid sim_sensors sim_motion ekf_node ekf_filter ekf.launch car_control_node encoder_node accelerometer_node steer_yaw_node robot_state_publisher robocar_health_node; do pkill -9 -f "$n" 2>/dev/null; done; sleep 1; done
+for pass in 1 2 3; do for n in collision_monitor bt_navigator controller_server planner_server behavior_server amcl lifecycle_manager waypoint_follower velocity_smoother smoother_server nav_config map_areas particle_relay sim_map_loader goal_relay trajectory_nav cartographer_node cartographer_occupancy_grid_node map_edit_node slam_checkpoint_node rplidar_node rf2o_laser_odometry sim_map_grid sim_sensors sim_motion ekf_node ekf_filter ekf.launch car_control_node encoder_node accelerometer_node steer_yaw_node robot_state_publisher robocar_health_node mcp_server_node; do pkill -9 -f "$n" 2>/dev/null; done; sleep 1; done
 sleep 2
 # --- banco (planta simulada) ---
 nohup ros2 launch robocar_description description.launch.py >/tmp/desc.log 2>&1 & disown
@@ -48,6 +48,7 @@ nohup python3 ~/robocar/src/robocar_pkg/robocar_pkg/particle_relay_node.py >/tmp
 nohup python3 ~/robocar/src/robocar_pkg/robocar_pkg/sim_map_loader_node.py >/tmp/sml.log 2>&1 & disown   # cargar mapa REAL en el banco (Fase B)
 nohup python3 ~/robocar/src/robocar_pkg/robocar_pkg/map_edit_node.py >/tmp/me.log 2>&1 & disown   # soporte del editor de mapa (tambien util en el banco)
 nohup python3 ~/robocar/src/robocar_pkg/robocar_pkg/robocar_health_node.py >/tmp/health.log 2>&1 & disown   # estado del entorno (badge/entornos.html)
+nohup python3 ~/robocar/src/robocar_pkg/robocar_pkg/mcp_server_node.py >/tmp/mcp.log 2>&1 & disown   # servidor MCP (Capa 3): tools para el LLM en :8090
 sleep 2
 echo "=== nodos Nav2 ==="; ros2 node list 2>/dev/null | grep -iE 'planner|controller|behavior|bt_nav|lifecycle|goal_relay|trajectory' | sort
 echo "=== estado lifecycle ==="
