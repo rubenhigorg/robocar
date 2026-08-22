@@ -22,8 +22,27 @@ def _san(x):
 
 
 def _spawn(cmd, log):
-    subprocess.Popen(['bash', '-lc', cmd], stdout=open(log, 'ab'),
+    subprocess.Popen(['bash', '-lc', cmd], stdout=open(log, 'wb'),   # 'wb': log limpio por arranque
                      stderr=subprocess.STDOUT, start_new_session=True)
+
+
+def _progress(env):
+    """Lee el log del bringup activo y saca los pasos ('-> nodo') y si ha terminado."""
+    steps, done, tail = [], False, ''
+    try:
+        txt = open('/tmp/launcher_%s.log' % env, encoding='utf-8', errors='replace').read()
+        lines = txt.splitlines()
+        for l in lines:
+            s = l.strip()
+            if s.startswith('-> '):
+                steps.append(s[3:].strip())
+        low = txt.lower()
+        done = ('listo' in low) or ('lista' in low) or ('estado lifecycle' in low)
+        tail = lines[-1].strip() if lines else ''
+    except Exception:
+        pass
+    return {'steps': steps, 'count': len(steps), 'last': steps[-1] if steps else '',
+            'done': done, 'tail': tail}
 
 
 def start_env(env, arg=''):
@@ -32,7 +51,7 @@ def start_env(env, arg=''):
     if arg:
         cmd += ' ' + arg
     _spawn(cmd, '/tmp/launcher_%s.log' % env)
-    threading.Thread(target=lambda: (time.sleep(32), state.update(launching=None)), daemon=True).start()
+    threading.Thread(target=lambda: (time.sleep(40), state.update(launching=None)), daemon=True).start()
 
 
 def stop_all():
@@ -66,6 +85,13 @@ class Handler(SimpleHTTPRequestHandler):
             else:
                 self._json({'ok': False, 'msg': 'entorno desconocido'})
             return
+        if p.path == '/api/progress':
+            env = (parse_qs(p.query).get('env', ['']))[0]
+            if env not in ENVS:
+                env = state['launching'] if state['launching'] in ENVS else ''
+            pr = _progress(env) if env else {'steps': [], 'count': 0, 'last': '', 'done': False, 'tail': ''}
+            pr.update({'ok': True, 'env': env, 'launching': state['launching']})
+            self._json(pr); return
         if p.path == '/api/stop':
             stop_all(); self._json({'ok': True, 'msg': 'parando todo'}); return
         if p.path == '/api/status':

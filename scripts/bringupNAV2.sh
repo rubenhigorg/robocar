@@ -20,6 +20,7 @@ pgrep -f rosbridge_websocket >/dev/null || ( nohup ros2 launch rosbridge_server 
 for pass in 1 2 3; do for n in collision_monitor bt_navigator controller_server planner_server behavior_server amcl lifecycle_manager waypoint_follower velocity_smoother smoother_server nav_config map_areas particle_relay sim_map_loader goal_relay trajectory_nav cartographer_node cartographer_occupancy_grid_node map_edit_node slam_checkpoint_node rplidar_node rf2o_laser_odometry sim_map_grid sim_sensors sim_motion ekf_node ekf_filter ekf.launch car_control_node encoder_node accelerometer_node steer_yaw_node robot_state_publisher robocar_health_node; do pkill -9 -f "$n" 2>/dev/null; done; sleep 1; done
 sleep 2
 # --- banco (planta simulada) ---
+echo "  -> arrancando simulador (sim_motion/sensors/mapa)"
 nohup ros2 launch robocar_description description.launch.py >/tmp/desc.log 2>&1 & disown
 sleep 2
 nohup python3 ~/robocar/src/robocar_pkg/robocar_pkg/sim_motion_node.py --ros-args -p cmd_mode:=twist -p rate_hz:=20.0 >/tmp/sm.log 2>&1 & disown
@@ -29,6 +30,7 @@ nohup python3 ~/robocar/src/robocar_pkg/robocar_pkg/trajectory_nav_node.py --ros
 sleep 4
 # (sin mapa de arranque: la web empieza limpia; el usuario carga su mapa cuando quiere)
 # --- Nav2 ---
+echo "  -> arrancando Nav2 (planner/controller/amcl)"
 nohup /opt/ros/humble/lib/nav2_planner/planner_server --ros-args --params-file $CFG >/tmp/planner.log 2>&1 & disown
 nohup /opt/ros/humble/lib/nav2_controller/controller_server --ros-args -r /cmd_vel:=/cmd_vel_raw --params-file $CFG >/tmp/controller.log 2>&1 & disown
 nohup /opt/ros/humble/lib/nav2_behaviors/behavior_server --ros-args --params-file $CFG >/tmp/behavior.log 2>&1 & disown
@@ -36,10 +38,12 @@ nohup /opt/ros/humble/lib/nav2_bt_navigator/bt_navigator --ros-args --params-fil
 nohup /opt/ros/humble/lib/nav2_collision_monitor/collision_monitor --ros-args --params-file $CFG >/tmp/colmon.log 2>&1 & disown   # reflejo IR
 nohup /opt/ros/humble/lib/nav2_amcl/amcl --ros-args --params-file $CFG >/tmp/amcl.log 2>&1 & disown   # LOCALIZACION (map->odom)
 sleep 4
+echo "  -> activando Nav2 (lifecycle ~12 s)"
 nohup /opt/ros/humble/lib/nav2_lifecycle_manager/lifecycle_manager --ros-args -r __node:=lifecycle_manager_navigation --params-file $CFG >/tmp/lifecycle.log 2>&1 & disown
 nohup /opt/ros/humble/lib/nav2_lifecycle_manager/lifecycle_manager --ros-args -r __node:=lifecycle_manager_localization --params-file $CFG >/tmp/lifeloc.log 2>&1 & disown
 sleep 12
 # relay del destino: /goal_pose (web) -> accion NavigateToPose (Nav2)
+echo "  -> arrancando soporte (goal_relay/nav_config/health) + rosbridge"
 nohup python3 ~/robocar/src/robocar_pkg/robocar_pkg/goal_relay_node.py >/tmp/gr.log 2>&1 & disown
 # config de navegacion (contrato /nav_config para web y LLM)
 nohup python3 ~/robocar/src/robocar_pkg/robocar_pkg/nav_config_node.py >/tmp/nc.log 2>&1 & disown

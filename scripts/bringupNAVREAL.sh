@@ -49,6 +49,7 @@ run amcl       /opt/ros/humble/lib/nav2_amcl/amcl                      --ros-arg
 sleep 4
 run lifecycle_nav /opt/ros/humble/lib/nav2_lifecycle_manager/lifecycle_manager --ros-args -r __node:=lifecycle_manager_navigation   --params-file "$CFG"
 run lifecycle_loc /opt/ros/humble/lib/nav2_lifecycle_manager/lifecycle_manager --ros-args -r __node:=lifecycle_manager_localization --params-file "$CFG"
+echo "  -> activando Nav2 (lifecycle ~12 s)"
 sleep 12
 # 7) motor real (deadman 0.5s -> neutro) + soporte web
 run car_control  ros2 run robocar_pkg car_control_node

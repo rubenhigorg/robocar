@@ -130,12 +130,29 @@
 <script>
 const _api=p=>fetch(p).then(r=>r.json()).catch(()=>({ok:false,msg:"sin conexión con el lanzador"}));
 const _cm=document.getElementById("ctrlmsg");
+let _pollT=null;
+function _poll(env,nom){
+  const t0=Date.now(); if(_pollT) clearInterval(_pollT);
+  _pollT=setInterval(async()=>{
+    const p=await _api("/api/progress?env="+env);
+    const el=Math.round((Date.now()-t0)/1000);
+    if(p.done || p.launching===null){
+      clearInterval(_pollT); _pollT=null;
+      _cm.textContent="✅ "+nom+" arrancado en "+el+" s · "+(p.count||0)+" nodos · mira el badge de estado (arriba).";
+      return;
+    }
+    const paso=p.last?("último: "+p.last):"limpiando lo anterior…";
+    _cm.textContent="⏳ Arrancando "+nom+"… "+el+" s · "+(p.count||0)+" nodos · "+paso;
+  },1500);
+}
 document.querySelectorAll('.ctrl-btns button[data-env]').forEach(b=>b.onclick=async()=>{
   const env=b.dataset.env, nom=env==="slam"?"cartografía":(env==="navreal"?"navegación real":"banco");
-  _cm.textContent="Arrancando "+nom+"… (~25 s; el badge se pondrá verde al terminar)";
-  const r=await _api("/api/start?env="+env); if(!r.ok) _cm.textContent="Error: "+(r.msg||"no se pudo");
+  _cm.textContent="⏳ Arrancando "+nom+"…";
+  const r=await _api("/api/start?env="+env);
+  if(!r.ok){ _cm.textContent="Error: "+(r.msg||"no se pudo"); return; }
+  _poll(env,nom);
 });
-document.getElementById("stopenv").onclick=async()=>{ _cm.textContent="Parando todo…"; const r=await _api("/api/stop"); _cm.textContent=r.ok?"Todo parado.":"Error al parar"; };
+document.getElementById("stopenv").onclick=async()=>{ if(_pollT){clearInterval(_pollT);_pollT=null;} _cm.textContent="⏳ Parando todo…"; const r=await _api("/api/stop"); _cm.textContent=r.ok?"⏹ Todo parado.":"Error al parar"; };
 </script>
 <script src="health-badge.js"></script>
 </body>
