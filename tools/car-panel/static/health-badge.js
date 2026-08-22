@@ -17,8 +17,9 @@
   function mount(){ if(document.body && !document.getElementById("rc-health")) document.body.appendChild(b); }
   if(document.body) mount(); else addEventListener("DOMContentLoaded", mount);
 
-  // aviso si la pagina necesita OTRO entorno (window.RC_NEED = "BANCO" | "SLAM")
-  const NEEDMAP = {BANCO:"banco", SLAM:"slam"};
+  // aviso si la pagina necesita OTRO entorno. window.RC_NEED = "BANCO" | "SLAM" | "NAV_REAL",
+  // o una LISTA separada por comas si la pagina vale para varios (p.ej. "BANCO,NAV_REAL": ambos son Nav2).
+  const NEEDMAP = {BANCO:"banco", SLAM:"slam", NAV_REAL:"navreal"};
   const warn = document.createElement("div");
   warn.id = "rc-need";
   warn.style.cssText =
@@ -28,15 +29,15 @@
   function mountW(){ if(document.body && !document.getElementById("rc-need")) document.body.appendChild(warn); }
   if(document.body) mountW(); else addEventListener("DOMContentLoaded", mountW);
   function checkNeed(h){
-    const need = window.RC_NEED;
-    if(!need || h.scenario === need){ warn.style.display = "none"; return; }
-    const env = NEEDMAP[need];
-    warn.textContent = "⚠️ Esta página necesita el entorno " + need + " · activo: " + (h.scenario||"—") + "  ";
+    const needs = (window.RC_NEED||"").split(",").map(s=>s.trim()).filter(Boolean);
+    if(!needs.length || needs.includes(h.scenario)){ warn.style.display = "none"; return; }
+    const target = needs[0], env = NEEDMAP[target];
+    warn.textContent = "⚠️ Esta página necesita el entorno " + needs.join(" o ") + " · activo: " + (h.scenario||"—") + "  ";
     const btn = document.createElement("button");
-    btn.textContent = "Cambiar a " + need;
+    btn.textContent = "Cambiar a " + target;
     btn.style.cssText = "font:inherit;font-weight:800;border:1px solid #1a1206;border-radius:8px;" +
       "background:#1a1206;color:#e0a24a;padding:.15rem .55rem;cursor:pointer;margin-left:.3rem";
-    btn.onclick = ()=>{ if(env) fetch("/api/start?env="+env).catch(()=>{}); warn.textContent = "Cambiando a "+need+"… (~25 s)"; };
+    btn.onclick = ()=>{ if(env) fetch("/api/start?env="+env).catch(()=>{}); warn.textContent = "Cambiando a "+target+"… (~25 s)"; };
     warn.appendChild(btn); warn.style.display = "block";
   }
 

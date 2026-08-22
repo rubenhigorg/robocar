@@ -721,7 +721,7 @@ $('#reset').onclick=()=>{ if(!connected){flash('Sin conexión');return;}
 let bt=null; function flash(t){ const b=$('#banner'); b.textContent=t; b.classList.add('show'); clearTimeout(bt); bt=setTimeout(()=>b.classList.remove('show'),2000); }
 connect();
 </script>
-<script>window.RC_NEED="BANCO";</script>
+<script>window.RC_NEED="BANCO,NAV_REAL";</script>
 <script src="health-badge.js"></script>
 </body>
 </html>
