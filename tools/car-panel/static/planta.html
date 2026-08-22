@@ -7,7 +7,7 @@
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📐</text></svg>">
 <style>
   :root{--bg:#0b0f16;--surface:#141c26;--raise:#1b2634;--ink:#e6ecf3;--muted:#93a1b2;--faint:#5c6a7c;
-    --line:#26323f;--accent:#3f8ae0;--ok:#39c07f;--warn:#e0a24a;--danger:#e06a6a;--cyan:#00d2e6;
+    --line:#26323f;--accent:#3f8ae0;--ok:#39c07f;--warn:#e0a24a;--danger:#e06a6a;
     --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;--mono:ui-monospace,Consolas,Menlo,monospace;}
   *{box-sizing:border-box}
   html,body{margin:0;min-height:100%;background:var(--bg);color:var(--ink);font-family:var(--sans);
@@ -21,7 +21,7 @@
   .bar .grp{display:flex;gap:.35rem;align-items:center;padding-right:.6rem;margin-right:.2rem;border-right:1px solid var(--line)}
   .bar .grp:last-child{border-right:none}
   button,input,select{font:inherit}
-  button{font-weight:600;font-size:.82rem;padding:.5rem .8rem;border-radius:9px;border:1px solid var(--line);
+  button{font-weight:600;font-size:.82rem;padding:.5rem .7rem;border-radius:9px;border:1px solid var(--line);
     background:var(--raise);color:var(--ink);cursor:pointer}
   button:hover{border-color:var(--accent)}
   button.act{background:var(--accent);border-color:var(--accent);color:#fff}
@@ -34,12 +34,12 @@
   .canvaswrap{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:.5rem;overflow:auto}
   canvas{display:block;max-width:100%;border-radius:6px;cursor:crosshair;background:#fff}
   .pill{font-family:var(--mono);font-size:.72rem;padding:.2rem .5rem;border-radius:20px;border:1px solid var(--line);color:var(--muted)}
-  .pill.on{color:var(--ok);border-color:var(--ok)}
-  .pill.off{color:var(--danger);border-color:var(--danger)}
+  .pill.on{color:var(--ok);border-color:var(--ok)} .pill.off{color:var(--danger);border-color:var(--danger)}
   #status{font-family:var(--mono);font-size:.76rem;color:var(--faint);min-height:1.2em;margin:.6rem 0}
   .furns{display:flex;flex-wrap:wrap;gap:.4rem;margin-top:.5rem}
   .furn{display:flex;gap:.4rem;align-items:center;background:var(--raise);border:1px solid var(--line);border-radius:20px;
-    padding:.15rem .3rem .15rem .7rem;font-size:.78rem}
+    padding:.15rem .3rem .15rem .7rem;font-size:.78rem;cursor:pointer}
+  .furn.sel{border-color:var(--accent);color:#fff}
   .furn button{padding:.05rem .4rem;border-radius:50%;border:none;background:transparent;color:var(--danger)}
   .help{color:var(--faint);font-size:.75rem;margin-top:.9rem;line-height:1.6}
   .help b{color:var(--muted)}
@@ -51,7 +51,7 @@
 <div class="wrap">
   <a class="back" href="index.html">← inicio</a>
   <h1>📐 Plano → mapa</h1>
-  <div class="sub">Convierte un plano de planta (imagen) en un mapa de navegación: escala real, paredes automáticas y muebles como obstáculos. Se guarda en <code>~/robocar/maps/</code> y aparece en <b>🗺️ Mapa real…</b> del Panel Nav2.</div>
+  <div class="sub">Convierte un plano de planta (imagen) en un mapa de navegación: escala real, paredes automáticas, y muebles/paredes editables. Se guarda en <code>~/robocar/maps/</code> y aparece en <b>🗺️ Mapa real…</b> del Panel Nav2.</div>
 
   <div class="bar">
     <div class="grp">
@@ -59,17 +59,22 @@
       <input type="file" id="file" accept="image/*" style="display:none">
     </div>
     <div class="grp">
-      <button id="tScale" class="tool">📏 Escala</button>
-      <button id="tOrigin" class="tool">📍 Origen (0,0)</button>
+      <button id="tSelect" class="tool act">✋ Sel</button>
       <button id="tFurn" class="tool">▭ Mueble</button>
+      <button id="tWall" class="tool">▬ Pared</button>
+      <button id="tErase" class="tool">⌫ Borra pared</button>
+    </div>
+    <div class="grp">
+      <button id="tScale" class="tool">📏 Escala</button>
+      <button id="tOrigin" class="tool">📍 Origen</button>
       <button id="tWalls">👁️ Ver paredes</button>
     </div>
     <div class="grp">
       <span class="pill" id="pScale">escala: —</span>
-      <label class="lbl">resol. <input class="num" id="res" type="number" step="0.01" min="0.01" value="0.05"> m/celda</label>
+      <label class="lbl">resol.<input class="num" id="res" type="number" step="0.01" min="0.01" value="0.05">m</label>
     </div>
     <div class="grp">
-      <input class="txt" id="name" value="planta-piso" title="nombre del mapa">
+      <input class="txt" id="name" value="planta-piso">
       <button id="save" class="go">💾 Generar y guardar</button>
     </div>
   </div>
@@ -81,13 +86,27 @@
       <span class="pill off" id="wsp">robot: …</span>
     </div>
     <div class="grp" id="orow2" style="display:none">
-      <button id="tAlign" class="tool">🧲 Alinear (arrastra)</button>
-      <label class="lbl">opac <input id="opacity" type="range" min="10" max="100" value="70" style="width:74px"></label>
-      <button id="sminus" title="reducir">− esc</button><button id="splus" title="aumentar">esc +</button>
-      <label class="lbl">giro <input id="rot" type="range" min="-180" max="180" step="0.5" value="0" style="width:104px"></label>
+      <button id="tAlign" class="tool">🧲 Alinear</button>
+      <label class="lbl">opac<input id="opacity" type="range" min="10" max="100" value="70" style="width:70px"></label>
+      <button id="sminus">− esc</button><button id="splus">esc +</button>
+      <label class="lbl">giro<input id="rot" type="range" min="-180" max="180" step="0.5" value="0" style="width:96px"></label>
       <button id="takeScale" class="go">📏 Tomar escala</button>
       <button id="dropOverlay" class="danger">✕ Quitar</button>
     </div>
+  </div>
+
+  <div class="bar" id="selrow" style="display:none">
+    <div class="grp"><span class="pill on" id="selname">figura</span></div>
+    <div class="grp">
+      <label class="lbl">giro<input id="selrot" type="range" min="-180" max="180" step="1" value="0" style="width:120px"></label>
+      <span class="pill" id="selrotv">0°</span>
+    </div>
+    <div class="grp">
+      <label class="lbl">ancho<input id="selw" class="num" type="number" step="0.05" min="0.02"></label>
+      <label class="lbl">alto<input id="selh" class="num" type="number" step="0.05" min="0.02"></label>
+      <span class="pill" id="selunit">m</span>
+    </div>
+    <div class="grp"><button id="selDup">⧉ duplicar</button><button id="selDel" class="danger">🗑 borrar</button></div>
   </div>
 
   <div id="status">Carga un plano para empezar.</div>
@@ -96,10 +115,10 @@
   <div class="furns" id="furns"></div>
 
   <div class="help">
-    <div><span class="step">1</span><b>Escala:</b> o bien <b>📏 Escala</b> (pincha dos puntos de una distancia conocida y escribe los metros), o bien <b>superpón tu cartografiado</b> (abajo), cásalo con las paredes y pulsa <b>📏 Tomar escala</b> — así sale la escala real sin medir.</div>
-    <div><span class="step">2</span><b>📍 Origen:</b> pincha en el <b>pasillo</b> (zona blanca libre): ahí nacerá el coche (0,0), para que NO aparezca dentro de una pared.</div>
-    <div><span class="step">3</span><b>▭ Mueble:</b> arrastra un rectángulo sobre un mueble y ponle nombre. Serán obstáculos que Nav2 esquiva.</div>
-    <div><span class="step">4</span><b>💾 Guardar:</b> genera el mapa y lo manda al robot (necesita el <b>Banco</b> arrancado). Luego: Panel Nav2 → 🗺️ Mapa real… → tu mapa.</div>
+    <div><span class="step">1</span><b>Escala:</b> <b>📏 Escala</b> (dos puntos + metros) o superpón tu cartografiado (barra de abajo) y <b>📏 Tomar escala</b>.</div>
+    <div><span class="step">2</span><b>📍 Origen:</b> pincha en el pasillo (zona libre): ahí nace el coche (0,0).</div>
+    <div><span class="step">3</span><b>Editar:</b> <b>▭ Mueble</b>/<b>▬ Pared</b>/<b>⌫ Borra pared</b> = arrastra para dibujar. Con <b>✋ Sel</b> pinchas una figura y salen tiradores: <b>esquinas</b>=tamaño, <b>tirador de arriba</b>=girar; o usa el giro/ancho/alto de la barra. Borra pared abre puertas y quita muros del plano.</div>
+    <div><span class="step">4</span><b>💾 Guardar</b> (Banco arrancado) → Panel Nav2 → 🗺️ Mapa real… → tu mapa.</div>
   </div>
 </div>
 
@@ -109,126 +128,157 @@
 const $=s=>document.querySelector(s);
 const cv=$('#c'), g=cv.getContext('2d');
 const host=location.hostname||'192.168.1.102';
-let img=null, imgW=0, imgH=0, vs=1;           // vs = px canvas / px imagen
-let tool=null;                                 // 'scale'|'origin'|'furn'|'align'
-let calib=[], mppx=0;
-let originPx=null;
-let furniture=[];
-let drag=null, showWalls=false;
-let overlay=null, alignDrag=null, expecting=false;   // capa cartografiada
+const DEG=r=>r*180/Math.PI, RAD=d=>d*Math.PI/180;
+let img=null, imgW=0, imgH=0, vs=1;
+let tool='select';                                  // select|furn|wall|erase|scale|origin|align
+let calib=[], mppx=0, originPx=null;
+let shapes=[], sel=-1;                               // figuras {kind:furn|wall|erase, cx,cy,w,h,rot,label}
+let create=null, action=null, showWalls=false;
+let overlay=null, alignDrag=null, expecting=false;
 const st=m=>{$('#status').textContent=m;};
+const KCOL={furn:{f:'rgba(224,106,106,.35)',s:'#e06a6a'},wall:{f:'rgba(18,22,32,.82)',s:'#0a0d14'},erase:{f:'rgba(57,192,127,.22)',s:'#39c07f'}};
+const KNAME={furn:'mueble',wall:'pared',erase:'hueco'};
 
-// ---------- cargar imagen base ----------
+// ---------- imagen ----------
 $('#btnLoad').onclick=()=>$('#file').click();
-$('#file').onchange=e=>{ const f=e.target.files[0]; if(!f)return;
-  const im=new Image();
+$('#file').onchange=e=>{ const f=e.target.files[0]; if(!f)return; const im=new Image();
   im.onload=()=>{ img=im; imgW=im.naturalWidth; imgH=im.naturalHeight;
     const dw=Math.min(imgW,1000); cv.width=dw; cv.height=Math.round(dw*imgH/imgW); vs=dw/imgW;
-    calib=[];mppx=0;originPx=null;furniture=[];updScale();renderFurns();render();
-    st('Plano cargado ('+imgW+'×'+imgH+' px). Calibra la escala (📏) o superpón el cartografiado.'); };
-  im.src=URL.createObjectURL(f);
-};
+    calib=[];mppx=0;originPx=null;shapes=[];sel=-1;updScale();renderList();updSelRow();render();
+    st('Plano cargado ('+imgW+'×'+imgH+'). Calibra la escala o superpón el cartografiado.'); };
+  im.src=URL.createObjectURL(f); };
 
 // ---------- herramientas ----------
-function setTool(t){ tool=(tool===t?null:t);
-  [['tScale','scale'],['tOrigin','origin'],['tFurn','furn'],['tAlign','align']]
-    .forEach(([id,name])=>$('#'+id)&&$('#'+id).classList.toggle('act',tool===name));
-  cv.style.cursor = tool==='align'?'move':(tool?'crosshair':'default');
-}
-$('#tScale').onclick=()=>{ calib=[]; setTool('scale'); st('Escala: pincha el PRIMER punto de una distancia conocida.'); };
-$('#tOrigin').onclick=()=>{ setTool('origin'); st('Origen: pincha en el pasillo (zona libre) donde nace el coche.'); };
+function setTool(t){ tool=t;
+  [['tSelect','select'],['tFurn','furn'],['tWall','wall'],['tErase','erase'],['tScale','scale'],['tOrigin','origin'],['tAlign','align']]
+    .forEach(([id,n])=>{const b=$('#'+id); if(b)b.classList.toggle('act',tool===n);});
+  cv.style.cursor = tool==='align'?'move':(tool==='select'?'default':'crosshair'); }
+$('#tSelect').onclick=()=>{ setTool('select'); st('Selecciona una figura para mover/girar/redimensionar.'); };
 $('#tFurn').onclick=()=>{ setTool('furn'); st('Mueble: arrastra un rectángulo sobre el mueble.'); };
+$('#tWall').onclick=()=>{ setTool('wall'); st('Pared: arrastra para dibujar una pared (ocupado).'); };
+$('#tErase').onclick=()=>{ setTool('erase'); st('Borra pared: arrastra un rectángulo para ABRIR (marca libre) — puertas, muros espurios.'); };
+$('#tScale').onclick=()=>{ calib=[]; setTool('scale'); st('Escala: pincha el PRIMER punto de una distancia conocida.'); };
+$('#tOrigin').onclick=()=>{ setTool('origin'); st('Origen: pincha en el pasillo (zona libre).'); };
 $('#tWalls').onclick=()=>{ showWalls=!showWalls; $('#tWalls').classList.toggle('act',showWalls); render(); };
 
-// ---------- coordenadas raton ----------
-const rectF=()=>cv.getBoundingClientRect();
-const toCanvas=ev=>{ const r=rectF(); return { x:(ev.clientX-r.left)*(cv.width/r.width), y:(ev.clientY-r.top)*(cv.height/r.height) }; };
-const toImg=ev=>{ const p=toCanvas(ev); return { x:p.x/vs, y:p.y/vs }; };
+// ---------- geometria de figuras (en px canvas) ----------
+const cC=s=>[s.cx*vs,s.cy*vs];
+function corner(s,sx,sy){ const lx=sx*s.w/2*vs, ly=sy*s.h/2*vs, c=Math.cos(s.rot), si=Math.sin(s.rot);
+  return [s.cx*vs+lx*c-ly*si, s.cy*vs+lx*si+ly*c]; }
+function rotHandle(s){ const ly=-(s.h/2*vs+18), c=Math.cos(s.rot), si=Math.sin(s.rot);
+  return [s.cx*vs-ly*si, s.cy*vs+ly*c]; }
+function inShapeC(px,py,s){ const dx=px-s.cx*vs, dy=py-s.cy*vs, c=Math.cos(-s.rot), si=Math.sin(-s.rot);
+  const lx=dx*c-dy*si, ly=dx*si+dy*c; return Math.abs(lx)<=s.w*vs/2 && Math.abs(ly)<=s.h*vs/2; }
 
-cv.addEventListener('mousedown',ev=>{ if(!img)return;
-  if(tool==='align'&&overlay){ const p=toCanvas(ev); alignDrag={mx:p.x,my:p.y, cx:overlay.cx,cy:overlay.cy}; return; }
-  const p=toImg(ev);
-  if(tool==='furn'){ drag={x0:p.x,y0:p.y,x1:p.x,y1:p.y}; }
-  else if(tool==='scale'){ calib.push(p); if(calib.length>=2) askMeters(); render(); }
-  else if(tool==='origin'){ originPx=p; st('Origen fijado. El coche nacerá aquí (0,0).'); render(); }
+// ---------- raton ----------
+const rF=()=>cv.getBoundingClientRect();
+const toC=ev=>{ const r=rF(); return { x:(ev.clientX-r.left)*(cv.width/r.width), y:(ev.clientY-r.top)*(cv.height/r.height) }; };
+const toI=ev=>{ const p=toC(ev); return { x:p.x/vs, y:p.y/vs }; };
+
+cv.addEventListener('mousedown',ev=>{ if(!img)return; const pc=toC(ev), pi=toI(ev);
+  if(tool==='align'&&overlay){ alignDrag={mx:pc.x,my:pc.y,cx:overlay.cx,cy:overlay.cy}; return; }
+  if(tool==='scale'){ calib.push(pi); if(calib.length>=2) askMeters(); render(); return; }
+  if(tool==='origin'){ originPx=pi; st('Origen fijado.'); render(); return; }
+  if(tool==='furn'||tool==='wall'||tool==='erase'){ create={x0:pi.x,y0:pi.y,x1:pi.x,y1:pi.y}; return; }
+  // select / manipular
+  if(sel>=0){ const s=shapes[sel];
+    const rh=rotHandle(s); if(Math.hypot(pc.x-rh[0],pc.y-rh[1])<10){ action={type:'rot'}; return; }
+    for(const[sx,sy]of[[1,1],[1,-1],[-1,1],[-1,-1]]){ const c=corner(s,sx,sy); if(Math.hypot(pc.x-c[0],pc.y-c[1])<10){ action={type:'size'}; return; } } }
+  // seleccionar la figura de mas arriba bajo el cursor
+  let hit=-1; for(let i=shapes.length-1;i>=0;i--){ if(inShapeC(pc.x,pc.y,shapes[i])){ hit=i; break; } }
+  sel=hit; updSelRow(); renderList();
+  if(hit>=0){ const s=shapes[hit]; action={type:'move',ox:s.cx,oy:s.cy,mx:pc.x,my:pc.y}; }
+  render();
 });
-cv.addEventListener('mousemove',ev=>{
-  if(alignDrag){ const p=toCanvas(ev); overlay.cx=alignDrag.cx+(p.x-alignDrag.mx); overlay.cy=alignDrag.cy+(p.y-alignDrag.my); render(); return; }
-  if(drag){ const p=toImg(ev); drag.x1=p.x; drag.y1=p.y; render(); }
-});
+cv.addEventListener('mousemove',ev=>{ if(!img)return; const pc=toC(ev);
+  if(alignDrag){ overlay.cx=alignDrag.cx+(pc.x-alignDrag.mx); overlay.cy=alignDrag.cy+(pc.y-alignDrag.my); render(); return; }
+  if(create){ const pi=toI(ev); create.x1=pi.x; create.y1=pi.y; render(); return; }
+  if(action&&sel>=0){ const s=shapes[sel];
+    if(action.type==='move'){ s.cx=action.ox+(pc.x-action.mx)/vs; s.cy=action.oy+(pc.y-action.my)/vs; }
+    else if(action.type==='size'){ const dx=pc.x-s.cx*vs,dy=pc.y-s.cy*vs,c=Math.cos(-s.rot),si=Math.sin(-s.rot);
+      s.w=Math.max(3,2*Math.abs(dx*c-dy*si)/vs); s.h=Math.max(3,2*Math.abs(dx*si+dy*c)/vs); }
+    else if(action.type==='rot'){ s.rot=Math.atan2(pc.y-s.cy*vs,pc.x-s.cx*vs)+Math.PI/2; }
+    updSelRow(); render(); } });
 window.addEventListener('mouseup',()=>{
   if(alignDrag){ alignDrag=null; return; }
-  if(drag){ const x=Math.min(drag.x0,drag.x1),y=Math.min(drag.y0,drag.y1),w=Math.abs(drag.x1-drag.x0),h=Math.abs(drag.y1-drag.y0);
-    drag=null; if(w>4&&h>4){ const label=prompt('Nombre del mueble (cama, sofá, armario…):','mueble')||'mueble'; furniture.push({x,y,w,h,label}); renderFurns(); } render(); }
-});
-cv.addEventListener('wheel',ev=>{ if(!overlay||tool!=='align')return; ev.preventDefault();
-  overlay.s *= (ev.deltaY<0?1.08:1/1.08); render(); },{passive:false});
+  if(create){ const x0=Math.min(create.x0,create.x1),y0=Math.min(create.y0,create.y1),w=Math.abs(create.x1-create.x0),h=Math.abs(create.y1-create.y0),kind=tool; create=null;
+    if(w>3&&h>3){ let label=KNAME[kind]; if(kind==='furn') label=prompt('Nombre del mueble (cama, sofá, armario…):','mueble')||'mueble';
+      shapes.push({kind,cx:x0+w/2,cy:y0+h/2,w,h,rot:0,label}); sel=shapes.length-1; updSelRow(); renderList(); }
+    render(); return; }
+  action=null; });
+cv.addEventListener('wheel',ev=>{ if(!overlay||tool!=='align')return; ev.preventDefault(); overlay.s*=(ev.deltaY<0?1.08:1/1.08); render(); },{passive:false});
 
 function askMeters(){ const dx=calib[1].x-calib[0].x,dy=calib[1].y-calib[0].y,dpx=Math.hypot(dx,dy);
   const m=parseFloat(prompt('¿Cuántos METROS hay entre esos dos puntos?','4.5'));
-  if(m>0&&dpx>0){ mppx=m/dpx; updScale(); st('Escala fijada: '+m+' m = '+Math.round(dpx)+' px → '+mppx.toFixed(4)+' m/px.'); }
-  else { calib=[]; st('Escala cancelada.'); }
-  setTool(null); render();
-}
-function updScale(){ const p=$('#pScale');
-  if(mppx){ p.textContent='escala: '+mppx.toFixed(4)+' m/px'; p.classList.add('on'); }
-  else { p.textContent='escala: —'; p.classList.remove('on'); } }
+  if(m>0&&dpx>0){ mppx=m/dpx; updScale(); st('Escala: '+m+' m = '+Math.round(dpx)+' px → '+mppx.toFixed(4)+' m/px.'); }
+  else { calib=[]; st('Escala cancelada.'); } setTool('select'); render(); }
+function updScale(){ const p=$('#pScale'); if(mppx){ p.textContent='escala: '+mppx.toFixed(4)+' m/px'; p.classList.add('on'); } else { p.textContent='escala: —'; p.classList.remove('on'); } renderList(); }
 
-// ---------- muebles ----------
-function renderFurns(){ const c=$('#furns'); c.innerHTML='';
-  furniture.forEach((f,i)=>{ const el=document.createElement('div'); el.className='furn';
-    const dim=mppx?' ('+(f.w*mppx).toFixed(2)+'×'+(f.h*mppx).toFixed(2)+' m)':'';
-    el.innerHTML='<span>▭ '+f.label+dim+'</span>';
-    const b=document.createElement('button'); b.textContent='✕'; b.title='quitar';
-    b.onclick=()=>{ furniture.splice(i,1); renderFurns(); render(); };
-    el.appendChild(b); c.appendChild(el); });
-}
+// ---------- panel de figura seleccionada ----------
+function updSelRow(){ const r=$('#selrow'); if(sel<0){ r.style.display='none'; return; } r.style.display='flex';
+  const s=shapes[sel]; $('#selname').textContent=(s.kind==='furn'?'▭ '+s.label:(s.kind==='wall'?'▬ pared':'⌫ hueco'));
+  $('#selrot').value=Math.round(DEG(s.rot)); $('#selrotv').textContent=Math.round(DEG(s.rot))+'°';
+  $('#selunit').textContent=mppx?'m':'px';
+  $('#selw').value=(mppx?(s.w*mppx):s.w).toFixed(mppx?2:0); $('#selh').value=(mppx?(s.h*mppx):s.h).toFixed(mppx?2:0); }
+$('#selrot').oninput=e=>{ if(sel<0)return; shapes[sel].rot=RAD(+e.target.value); $('#selrotv').textContent=Math.round(+e.target.value)+'°'; render(); };
+$('#selw').oninput=e=>{ if(sel<0)return; const v=parseFloat(e.target.value); if(v>0){ shapes[sel].w=mppx?v/mppx:v; render(); } };
+$('#selh').oninput=e=>{ if(sel<0)return; const v=parseFloat(e.target.value); if(v>0){ shapes[sel].h=mppx?v/mppx:v; render(); } };
+$('#selDel').onclick=()=>{ if(sel<0)return; shapes.splice(sel,1); sel=-1; updSelRow(); renderList(); render(); };
+$('#selDup').onclick=()=>{ if(sel<0)return; const s=shapes[sel]; shapes.push({...s,cx:s.cx+18,cy:s.cy+18}); sel=shapes.length-1; updSelRow(); renderList(); render(); };
+
+// ---------- lista ----------
+function renderList(){ const c=$('#furns'); c.innerHTML='';
+  shapes.forEach((s,i)=>{ const el=document.createElement('div'); el.className='furn'+(i===sel?' sel':'');
+    const ic=s.kind==='furn'?'▭':(s.kind==='wall'?'▬':'⌫'); const dim=mppx?' ('+(s.w*mppx).toFixed(2)+'×'+(s.h*mppx).toFixed(2)+'m)':'';
+    const nm=s.kind==='furn'?s.label:KNAME[s.kind];
+    el.innerHTML='<span>'+ic+' '+nm+dim+'</span>'; el.onclick=()=>{ sel=i; updSelRow(); renderList(); render(); };
+    const b=document.createElement('button'); b.textContent='✕'; b.onclick=ev=>{ ev.stopPropagation(); shapes.splice(i,1); if(sel===i)sel=-1; else if(sel>i)sel--; updSelRow(); renderList(); render(); };
+    el.appendChild(b); c.appendChild(el); }); }
 
 // ---------- dibujo ----------
-function render(){
-  if(!img){ g.clearRect(0,0,cv.width,cv.height); return; }
-  g.clearRect(0,0,cv.width,cv.height);
-  g.drawImage(img,0,0,cv.width,cv.height);
+function drawShape(s,i){ const col=KCOL[s.kind]; g.save(); g.translate(s.cx*vs,s.cy*vs); g.rotate(s.rot);
+  const w=s.w*vs,h=s.h*vs; g.fillStyle=col.f; g.strokeStyle=col.s; g.lineWidth=2;
+  if(s.kind==='erase') g.setLineDash([6,4]); g.fillRect(-w/2,-h/2,w,h); g.strokeRect(-w/2,-h/2,w,h); g.setLineDash([]);
+  if(s.kind==='furn'){ g.fillStyle='#fff'; g.font='12px sans-serif'; g.fillText(s.label,-w/2+3,-h/2+13); } g.restore();
+  if(i===sel){ g.strokeStyle='#3f8ae0'; g.fillStyle='#3f8ae0'; g.lineWidth=1.5;
+    for(const[sx,sy]of[[1,1],[1,-1],[-1,1],[-1,-1]]){ const c=corner(s,sx,sy); g.fillRect(c[0]-4,c[1]-4,8,8); }
+    const rh=rotHandle(s),cc=cC(s); g.beginPath(); g.moveTo(cc[0],cc[1]); g.lineTo(rh[0],rh[1]); g.stroke();
+    g.beginPath(); g.arc(rh[0],rh[1],5,0,7); g.stroke(); } }
+function render(){ if(!img){ g.clearRect(0,0,cv.width,cv.height); return; }
+  g.clearRect(0,0,cv.width,cv.height); g.drawImage(img,0,0,cv.width,cv.height);
   if(showWalls){ const d=g.getImageData(0,0,cv.width,cv.height),a=d.data;
-    for(let i=0;i<a.length;i+=4){ if(a[i]<80&&a[i+1]<80&&a[i+2]<80){ a[i]=224;a[i+1]=64;a[i+2]=64; } }
-    g.putImageData(d,0,0); }
-  // capa cartografiada
+    for(let i=0;i<a.length;i+=4){ if(a[i]<80&&a[i+1]<80&&a[i+2]<80){ a[i]=224;a[i+1]=64;a[i+2]=64; } } g.putImageData(d,0,0); }
   if(overlay){ g.save(); g.translate(overlay.cx,overlay.cy); g.rotate(overlay.rot); g.scale(overlay.s,overlay.s);
-    g.globalAlpha=overlay.opacity; g.imageSmoothingEnabled=false; g.drawImage(overlay.cvs,-overlay.oW/2,-overlay.oH/2);
-    g.restore(); g.globalAlpha=1; }
-  // muebles
-  g.lineWidth=2;
-  furniture.forEach(f=>{ g.fillStyle='rgba(224,106,106,.35)'; g.strokeStyle='#e06a6a';
-    g.fillRect(f.x*vs,f.y*vs,f.w*vs,f.h*vs); g.strokeRect(f.x*vs,f.y*vs,f.w*vs,f.h*vs);
-    g.fillStyle='#fff'; g.font='12px sans-serif'; g.fillText(f.label,f.x*vs+3,f.y*vs+13); });
-  if(drag){ const x=Math.min(drag.x0,drag.x1),y=Math.min(drag.y0,drag.y1),w=Math.abs(drag.x1-drag.x0),h=Math.abs(drag.y1-drag.y0);
-    g.fillStyle='rgba(224,106,106,.25)'; g.strokeStyle='#e06a6a'; g.fillRect(x*vs,y*vs,w*vs,h*vs); g.strokeRect(x*vs,y*vs,w*vs,h*vs); }
+    g.globalAlpha=overlay.opacity; g.imageSmoothingEnabled=false; g.drawImage(overlay.cvs,-overlay.oW/2,-overlay.oH/2); g.restore(); g.globalAlpha=1; }
+  shapes.forEach((s,i)=>drawShape(s,i));
+  if(create){ const x=Math.min(create.x0,create.x1)*vs,y=Math.min(create.y0,create.y1)*vs,w=Math.abs(create.x1-create.x0)*vs,h=Math.abs(create.y1-create.y0)*vs,c=KCOL[tool]||KCOL.furn;
+    g.setLineDash(tool==='erase'?[6,4]:[]); g.fillStyle=c.f; g.strokeStyle=c.s; g.lineWidth=2; g.fillRect(x,y,w,h); g.strokeRect(x,y,w,h); g.setLineDash([]); }
   if(calib.length){ g.strokeStyle='#3f8ae0'; g.fillStyle='#3f8ae0'; g.lineWidth=2;
     calib.forEach(p=>{ g.beginPath(); g.arc(p.x*vs,p.y*vs,4,0,7); g.fill(); });
     if(calib.length===2){ g.beginPath(); g.moveTo(calib[0].x*vs,calib[0].y*vs); g.lineTo(calib[1].x*vs,calib[1].y*vs); g.stroke(); } }
   if(originPx){ const x=originPx.x*vs,y=originPx.y*vs; g.strokeStyle='#39c07f'; g.lineWidth=2;
     g.beginPath(); g.moveTo(x-9,y); g.lineTo(x+9,y); g.moveTo(x,y-9); g.lineTo(x,y+9); g.stroke();
-    g.fillStyle='#39c07f'; g.font='bold 12px monospace'; g.fillText('0,0',x+11,y-6); }
-}
+    g.fillStyle='#39c07f'; g.font='bold 12px monospace'; g.fillText('0,0',x+11,y-6); } }
 
 // ---------- generar grid ----------
-function buildGrid(){
-  if(!img){ alert('Carga un plano primero.'); return null; }
-  if(!mppx){ alert('Fija la escala: 📏 Escala, o superpón el cartografiado y 📏 Tomar escala.'); return null; }
+function inShapeI(ix,iy,s){ const dx=ix-s.cx,dy=iy-s.cy,c=Math.cos(-s.rot),si=Math.sin(-s.rot);
+  const lx=dx*c-dy*si, ly=dx*si+dy*c; return Math.abs(lx)<=s.w/2 && Math.abs(ly)<=s.h/2; }
+function buildGrid(){ if(!img){ alert('Carga un plano.'); return null; }
+  if(!mppx){ alert('Fija la escala (📏) o superpón el cartografiado y 📏 Tomar escala.'); return null; }
   const res=parseFloat($('#res').value)||0.05, cellpx=res/mppx;
-  if(cellpx<1.2 && !confirm('La resolución es muy fina para esta escala; el mapa saldrá enorme. ¿Seguir?')) return null;
+  if(cellpx<1.2 && !confirm('Resolución muy fina para esta escala; el mapa saldrá enorme. ¿Seguir?')) return null;
   const gW=Math.max(1,Math.floor(imgW/cellpx)), gH=Math.max(1,Math.floor(imgH/cellpx));
-  const off=document.createElement('canvas'); off.width=imgW; off.height=imgH;
-  const oc=off.getContext('2d'); oc.drawImage(img,0,0);
+  const off=document.createElement('canvas'); off.width=imgW; off.height=imgH; const oc=off.getContext('2d'); oc.drawImage(img,0,0);
   const px=oc.getImageData(0,0,imgW,imgH).data;
   const isWall=(ix,iy)=>{ const i=(iy*imgW+ix)*4; return px[i]<80&&px[i+1]<80&&px[i+2]<80&&px[i+3]>40; };
-  const inFurn=(ix,iy)=>furniture.some(f=>ix>=f.x&&ix<f.x+f.w&&iy>=f.y&&iy<f.y+f.h);
+  const occ=shapes.filter(s=>s.kind==='furn'||s.kind==='wall'), era=shapes.filter(s=>s.kind==='erase');
   const cls=new Uint8Array(gW*gH);
   for(let gy=0;gy<gH;gy++)for(let gx=0;gx<gW;gx++){
-    const x0=Math.floor(gx*cellpx),x1=Math.min(imgW,Math.floor((gx+1)*cellpx));
-    const y0=Math.floor(gy*cellpx),y1=Math.min(imgH,Math.floor((gy+1)*cellpx));
-    let wall=inFurn((x0+x1)>>1,(y0+y1)>>1);
+    const x0=Math.floor(gx*cellpx),x1=Math.min(imgW,Math.floor((gx+1)*cellpx)),y0=Math.floor(gy*cellpx),y1=Math.min(imgH,Math.floor((gy+1)*cellpx));
+    const cxp=(x0+x1)>>1, cyp=(y0+y1)>>1;
+    let wall=false; for(const s of occ){ if(inShapeI(cxp,cyp,s)){ wall=true; break; } }
     if(!wall){ for(let iy=y0;iy<y1&&!wall;iy++)for(let ix=x0;ix<x1;ix++){ if(isWall(ix,iy)){wall=true;break;} } }
+    if(wall){ for(const s of era){ if(inShapeI(cxp,cyp,s)){ wall=false; break; } } }
     cls[gy*gW+gx]=wall?1:0;
   }
   const ext=new Uint8Array(gW*gH),stk=[];
@@ -237,85 +287,57 @@ function buildGrid(){
   while(stk.length){ const k=stk.pop(),x=k%gW,y=(k/gW)|0; pushIf(x+1,y);pushIf(x-1,y);pushIf(x,y+1);pushIf(x,y-1); }
   let ogx,ogyTop;
   if(originPx){ ogx=Math.min(gW-1,Math.max(0,Math.floor(originPx.x/cellpx))); ogyTop=Math.min(gH-1,Math.max(0,Math.floor(originPx.y/cellpx)));
-    if(cls[ogyTop*gW+ogx]===1||ext[ogyTop*gW+ogx]) st('⚠ El origen cae en pared/exterior; lo reubico a zona libre.'); }
-  if(!originPx||cls[ogyTop*gW+ogx]===1||ext[ogyTop*gW+ogx]){
-    let sx=0,sy=0,n=0; for(let k=0;k<gW*gH;k++){ if(cls[k]===0&&!ext[k]){ sx+=k%gW; sy+=(k/gW)|0; n++; } }
+    if(cls[ogyTop*gW+ogx]===1||ext[ogyTop*gW+ogx]) st('⚠ Origen en pared/exterior; lo reubico a zona libre.'); }
+  if(!originPx||cls[ogyTop*gW+ogx]===1||ext[ogyTop*gW+ogx]){ let sx=0,sy=0,n=0;
+    for(let k=0;k<gW*gH;k++){ if(cls[k]===0&&!ext[k]){ sx+=k%gW; sy+=(k/gW)|0; n++; } }
     if(n){ const mx=sx/n,my=sy/n; let best=1e18; for(let k=0;k<gW*gH;k++){ if(cls[k]===0&&!ext[k]){ const x=k%gW,y=(k/gW)|0,dd=(x-mx)*(x-mx)+(y-my)*(y-my); if(dd<best){best=dd;ogx=x;ogyTop=y;} } } } }
   const ogyBot=gH-1-ogyTop, originX=-ogx*res, originY=-ogyBot*res;
   const data=new Array(gW*gH);
-  for(let gyBot=0;gyBot<gH;gyBot++){ const gyTop=gH-1-gyBot;
-    for(let gx=0;gx<gW;gx++){ const k=gyTop*gW+gx; data[gyBot*gW+gx]= cls[k]===1?100:(ext[k]?-1:0); } }
-  return {res,gW,gH,originX,originY,data,occ:data.filter(v=>v===100).length};
-}
+  for(let gyBot=0;gyBot<gH;gyBot++){ const gyTop=gH-1-gyBot; for(let gx=0;gx<gW;gx++){ const k=gyTop*gW+gx; data[gyBot*gW+gx]=cls[k]===1?100:(ext[k]?-1:0); } }
+  return {res,gW,gH,originX,originY,data,occ:data.filter(v=>v===100).length}; }
 
-// ---------- rosbridge (persistente) ----------
+// ---------- rosbridge ----------
 const adv=(t,ty)=>JSON.stringify({op:'advertise',topic:t,type:ty});
 const subj=(t,ty)=>JSON.stringify({op:'subscribe',topic:t,type:ty});
 const pubj=(t,m)=>JSON.stringify({op:'publish',topic:t,msg:m});
 let ws=null,wsReady=false;
-function wsStatus(ok){ const p=$('#wsp'); p.textContent=ok?'robot: conectado':'robot: sin conexión (arranca Banco)';
-  p.classList.toggle('on',ok); p.classList.toggle('off',!ok); }
-function wsConnect(){
-  try{ ws=new WebSocket('ws://'+host+':9090'); }catch(e){ return; }
+function wsStatus(ok){ const p=$('#wsp'); p.textContent=ok?'robot: conectado':'robot: sin conexión (arranca Banco)'; p.classList.toggle('on',ok); p.classList.toggle('off',!ok); }
+function wsConnect(){ try{ ws=new WebSocket('ws://'+host+':9090'); }catch(e){ return; }
   ws.onopen=()=>{ wsReady=true; wsStatus(true);
-    ws.send(adv('/edited_map','nav_msgs/msg/OccupancyGrid'));
-    ws.send(adv('/slam/edit_save','std_msgs/msg/String'));
-    ws.send(adv('/slam/edit_load','std_msgs/msg/String'));
-    ws.send(subj('/slam/edit_status','std_msgs/msg/String'));
-    ws.send(subj('/slam/maps_list','std_msgs/msg/String'));
-    ws.send(subj('/edit_map','nav_msgs/msg/OccupancyGrid'));
-  };
+    ws.send(adv('/edited_map','nav_msgs/msg/OccupancyGrid')); ws.send(adv('/slam/edit_save','std_msgs/msg/String'));
+    ws.send(adv('/slam/edit_load','std_msgs/msg/String')); ws.send(subj('/slam/edit_status','std_msgs/msg/String'));
+    ws.send(subj('/slam/maps_list','std_msgs/msg/String')); ws.send(subj('/edit_map','nav_msgs/msg/OccupancyGrid')); };
   ws.onmessage=e=>{ const d=JSON.parse(e.data);
-    if(d.topic==='/slam/edit_status') st('robot: '+d.msg.data);
-    else if(d.topic==='/slam/maps_list') fillMaps(d.msg.data);
-    else if(d.topic==='/edit_map') onEditMap(d.msg); };
-  ws.onclose=()=>{ wsReady=false; wsStatus(false); setTimeout(wsConnect,2500); };
-  ws.onerror=()=>{};
-}
-function fillMaps(js){ let o; try{o=JSON.parse(js);}catch(e){return;}
-  const sel=$('#mapsel'),cur=sel.value; sel.innerHTML='<option value="">— cartografiado a superponer —</option>';
-  (o.maps||[]).forEach(n=>{ const op=document.createElement('option'); op.value='map:'+n; op.textContent='🗺️ '+n; sel.appendChild(op); });
-  (o.checkpoints||[]).forEach(c=>{ const op=document.createElement('option'); op.value='ckpt:'+c.name; op.textContent='📍 '+c.name; sel.appendChild(op); });
-  if(cur) sel.value=cur;
-}
-$('#btnOverlay').onclick=()=>{ const sel=$('#mapsel').value;
-  if(!sel){ st('Elige un cartografiado en la lista.'); return; }
-  if(!wsReady){ st('⚠ Sin conexión (:9090). Arranca el Banco.'); return; }
-  expecting=true; ws.send(pubj('/slam/edit_load',{data:sel})); st('Cargando '+sel+' del robot…'); };
-function onEditMap(m){ if(!expecting)return; expecting=false;
-  const W=m.info.width,H=m.info.height,res=m.info.resolution,data=m.data;
-  const c=document.createElement('canvas'); c.width=W; c.height=H; const ctx=c.getContext('2d');
-  const id=ctx.createImageData(W,H),a=id.data;
-  for(let gyBot=0;gyBot<H;gyBot++){ const rowTop=H-1-gyBot;
-    for(let x=0;x<W;x++){ const v=data[gyBot*W+x],o=(rowTop*W+x)*4;
-      if(v>=50){ a[o]=0;a[o+1]=210;a[o+2]=230;a[o+3]=255; } else { a[o+3]=0; } } }
+    if(d.topic==='/slam/edit_status') st('robot: '+d.msg.data); else if(d.topic==='/slam/maps_list') fillMaps(d.msg.data); else if(d.topic==='/edit_map') onEditMap(d.msg); };
+  ws.onclose=()=>{ wsReady=false; wsStatus(false); setTimeout(wsConnect,2500); }; ws.onerror=()=>{}; }
+function fillMaps(js){ let o; try{o=JSON.parse(js);}catch(e){return;} const sel2=$('#mapsel'),cur=sel2.value;
+  sel2.innerHTML='<option value="">— cartografiado a superponer —</option>';
+  (o.maps||[]).forEach(n=>{ const op=document.createElement('option'); op.value='map:'+n; op.textContent='🗺️ '+n; sel2.appendChild(op); });
+  (o.checkpoints||[]).forEach(c=>{ const op=document.createElement('option'); op.value='ckpt:'+c.name; op.textContent='📍 '+c.name; sel2.appendChild(op); });
+  if(cur) sel2.value=cur; }
+$('#btnOverlay').onclick=()=>{ const s=$('#mapsel').value; if(!s){ st('Elige un cartografiado.'); return; } if(!wsReady){ st('⚠ Sin conexión. Arranca el Banco.'); return; }
+  expecting=true; ws.send(pubj('/slam/edit_load',{data:s})); st('Cargando '+s+'…'); };
+function onEditMap(m){ if(!expecting)return; expecting=false; const W=m.info.width,H=m.info.height,res=m.info.resolution,data=m.data;
+  const c=document.createElement('canvas'); c.width=W; c.height=H; const ctx=c.getContext('2d'); const id=ctx.createImageData(W,H),a=id.data;
+  for(let gb=0;gb<H;gb++){ const rt=H-1-gb; for(let x=0;x<W;x++){ const v=data[gb*W+x],o=(rt*W+x)*4; if(v>=50){ a[o]=0;a[o+1]=210;a[o+2]=230;a[o+3]=255; } else a[o+3]=0; } }
   ctx.putImageData(id,0,0);
   overlay={cvs:c,oW:W,oH:H,oRes:res,cx:cv.width/2,cy:cv.height/2,s:0.6*cv.width/W,rot:0,opacity:0.7};
   $('#orow2').style.display='flex'; $('#opacity').value=70; $('#rot').value=0;
-  st('Cartografiado superpuesto ('+W+'×'+H+', '+res.toFixed(3)+' m/celda). Con 🧲 Alinear muévelo/gíralo/escálalo (rueda=zoom) sobre las paredes del plano, y pulsa 📏 Tomar escala.');
-  setTool('align'); render();
-}
+  st('Cartografiado superpuesto ('+W+'×'+H+', '+res.toFixed(3)+' m/celda). 🧲 Alinear (rueda=zoom) sobre las paredes y 📏 Tomar escala.'); setTool('align'); render(); }
 $('#opacity').oninput=e=>{ if(overlay){ overlay.opacity=e.target.value/100; render(); } };
-$('#rot').oninput=e=>{ if(overlay){ overlay.rot=e.target.value*Math.PI/180; render(); } };
+$('#rot').oninput=e=>{ if(overlay){ overlay.rot=RAD(+e.target.value); render(); } };
 $('#sminus').onclick=()=>{ if(overlay){ overlay.s*=0.97; render(); } };
 $('#splus').onclick=()=>{ if(overlay){ overlay.s*=1.03; render(); } };
-$('#dropOverlay').onclick=()=>{ overlay=null; $('#orow2').style.display='none'; setTool(null); render(); st('Capa quitada.'); };
-$('#takeScale').onclick=()=>{ if(!overlay){ st('No hay capa superpuesta.'); return; } if(!img){ return; }
-  mppx=overlay.oRes*vs/overlay.s; updScale(); renderFurns();
-  st('Escala tomada del cartografiado: '+mppx.toFixed(4)+' m/px (celda '+overlay.oRes.toFixed(3)+' m). Ya puedes marcar origen, muebles y guardar.'); };
+$('#dropOverlay').onclick=()=>{ overlay=null; $('#orow2').style.display='none'; setTool('select'); render(); st('Capa quitada.'); };
+$('#takeScale').onclick=()=>{ if(!overlay||!img)return; mppx=overlay.oRes*vs/overlay.s; updScale(); updSelRow(); st('Escala del cartografiado: '+mppx.toFixed(4)+' m/px. Marca origen, muebles/paredes y guarda.'); };
 
 // ---------- guardar ----------
-$('#save').onclick=()=>{ const grid=buildGrid(); if(!grid)return;
-  const name=($('#name').value||'planta-piso').trim().replace(/[^a-zA-Z0-9_-]/g,'-');
+$('#save').onclick=()=>{ const grid=buildGrid(); if(!grid)return; const name=($('#name').value||'planta-piso').trim().replace(/[^a-zA-Z0-9_-]/g,'-');
   if(!wsReady){ st('⚠ Sin conexión (:9090). Arranca el Banco y reintenta.'); return; }
-  st('Generado '+grid.gW+'×'+grid.gH+' celdas · '+grid.occ+' ocupadas · origen ('+grid.originX.toFixed(2)+', '+grid.originY.toFixed(2)+'). Enviando…');
+  st('Generado '+grid.gW+'×'+grid.gH+' · '+grid.occ+' ocupadas · origen ('+grid.originX.toFixed(2)+', '+grid.originY.toFixed(2)+'). Enviando…');
   ws.send(pubj('/edited_map',{ header:{frame_id:'map',stamp:{sec:0,nanosec:0}},
-    info:{resolution:grid.res,width:grid.gW,height:grid.gH,
-          origin:{position:{x:grid.originX,y:grid.originY,z:0.0},orientation:{x:0,y:0,z:0,w:1.0}}},
-    data:grid.data }));
-  setTimeout(()=>{ ws.send(pubj('/slam/edit_save',{data:name}));
-    st('Guardando "'+name+'"… (espera el mensaje del robot). Luego: Panel Nav2 → 🗺️ Mapa real… → '+name); },700);
-};
+    info:{resolution:grid.res,width:grid.gW,height:grid.gH,origin:{position:{x:grid.originX,y:grid.originY,z:0.0},orientation:{x:0,y:0,z:0,w:1.0}}}, data:grid.data }));
+  setTimeout(()=>{ ws.send(pubj('/slam/edit_save',{data:name})); st('Guardando "'+name+'"… luego Panel Nav2 → 🗺️ Mapa real… → '+name); },700); };
 
 wsConnect(); render();
 </script>
