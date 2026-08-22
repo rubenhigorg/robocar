@@ -56,12 +56,13 @@
   </header>
 
   <div class="control">
-    <div class="ct">⚙️ <b>Entorno activo</b> (mira el badge de arriba) — arranca o cambia:</div>
+    <div class="ct">⚙️ <b>Arrancar / cambiar el entorno del robot</b> (mira el badge de arriba para el estado):</div>
     <div class="ctrl-btns">
-      <button data-env="banco">🧭 Banco (sim)</button>
-      <button data-env="slam">🗺️ Cartografía (real)</button>
+      <button data-env="banco">▶ Arrancar Banco (sim)</button>
+      <button data-env="slam">▶ Arrancar Cartografía (real)</button>
       <button id="stopenv" class="stop">⏹ Parar todo</button>
     </div>
+    <div class="ct" style="margin:.5rem 0 0;font-size:.72rem;color:var(--faint)">(Las tarjetas de abajo solo <b>abren</b> cada herramienta; para arrancar el robot usa estos botones.)</div>
     <div class="ctrl-msg" id="ctrlmsg"></div>
   </div>
 

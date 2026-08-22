@@ -46,9 +46,11 @@ class Health(Node):
     def tick(self):
         lines = self._proc_lines()
         def cnt(pat):
-            # cuenta procesos-nodo reales; ignora los envoltorios "ros2 run/launch" (que contienen
-            # el nombre del nodo pero no son el proceso del nodo) -> no falsos duplicados.
-            return sum(1 for l in lines if pat in l and 'ros2 run ' not in l and 'ros2 launch ' not in l)
+            # cuenta procesos-nodo reales; ignora ENVOLTORIOS (ros2 run/launch, cron sh -c / bash -lc)
+            # que contienen el nombre pero no son el proceso real -> no falsos duplicados.
+            return sum(1 for l in lines if pat in l
+                       and 'ros2 run ' not in l and 'ros2 launch ' not in l
+                       and 'bash -lc' not in l and '/bin/sh -c' not in l)
         def present(d):
             return any(cnt(p) > 0 for p in d.values())
 
