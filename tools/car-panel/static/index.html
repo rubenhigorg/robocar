@@ -60,6 +60,7 @@
     <div class="ctrl-btns">
       <button data-env="banco">▶ Arrancar Banco (sim)</button>
       <button data-env="slam">▶ Arrancar Cartografía (real)</button>
+      <button data-env="navreal">▶ Arrancar Nav real</button>
       <button id="stopenv" class="stop">⏹ Parar todo</button>
     </div>
     <div class="ct" style="margin:.5rem 0 0;font-size:.72rem;color:var(--faint)">(Las tarjetas de abajo solo <b>abren</b> cada herramienta; para arrancar el robot usa estos botones.)</div>
@@ -130,7 +131,7 @@
 const _api=p=>fetch(p).then(r=>r.json()).catch(()=>({ok:false,msg:"sin conexión con el lanzador"}));
 const _cm=document.getElementById("ctrlmsg");
 document.querySelectorAll('.ctrl-btns button[data-env]').forEach(b=>b.onclick=async()=>{
-  const env=b.dataset.env, nom=env==="slam"?"cartografía":"banco";
+  const env=b.dataset.env, nom=env==="slam"?"cartografía":(env==="navreal"?"navegación real":"banco");
   _cm.textContent="Arrancando "+nom+"… (~25 s; el badge se pondrá verde al terminar)";
   const r=await _api("/api/start?env="+env); if(!r.ok) _cm.textContent="Error: "+(r.msg||"no se pudo");
 });

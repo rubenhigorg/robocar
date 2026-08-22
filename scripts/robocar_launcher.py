@@ -13,8 +13,12 @@ from urllib.parse import urlparse, parse_qs
 
 STATIC = os.path.expanduser('~/robocar/tools/car-panel/static')
 SCRIPTS = os.path.expanduser('~/robocar/scripts')
-ENVS = {'banco': 'bringupNAV2.sh', 'slam': 'bringupSLAM.sh'}
+ENVS = {'banco': 'bringupNAV2.sh', 'slam': 'bringupSLAM.sh', 'navreal': 'bringupNAVREAL.sh'}
 state = {'launching': None}
+
+
+def _san(x):
+    return ''.join(c for c in (x or '') if c.isalnum() or c in '_-')
 
 
 def _spawn(cmd, log):
@@ -22,10 +26,12 @@ def _spawn(cmd, log):
                      stderr=subprocess.STDOUT, start_new_session=True)
 
 
-def start_env(env):
+def start_env(env, arg=''):
     state['launching'] = env
-    _spawn('bash %s/stopall.sh; bash %s/%s' % (SCRIPTS, SCRIPTS, ENVS[env]),
-           '/tmp/launcher_%s.log' % env)
+    cmd = 'bash %s/stopall.sh; bash %s/%s' % (SCRIPTS, SCRIPTS, ENVS[env])
+    if arg:
+        cmd += ' ' + arg
+    _spawn(cmd, '/tmp/launcher_%s.log' % env)
     threading.Thread(target=lambda: (time.sleep(32), state.update(launching=None)), daemon=True).start()
 
 
@@ -51,9 +57,12 @@ class Handler(SimpleHTTPRequestHandler):
     def do_GET(self):
         p = urlparse(self.path)
         if p.path == '/api/start':
-            env = (parse_qs(p.query).get('env', ['']))[0]
+            q = parse_qs(p.query)
+            env = (q.get('env', ['']))[0]
+            mapa = _san((q.get('map', ['']))[0])
             if env in ENVS:
-                start_env(env); self._json({'ok': True, 'env': env, 'msg': 'arrancando ' + env})
+                start_env(env, mapa if env == 'navreal' else '')
+                self._json({'ok': True, 'env': env, 'msg': 'arrancando ' + env})
             else:
                 self._json({'ok': False, 'msg': 'entorno desconocido'})
             return
