@@ -261,5 +261,6 @@ window.addEventListener("blur", ()=>release());
 let bt=null; function flash(msg){ const b=$("#banner"); b.textContent=msg; b.classList.add("show"); clearTimeout(bt); bt=setTimeout(()=>b.classList.remove("show"),2600); }
 resize(); connect(); updateArm();
 </script>
+<script src="health-badge.js"></script>
 </body>
 </html>
