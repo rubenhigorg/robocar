@@ -17,7 +17,8 @@ BANCO = {'sim_motion': 'sim_motion_node', 'sim_sensors': 'sim_sensors_node',
          'sim_map_grid': 'sim_map_grid_node', 'planner': 'nav2_planner/planner_server',
          'controller': 'nav2_controller/controller_server', 'bt_navigator': 'nav2_bt_navigator',
          'amcl': 'nav2_amcl/amcl', 'collision_monitor': 'nav2_collision_monitor',
-         'goal_relay': 'goal_relay_node', 'nav_config': 'nav_config_node', 'map_areas': 'map_areas_node'}
+         'goal_relay': 'goal_relay_node', 'nav_config': 'nav_config_node', 'map_areas': 'map_areas_node',
+         'mcp_server': 'mcp_server_node'}
 SLAM = {'rplidar': 'rplidar_node', 'encoder': 'encoder_node', 'imu': 'accelerometer_node',
         'car_control': 'car_control_node', 'ekf': 'ekf_node', 'cartographer': 'cartographer_node',
         'occupancy_grid': 'cartographer_occupancy_grid_node'}

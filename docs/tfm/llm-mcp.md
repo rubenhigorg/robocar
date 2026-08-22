@@ -239,7 +239,49 @@ Ejemplo de interacción:
 !!! tip "Extensión futura"
     Esta interfaz puede crecer con herramientas como `get_battery_status()`, `dock()`, `describe_surroundings()` o `navigate_through(waypoints)` sin alterar la estructura general del sistema.
 
-## 6. Diferenciación respecto a trabajos previos
+## 6. Implementación v1 del MCP Server
+
+La v1 (`src/robocar_pkg/robocar_pkg/mcp_server_node.py`) materializa el diseño anterior como un
+**envoltorio fino** (~250 líneas): la lógica dura ya vive en el grafo ROS2 construido en las
+capas anteriores, y el servidor se limita a exponerla como herramientas seguras.
+
+### Decisiones de implementación
+
+| Decisión | Elección | Motivo |
+|---|---|---|
+| Acceso a ROS2 | **rclpy directo** (nodo más del sistema) | corre junto a los nodos en la Pi; obligado además por `ROS_LOCALHOST_ONLY=1` |
+| Navegación | **action client propio** de `NavigateToPose` (patrón de `goal_relay`) | códigos de resultado limpios (SUCCEEDED/CANCELED/ABORTED) en vez de parsear los textos de `/nav2_relay/status`, que son para la web |
+| Transporte MCP | **FastMCP · HTTP** (`streamable-http`, puerto 8090) | el host puede correr fuera de la Pi; para probar basta `claude mcp add --transport http robocar http://robocar.local:8090/mcp` |
+| Concurrencia | executor rclpy en hilo de fondo; `navigate_to` bloquea hasta resultado (timeout 120 s) | la conversación queda alineada con el estado real del robot (sec. 4) |
+
+### Mapeo herramienta → grafo ROS2
+
+| Herramienta | Se apoya en |
+|---|---|
+| `navigate_to(lugar)` | salud vía `/robocar/health` → resolución semántica en `/map_areas` → acción `/navigate_to_pose` |
+| `get_current_location()` | `/amcl_pose` + punto-en-rectángulo sobre las zonas de `/map_areas` |
+| `list_known_places()` | `/map_areas` (zonas etiquetadas desde la web) |
+| `stop_navigation()` | cancela el goal propio **y** publica `/nav2_relay/cancel` (cubre goals lanzados desde la web) |
+| `get_situation()` | snapshot de `/robocar/health` + pose + zonas + navegación en curso |
+
+La v1 añade `get_situation()` a las cuatro herramientas de la sección 5: es la parte
+**dinámica** del contexto del agente (entorno BANCO/NAV_REAL/SLAM, salud, mapa), mientras que
+la parte **estática** (identidad Ackermann, restricciones, códigos de resultado y reglas tipo
+"si BLOCKED no reintentes") viaja embebida en las **descripciones de las tools** — el LLM la
+recibe en el handshake `tools/list`, sin gastar llamadas.
+
+### Frontera de seguridad
+
+- El servidor **solo escribe** en la acción `NavigateToPose` y en `/nav2_relay/cancel` —
+  nada que la web no haga ya; no añade capacidad de daño nueva.
+- **No se exponen**: `/cmd_vel` (el LLM navega, no conduce), `/initialpose` (desconfiguraría
+  AMCL), edición de mapas ni lanzador de entornos.
+- `navigate_to` exige entorno BANCO o NAV_REAL con salud OK (*defensa en profundidad*: la
+  herramienta verifica por sí misma, no confía en que el LLM consulte antes).
+- `set_driving_style` (sobre `/nav_config`) queda para la v2: exige diseñar los límites
+  (clamps) de velocidad con calma.
+
+## 7. Diferenciación respecto a trabajos previos
 
 La propuesta se diferencia de gran parte de la literatura y de muchas demos experimentales en tres aspectos clave:
 
