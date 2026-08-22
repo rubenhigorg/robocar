@@ -24,7 +24,7 @@ SELF_PGID=$(ps -o pgid= -p $$ | tr -d ' ')
 ROSPAT='/opt/ros/|robocar/src|robocar_pkg|rosbridge_server|rosapi|rplidar|nav2_|cartographer|rf2o|/ekf|amcl|robot_state_publisher|robocar_slam|robocar_description|map_server|lifecycle_manager|collision_monitor|sim_motion|sim_sensors|sim_map|goal_relay|nav_config|map_areas|particle_relay|slam_checkpoint|map_edit|sim_map_loader|robocar_health|trajectory_nav|encoder_node|accelerometer_node|car_control|steer_yaw|odom_cov|wheel_twist'
 
 collect_pgids(){
-  ps -eo pgid,args | grep -E "$ROSPAT" | grep -vE "grep|$LAUNCHER" \
+  ps -eo pgid,args | grep -E "$ROSPAT" | grep -vE "grep|$LAUNCHER|_ros2_daemon|ros2 daemon" \
     | awk '{print $1}' | sort -u | grep -vx "$SELF_PGID"
 }
 
@@ -47,13 +47,12 @@ for n in rosbridge_websocket rosapi_node rplidar_node cartographer_node cartogra
 done
 sleep 1
 
-# 3) higiene DDS: SHM obsoleta (raiz del cuelgue de rosbridge) + daemon ros2
+# 3) higiene DDS: SHM obsoleta (raiz del cuelgue de rosbridge)
 rm -f /dev/shm/fastrtps_* /dev/shm/sem.fastrtps_* 2>/dev/null
-( source /opt/ros/humble/setup.bash 2>/dev/null; ros2 daemon stop >/dev/null 2>&1 ) &
 sleep 1
 
-# 4) verificacion
-LEFT=$(ps -eo args | grep -E "$ROSPAT" | grep -vE "grep|$LAUNCHER" | wc -l | tr -d ' ')
+# 4) verificacion (el daemon de ros2 es inofensivo, no cuenta)
+LEFT=$(ps -eo args | grep -E "$ROSPAT" | grep -vE "grep|$LAUNCHER|_ros2_daemon|ros2 daemon" | wc -l | tr -d ' ')
 SHM=$(ls /dev/shm/ 2>/dev/null | grep -ic fastrtps)
 echo "stopall v2 -> procesos ROS restantes=$LEFT · segmentos fastrtps=$SHM · lanzador intacto"
 [ "$LEFT" = "0" ] && [ "$SHM" = "0" ] && echo "stopall v2 -> LIMPIO" || echo "stopall v2 -> AVISO: quedan restos (revisar)"
