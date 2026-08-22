@@ -231,10 +231,10 @@ collision_monitor:
       min_points: 1
       visualize: true
       polygon_pub_topic: "collision_stop_zone"
-    observation_sources: ["scan"]
-    scan:
-      type: "scan"
-      topic: "/scan"
+    observation_sources: ["ir"]
+    ir:
+      type: "range"
+      topic: "/ir_range"
 
 lifecycle_manager_navigation:
   ros__parameters:

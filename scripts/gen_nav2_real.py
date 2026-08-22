@@ -23,14 +23,9 @@ rep('desired_linear_vel: 0.450', 'desired_linear_vel: 0.250')
 # AMCL: mapa del map_server en /map (estatico), no /map_amcl del banco
 rep('map_topic: /map_amcl', 'map_topic: /map')
 rep('first_map_only: false', 'first_map_only: true')
-# collision_monitor con el LIDAR real (/scan) en vez del IR
-rep('''    observation_sources: ["ir"]
-    ir:
-      type: "range"
-      topic: "/ir_range"''', '''    observation_sources: ["scan"]
-    scan:
-      type: "scan"
-      topic: "/scan"''')
+# collision_monitor: se deja el del IR (/ir_range) del banco -- el freno de emergencia por
+# LIDAR daba falsos positivos en el banco (el laser ve paredes/objetos dentro de la StopZone)
+# y cortaba /cmd_vel -> el controller "Failed to make progress". El IR frontal es suficiente.
 # lifecycle de localizacion: arrancar tambien el map_server (antes de amcl)
 rep('''    node_names:
       - amcl''', '''    node_names:
