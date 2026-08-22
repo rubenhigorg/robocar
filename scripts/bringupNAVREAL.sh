@@ -31,9 +31,10 @@ run description ros2 launch robocar_description description.launch.py; sleep 2
 run rplidar ros2 run rplidar_ros rplidar_node --ros-args \
               -p serial_port:=/dev/serial0 -p serial_baudrate:=460800 \
               -p frame_id:=laser -p scan_mode:=Standard -p angle_compensate:=true
-# 3) sensores I2C
+# 3) sensores I2C + ultrasonidos/IR (contrato nav2: /us_* evitacion, /ir_range parada)
 run encoder ros2 run robocar_pkg encoder_node
 run imu     ros2 run robocar_pkg accelerometer_node
+run distance python3 ~/robocar/src/robocar_pkg/robocar_pkg/distance_node.py
 sleep 2
 # 4) EKF -> /odometry/filtered + TF odom->base_link
 run ekf ros2 launch robocar_pkg ekf.launch.py; sleep 3

@@ -2,6 +2,7 @@ import rclpy
 from rclpy.node import Node
 from std_msgs.msg import String
 from messages_pkg.msg import Distance
+from sensor_msgs.msg import Range   # puente al contrato de nav2 (igual que sim_sensors)
 import RPi.GPIO as GPIO
 import time
 
@@ -24,6 +25,17 @@ class UltrasoundNode(Node):
         super().__init__('distance_node')
         self.publisher_ = self.create_publisher(Distance, 'ultrasound_data', 10)
         self.timer = self.create_timer(0.1, self.talker)  # 10Hz
+
+        # --- PUENTE al contrato de nav2 (identico a sim_sensors): ultrasonidos como
+        #     sensor_msgs/Range para la range_layer del costmap (EVITACION) + /ir_range =
+        #     proximidad FRONTAL (ultrasonido central, capada a 0.5 m) para el
+        #     collision_monitor (PARADA). Frames segun el URDF (robot_state_publisher). ---
+        self.US_MAX = 3.0    # m (alcance ultrasonidos)
+        self.IR_MAX = 0.5    # m (proximidad frontal para la parada)
+        self.us_frames = {'center': 'ultrasound_center',
+                          'left': 'ultrasound_left', 'right': 'ultrasound_right'}
+        self.pub_us_range = {k: self.create_publisher(Range, '/us_' + k, 10) for k in self.us_frames}
+        self.pub_ir = self.create_publisher(Range, '/ir_range', 10)
 
         GPIO.setmode(GPIO.BCM)
 
@@ -71,8 +83,29 @@ class UltrasoundNode(Node):
         msg.right_distance = right_distance
         msg.center_distance = center_distance
         msg.emergency_stop = bool(GPIO.input(6)) # emergency_stop
-        self.get_logger().info(f'Publishing: {msg}')
         self.publisher_.publish(msg)
+
+        # --- puente al contrato de nav2 (como sim_sensors) ---
+        now = self.get_clock().now().to_msg()
+
+        def mk_range(dist_cm, frame, mx, rad, fov):
+            r = Range()
+            r.header.stamp = now
+            r.header.frame_id = frame
+            r.radiation_type = rad
+            r.field_of_view = fov
+            r.min_range = 0.02
+            r.max_range = mx
+            m = dist_cm / 100.0                                  # el sensor da cm
+            r.range = float(m) if (0.0 <= m <= mx) else float(mx)  # -1 (sin eco) -> max (sin obstaculo)
+            return r
+
+        # ultrasonidos -> /us_* (Range) para la evitacion (range_layer del costmap local)
+        self.pub_us_range['center'].publish(mk_range(center_distance, self.us_frames['center'], self.US_MAX, Range.ULTRASOUND, 0.5))
+        self.pub_us_range['left'].publish(mk_range(left_distance,   self.us_frames['left'],   self.US_MAX, Range.ULTRASOUND, 0.5))
+        self.pub_us_range['right'].publish(mk_range(right_distance, self.us_frames['right'],  self.US_MAX, Range.ULTRASOUND, 0.5))
+        # proximidad frontal (ultrasonido central) -> /ir_range para el collision_monitor (parada)
+        self.pub_ir.publish(mk_range(center_distance, 'base_link', self.IR_MAX, Range.INFRARED, 0.2))
 
 def main(args=None):
     rclpy.init(args=args)
