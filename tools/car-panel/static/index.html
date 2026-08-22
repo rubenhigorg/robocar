@@ -37,6 +37,15 @@
   .arrow{margin-left:auto;color:var(--faint);align-self:center;font-size:1.1rem}
   footer{margin-top:1.8rem;color:var(--faint);font-size:.74rem;font-family:var(--mono);text-align:center;line-height:1.6}
   @media (max-width:520px){ .wrap{padding-top:1.6rem} .brand{font-size:1.6rem} }
+  .control{border:1px solid var(--line);border-radius:14px;padding:.9rem 1rem;margin:0 0 1.3rem;
+    background:linear-gradient(180deg,var(--surface),#111925)}
+  .control .ct{font-size:.82rem;color:var(--muted);margin-bottom:.55rem}
+  .ctrl-btns{display:flex;gap:.5rem;flex-wrap:wrap}
+  .ctrl-btns button{font:inherit;font-weight:700;font-size:.85rem;padding:.6rem 1rem;border-radius:11px;
+    border:1px solid var(--line);background:var(--raise);color:var(--ink);cursor:pointer}
+  .ctrl-btns button:hover{border-color:var(--accent)}
+  .ctrl-btns .stop{border-color:#e0a24a;color:#e0a24a}
+  .ctrl-msg{font-size:.76rem;color:var(--faint);margin-top:.55rem;min-height:1.1em;font-family:var(--mono)}
 </style>
 </head>
 <body>
@@ -45,6 +54,16 @@
     <div class="brand">robo<span>car</span></div>
     <div class="sub">Control, navegación y cartografía del robot. Elige una herramienta:</div>
   </header>
+
+  <div class="control">
+    <div class="ct">⚙️ <b>Entorno activo</b> (mira el badge de arriba) — arranca o cambia:</div>
+    <div class="ctrl-btns">
+      <button data-env="banco">🧭 Banco (sim)</button>
+      <button data-env="slam">🗺️ Cartografía (real)</button>
+      <button id="stopenv" class="stop">⏹ Parar todo</button>
+    </div>
+    <div class="ctrl-msg" id="ctrlmsg"></div>
+  </div>
 
   <div class="grid">
     <a class="card" href="cartografia.html" style="--c:#39c07f">
@@ -98,6 +117,16 @@
 
   <footer>Raspberry Pi 4 · ROS2 Humble · rosbridge :9090 · panel :8080</footer>
 </div>
+<script>
+const _api=p=>fetch(p).then(r=>r.json()).catch(()=>({ok:false,msg:"sin conexión con el lanzador"}));
+const _cm=document.getElementById("ctrlmsg");
+document.querySelectorAll('.ctrl-btns button[data-env]').forEach(b=>b.onclick=async()=>{
+  const env=b.dataset.env, nom=env==="slam"?"cartografía":"banco";
+  _cm.textContent="Arrancando "+nom+"… (~25 s; el badge se pondrá verde al terminar)";
+  const r=await _api("/api/start?env="+env); if(!r.ok) _cm.textContent="Error: "+(r.msg||"no se pudo");
+});
+document.getElementById("stopenv").onclick=async()=>{ _cm.textContent="Parando todo…"; const r=await _api("/api/stop"); _cm.textContent=r.ok?"Todo parado.":"Error al parar"; };
+</script>
 <script src="health-badge.js"></script>
 </body>
 </html>

@@ -17,6 +17,29 @@
   function mount(){ if(document.body && !document.getElementById("rc-health")) document.body.appendChild(b); }
   if(document.body) mount(); else addEventListener("DOMContentLoaded", mount);
 
+  // aviso si la pagina necesita OTRO entorno (window.RC_NEED = "BANCO" | "SLAM")
+  const NEEDMAP = {BANCO:"banco", SLAM:"slam"};
+  const warn = document.createElement("div");
+  warn.id = "rc-need";
+  warn.style.cssText =
+    "position:fixed;top:40px;left:50%;transform:translateX(-50%);z-index:99998;display:none;" +
+    "font:600 12px system-ui,-apple-system,sans-serif;padding:.32rem .7rem;border-radius:10px;" +
+    "max-width:94vw;text-align:center;background:#e0a24a;color:#1a1206;box-shadow:0 2px 10px rgba(0,0,0,.4)";
+  function mountW(){ if(document.body && !document.getElementById("rc-need")) document.body.appendChild(warn); }
+  if(document.body) mountW(); else addEventListener("DOMContentLoaded", mountW);
+  function checkNeed(h){
+    const need = window.RC_NEED;
+    if(!need || h.scenario === need){ warn.style.display = "none"; return; }
+    const env = NEEDMAP[need];
+    warn.textContent = "⚠️ Esta página necesita el entorno " + need + " · activo: " + (h.scenario||"—") + "  ";
+    const btn = document.createElement("button");
+    btn.textContent = "Cambiar a " + need;
+    btn.style.cssText = "font:inherit;font-weight:800;border:1px solid #1a1206;border-radius:8px;" +
+      "background:#1a1206;color:#e0a24a;padding:.15rem .55rem;cursor:pointer;margin-left:.3rem";
+    btn.onclick = ()=>{ if(env) fetch("/api/start?env="+env).catch(()=>{}); warn.textContent = "Cambiando a "+need+"… (~25 s)"; };
+    warn.appendChild(btn); warn.style.display = "block";
+  }
+
   function set(txt, col){ b.textContent = txt; b.style.color = col; b.style.borderColor = col; }
   let ws=null;
   function conn(){
@@ -30,6 +53,7 @@
           const none = h.scenario==="NINGUNO";
           set((none?"⚪ ":(h.ok?"🟢 ":"🔴 ")) + (h.summary||h.scenario||""),
               none?"#93a1b2":(h.ok?"#39c07f":"#e05a5a"));
+          checkNeed(h);
         }catch(e){}
       } };
   }

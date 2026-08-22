@@ -16,7 +16,6 @@ export ROS_DOMAIN_ID=0 ROS_LOCALHOST_ONLY=1
 CFG=~/robocar/src/robocar_pkg/config/nav2_bench.yaml
 # rosbridge + panel
 pgrep -f rosbridge_websocket >/dev/null || ( nohup ros2 launch rosbridge_server rosbridge_websocket_launch.xml >/tmp/rosbridge.log 2>&1 & )
-pgrep -f "http.server 8080" >/dev/null || ( cd ~/robocar/tools/car-panel/static; nohup python3 -m http.server 8080 >/tmp/panel.log 2>&1 & )
 # limpiar todo lo que pueda chocar
 for pass in 1 2 3; do for n in collision_monitor bt_navigator controller_server planner_server behavior_server amcl lifecycle_manager waypoint_follower velocity_smoother smoother_server nav_config map_areas particle_relay sim_map_loader goal_relay trajectory_nav cartographer_node cartographer_occupancy_grid_node map_edit_node slam_checkpoint_node rplidar_node rf2o_laser_odometry sim_map_grid sim_sensors sim_motion ekf_node ekf_filter ekf.launch car_control_node encoder_node accelerometer_node steer_yaw_node robot_state_publisher robocar_health_node; do pkill -9 -f "$n" 2>/dev/null; done; sleep 1; done
 sleep 2

@@ -64,7 +64,7 @@ run health     python3 ~/robocar/src/robocar_pkg/robocar_pkg/robocar_health_node
 run car_control ros2 run robocar_pkg car_control_node
 # 7) Web: rosbridge (:9090) + panel (:8080)
 run rosbridge  ros2 launch rosbridge_server rosbridge_websocket_launch.xml
-run panel      bash -c "cd ~/robocar/tools/car-panel/static && exec python3 -m http.server 8080"
+# [panel lo sirve robocar_launcher] run panel      bash -c "cd ~/robocar/tools/car-panel/static && exec python3 -m http.server 8080"
 sleep 2
 
 echo ""
