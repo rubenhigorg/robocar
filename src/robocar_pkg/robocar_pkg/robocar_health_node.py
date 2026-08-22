@@ -26,7 +26,7 @@ NAV_REAL = {'rplidar': 'rplidar_node', 'encoder': 'encoder_node', 'imu': 'accele
             'amcl': 'nav2_amcl/amcl', 'planner': 'nav2_planner/planner_server',
             'controller': 'nav2_controller/controller_server'}
 # nodos "firma" y singletons
-SINGLETONS = {'rosbridge': 'lib/rosbridge_server/rosbridge_websocket', 'panel': 'http.server 8080',
+SINGLETONS = {'rosbridge': 'lib/rosbridge_server/rosbridge_websocket', 'panel/lanzador': 'robocar_launcher',
               'robot_state_publisher': 'robot_state_publisher'}
 
 
