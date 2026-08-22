@@ -102,6 +102,32 @@ class Handler(SimpleHTTPRequestHandler):
         pass
 
 
+def _kill_other_launchers():
+    """SINGLETON: mata cualquier otra instancia del lanzador antes de atar :8080.
+    Evita los duplicados que confunden al health ('panel/lanzador: 2 instancias')."""
+    me = os.getpid()
+    try:
+        out = subprocess.check_output(['ps', '-eo', 'pid,args'], text=True)
+    except Exception:
+        return
+    for line in out.splitlines():
+        if 'robocar_launcher.py' not in line:
+            continue
+        if 'bash -lc' in line or '/bin/sh -c' in line or 'ps -eo' in line:
+            continue
+        parts = line.split(None, 1)
+        if not parts or not parts[0].isdigit():
+            continue
+        pid = int(parts[0])
+        if pid != me:
+            try:
+                os.kill(pid, 9)
+            except Exception:
+                pass
+
+
 if __name__ == '__main__':
+    _kill_other_launchers()
+    time.sleep(1)   # deja que la instancia vieja libere :8080
     print('robocar_launcher en :8080 (sirve panel + /api/start,/stop,/status)')
     ThreadingHTTPServer(('0.0.0.0', 8080), Handler).serve_forever()
