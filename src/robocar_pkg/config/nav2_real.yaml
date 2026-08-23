@@ -120,6 +120,7 @@ global_costmap:
       static_layer:
         plugin: "nav2_costmap_2d::StaticLayer"
         map_subscribe_transient_local: true    # nuestro /map es latched
+        lethal_cost_threshold: 65    # cartographer marca paredes a prob 50-98; >=65 = pared (default 100 no las cogia)
         subscribe_to_updates: false
       obstacle_layer:
         plugin: "nav2_costmap_2d::ObstacleLayer"
