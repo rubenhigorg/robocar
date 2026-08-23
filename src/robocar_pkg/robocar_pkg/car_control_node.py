@@ -55,17 +55,25 @@ class CarControlNode(Node):
         self.declare_parameter('max_linear_rev', 0.5)  # m/s que mapea a throttle_rev_full (reversa mas lenta)
         # NAV_REAL arranca en autonomo (que Nav2 conduzca sin pulsar el boton X del joystick).
         self.declare_parameter('autonomous_start', False)
-        # STALL-BREAKER: si comando avanzar pero el encoder dice que NO me muevo, subo el gas
-        # gradualmente hasta que arranca (rompe el rozamiento estatico; se adapta a suelo/bateria).
-        self.declare_parameter('stall_boost_max', 14.0)   # grados extra de gas maximos
+        # LAZO DE VELOCIDAD (cerrado con el encoder): PI sobre la velocidad REAL (/odometry/filtered)
+        # para que la velocidad medida siga a la comandada por Nav2. throttle = feed-forward (mapa
+        # abierto) + correccion PI. Asi 0.12 m/s es 0.12 de verdad (antes era lazo abierto y no cuadraba).
+        self.declare_parameter('closed_loop', True)       # False -> solo feed-forward (lazo abierto)
+        self.declare_parameter('vel_kp', 18.0)            # grados de throttle por (m/s) de error
+        self.declare_parameter('vel_ki', 6.0)             # grados por (m/s*s) (elimina el error permanente)
+        self.declare_parameter('vel_i_max', 16.0)         # tope de la parte integral (grados) anti-windup
         self.declare_parameter('stall_speed_eps', 0.03)   # m/s por debajo = "parado"
+        # ANTI-PATINAJE: si doy gas casi a tope y el encoder NO ve movimiento durante stall_timeout,
+        # pulso NEUTRO (dejar de patinar -> odometria falsa que desubicaba a AMCL).
+        self.declare_parameter('stall_timeout', 1.2)      # s
 
         self.kit = ServoKit(channels=16)
         self.autonomous_mode = self.get_parameter('autonomous_start').value
-        self.meas_speed = 0.0     # velocidad real (encoder/EKF) para el stall-breaker
-        self.stall_boost = 0.0
+        self.meas_speed = 0.0     # velocidad real (encoder/EKF) -> lazo de velocidad
+        self.vel_i = 0.0          # integrador del lazo PI de velocidad
+        self.cmd_dir = 0          # sentido comandado (+1/-1/0): al cambiar, reseteo el integrador
+        self.stall_ticks = 0      # ciclos comandando sin moverme (anti-patinaje/desubicacion)
         self.rev_arm = 0          # ciclos de neutro para ARMAR la reversa del ESC (dwell)
-        self.rev_boost = 0.0      # stall-breaker de reversa
         self.create_subscription(Odometry, '/odometry/filtered', self._odom_cb, 10)
         self.create_subscription(Bool, '/set_autonomous', self._set_auto_cb, 10)  # armar/desarmar desde la web
         self.current_throttle = None
@@ -114,12 +122,18 @@ class CarControlNode(Node):
 
 
     def cmd_vel_callback(self, msg):
-        # Puente Ackermann: /cmd_vel (Twist) -> servo direccion + ESC.
+        # Puente Ackermann + LAZO DE VELOCIDAD (PI con el encoder): /cmd_vel (Twist) -> servo + ESC.
         # Solo actua en modo autonomo (igual que lane_info).
         if not self.autonomous_mode:
             return
 
-        self.last_cmd_vel_time = self.get_clock().now()
+        now = self.get_clock().now()
+        if self.last_cmd_vel_time is not None:
+            dt = self.clamp((now - self.last_cmd_vel_time).nanoseconds / 1e9, 0.01, 0.2)
+        else:
+            dt = 0.05
+        self.last_cmd_vel_time = now
+
         max_ang = self.get_parameter('max_angular').value
         steer_center = self.get_parameter('steer_center').value
         steer_span = self.get_parameter('steer_span').value
@@ -127,6 +141,15 @@ class CarControlNode(Node):
         stop = self.get_parameter('throttle_stop').value
         start = self.get_parameter('throttle_start').value
         full = self.get_parameter('throttle_full').value
+        rev_start = self.get_parameter('throttle_rev_start').value
+        rev_full = self.get_parameter('throttle_rev_full').value
+        max_lin_rev = self.get_parameter('max_linear_rev').value
+        closed = self.get_parameter('closed_loop').value
+        kp = self.get_parameter('vel_kp').value if closed else 0.0
+        ki = self.get_parameter('vel_ki').value if closed else 0.0
+        i_max = self.get_parameter('vel_i_max').value
+        eps = self.get_parameter('stall_speed_eps').value
+        stall_to = self.get_parameter('stall_timeout').value
 
         # Direccion: angular.z (rad/s) -> canal 2. angular.z > 0 (giro a la izq) -> servo > centro.
         ang = msg.angular.z
@@ -134,57 +157,67 @@ class CarControlNode(Node):
         steer = self.clamp(steer, 40.0, 170.0)
         self.kit.servo[2].angle = float(steer)
 
-        # Traccion: linear.x (m/s) -> canales 0 y 1. ESC bidireccional (verificado):
-        # ADELANTE = bajar el angulo desde el neutro (93.6 -> 27); ATRAS = subir
-        # el angulo (93.6 -> ~108).
+        # Traccion: linear.x (m/s) -> canales 0 y 1. ESC bidireccional: ADELANTE = BAJAR el angulo
+        # desde neutro (93.6 -> 27); ATRAS = SUBIR (93.6 -> ~108). El feed-forward da el angulo base
+        # segun el mapa; el PI lo corrige para que la velocidad REAL (encoder) siga a la comandada.
         lin = msg.linear.x
-        rev_start = self.get_parameter('throttle_rev_start').value
-        rev_full = self.get_parameter('throttle_rev_full').value
-        max_lin_rev = self.get_parameter('max_linear_rev').value
-        if max_lin <= 0.0:
+        meas = self.meas_speed
+        if max_lin <= 0.0 or abs(lin) < 1e-3:
             throttle = stop
             self.rev_arm = 0
-        elif lin > 0.0:
+            self.vel_i = 0.0
+            self.cmd_dir = 0
+            self.stall_ticks = 0
+        elif lin > 0.0:                                    # ADELANTE (mas gas = BAJAR el angulo)
+            if self.cmd_dir != 1:
+                self.vel_i = 0.0                           # cambio de sentido -> reset del integrador
+                self.cmd_dir = 1
             self.rev_arm = 0
             frac = min(lin / max_lin, 1.0)
-            throttle = start - frac * (start - full)
-            throttle = self.clamp(throttle, self.THROTTLE_HARD_FLOOR, stop)
-        elif lin < 0.0:
-            # QUIRK del ESC: si le pides reversa VINIENDO DE MOVERTE ADELANTE, FRENA en vez de
-            # retroceder. Solucion: un instante de NEUTRO para "armar" la reversa (dwell), luego reversa.
+            ff = start - frac * (start - full)             # feed-forward (mapa abierto)
+            err = lin - meas                               # v_cmd - v_real
+            throttle = self._pi_throttle(ff, err, dt, kp, ki, i_max, -1,
+                                         self.THROTTLE_HARD_FLOOR, stop)
+        else:                                              # ATRAS (lin < 0; mas gas = SUBIR el angulo)
+            if self.cmd_dir != -1:
+                self.vel_i = 0.0
+                self.cmd_dir = -1
+            # QUIRK del ESC: reversa VINIENDO DE MOVERTE ADELANTE -> FRENA. Neutro un instante (arma).
             prev_t = self.current_throttle if self.current_throttle is not None else stop
-            if self.rev_arm <= 0 and prev_t < stop - 0.3 and abs(self.meas_speed) > 0.03:
-                self.rev_arm = 8                      # ~0.4 s de neutro para armar el ESC
+            if self.rev_arm <= 0 and prev_t < stop - 0.3 and abs(meas) > 0.03:
+                self.rev_arm = 8                           # ~0.4 s de neutro para armar el ESC
             if self.rev_arm > 0:
                 self.rev_arm -= 1
-                throttle = stop                       # neutro (arma la reversa)
+                throttle = stop                            # neutro (arma la reversa)
+                self.vel_i = 0.0                           # no integrar durante el neutro
             else:
                 frac = min(-lin / max_lin_rev, 1.0)
-                throttle = rev_start + frac * (rev_full - rev_start)
-                throttle = self.clamp(throttle, stop, self.THROTTLE_HARD_CEIL)
+                ff = rev_start + frac * (rev_full - rev_start)
+                err = (-lin) - (-meas)                     # magnitud: v_cmd - v_real
+                throttle = self._pi_throttle(ff, err, dt, kp, ki, i_max, +1,
+                                             stop, self.THROTTLE_HARD_CEIL)
+
+        # ANTI-PATINAJE / ANTI-DESUBICACION: si YA doy gas casi a tope y el encoder no ve movimiento
+        # durante stall_timeout -> pulso NEUTRO. Evita seguir patinando (odometria falsa -> AMCL se
+        # desubica) cuando el ESC no arranca (p.ej. reversa que frena). near_max mira el gas ya
+        # ENTREGADO (tras rampa) para no dispararse durante el arranque normal.
+        prev_actual = self.current_throttle if self.current_throttle is not None else stop
+        near_max = ((lin > 0.0 and prev_actual <= self.THROTTLE_HARD_FLOOR + 2.0) or
+                    (lin < 0.0 and prev_actual >= self.THROTTLE_HARD_CEIL - 2.0))
+        if abs(lin) > 0.02 and abs(meas) < eps and self.rev_arm <= 0 and near_max:
+            self.stall_ticks += 1
+            if self.stall_ticks * dt > stall_to:
+                throttle = stop
+                self.vel_i = 0.0
+                self.stall_ticks = 0
+                self.rev_arm = 6 if lin < 0.0 else 0       # en reversa, re-arma el ESC; adelante solo respira
+                self.get_logger().warn(
+                    'comando %.2f m/s sin movimiento -> pulso neutro (no patinar/desubicar)' % lin)
         else:
-            throttle = stop
-            self.rev_arm = 0
-        # STALL-BREAKER (Ruben): el robot sabe si se mueve (encoder) -> si comando avanzar/retroceder
-        # pero no me muevo, subo el empuje hasta que arranca; al rodar, aflojo. Rompe el rozamiento.
-        eps = self.get_parameter('stall_speed_eps').value
-        bmax = self.get_parameter('stall_boost_max').value
-        if lin > 0.02:
-            self.rev_boost = 0.0
-            self.stall_boost = (min(self.stall_boost + 0.4, bmax) if abs(self.meas_speed) < eps
-                                else max(self.stall_boost - 0.6, 0.0))
-            throttle = self.clamp(throttle - self.stall_boost, self.THROTTLE_HARD_FLOOR, stop)   # bajar = mas gas
-        elif lin < -0.02 and self.rev_arm <= 0:       # reversa YA armada -> stall-breaker de reversa
-            self.stall_boost = 0.0
-            self.rev_boost = (min(self.rev_boost + 0.4, bmax) if abs(self.meas_speed) < eps
-                              else max(self.rev_boost - 0.6, 0.0))
-            throttle = self.clamp(throttle + self.rev_boost, stop, self.THROTTLE_HARD_CEIL)      # subir = mas reversa
-        else:
-            self.stall_boost = 0.0
-            self.rev_boost = 0.0
-        # Rampa anti-pico: DAR gas (alejarse del neutro, en cualquier sentido) se
-        # limita a max_throttle_step por comando; QUITAR gas (hacia el neutro) es
-        # instantaneo (freno inmediato).
+            self.stall_ticks = 0
+
+        # Rampa anti-pico: alejarse del neutro (dar gas) se limita a max_throttle_step por comando;
+        # acercarse al neutro (quitar gas) es instantaneo (freno inmediato).
         step = self.get_parameter('max_throttle_step').value
         prev = self.current_throttle if self.current_throttle is not None else stop
         if throttle < stop:            # zona ADELANTE
@@ -196,8 +229,17 @@ class CarControlNode(Node):
         self.write_throttle(throttle)
 
         self.get_logger().info(
-            'cmd_vel -> steer=%.1f throttle=%.1f (lin=%.2f ang=%.2f)'
-            % (steer, throttle, msg.linear.x, ang))
+            'cmd_vel -> steer=%.1f thr=%.1f (cmd=%.2f real=%.2f i=%.2f)'
+            % (steer, throttle, lin, meas, self.vel_i))
+
+    def _pi_throttle(self, ff, err, dt, kp, ki, i_max, sign, lo, hi):
+        # Lazo PI de velocidad. ff = feed-forward (mapa abierto); err = v_cmd - v_real (magnitud);
+        # sign = -1 adelante (mas gas = BAJAR throttle), +1 reversa (mas gas = SUBIR).
+        # Integrador con tope (anti-windup por clamping) -> no se dispara si satura o no arranca.
+        i_lim = (i_max / ki) if ki > 1e-6 else 0.0
+        self.vel_i = self.clamp(self.vel_i + err * dt, -i_lim, i_lim)
+        corr = kp * err + ki * self.vel_i              # grados alejandose del neutro
+        return self.clamp(ff + sign * corr, lo, hi)
 
     def _odom_cb(self, msg):
         self.meas_speed = msg.twist.twist.linear.x   # velocidad real para el stall-breaker
@@ -206,7 +248,7 @@ class CarControlNode(Node):
         self.autonomous_mode = bool(msg.data)
         self.get_logger().info('autonomous_mode = %s (via /set_autonomous)' % self.autonomous_mode)
         if not self.autonomous_mode:
-            self.stall_boost = 0.0
+            self.vel_i = 0.0
             self.set_throttle_neutral()
 
     def clamp(self, x, lo, hi):
