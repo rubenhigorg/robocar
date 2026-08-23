@@ -655,10 +655,15 @@ function onCostmap(m){ if(!showCost){ costImg=null; return; } const W=m.info.wid
     else { img.data[i]=224; img.data[i+1]=200; img.data[i+2]=90; img.data[i+3]=45; } }           // margen (tenue)
   g2.putImageData(img,0,0);
   costImg={canvas:oc,ox:m.info.origin.position.x,oy:m.info.origin.position.y,res,W,H}; draw(); }
+// Montaje del RPLidar (URDF laser_joint): x=0.07 m delante de base_link, yaw=pi (el 0 del sensor
+// mira ATRAS). Hay que aplicarlo aqui o el laser se pinta girado 180 respecto al mapa (AMCL si lo aplica).
+const LASER_X=0.07, LASER_YAW=Math.PI;
 function onScan(m){ if(!carRel) return; const pts=[]; const n=m.ranges.length;
+  const c=Math.cos(carRel.yaw), s=Math.sin(carRel.yaw);
   for(let i=0;i<n;i+=2){ const r=m.ranges[i]; if(!isFinite(r)||r<=0.02)continue;
-    const a=m.angle_min+i*m.angle_increment, lx=r*Math.cos(a), ly=r*Math.sin(a), c=Math.cos(carRel.yaw), s=Math.sin(carRel.yaw);
-    pts.push({x:carRel.x+lx*c-ly*s, y:carRel.y+lx*s+ly*c}); }
+    const a=m.angle_min+i*m.angle_increment+LASER_YAW;   // + giro del montaje del laser
+    const bx=LASER_X+r*Math.cos(a), by=r*Math.sin(a);     // punto en base_link
+    pts.push({x:carRel.x+bx*c-by*s, y:carRel.y+bx*s+by*c}); }
   scanPts=pts; }
 function onPlan(m){ if(!odom0){navPlan=[];return;} const pts=[];
   (m.poses||[]).forEach(ps=>{ const r=mapToRel(ps.pose.position.x, ps.pose.position.y); if(r) pts.push(r); });
