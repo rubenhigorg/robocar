@@ -260,7 +260,7 @@ amcl:
     scan_topic: /scan
     map_topic: /map              # SOLO cambia al cargar mapa nuevo (sim_map_grid); evita re-init cada seg
     set_initial_pose: true                # arranca creyendo estar en el origen (compatibilidad)
-    initial_pose: {x: 0.0, y: 0.0, z: 0.0, yaw: 0.0}
+    initial_pose: {x: 0.13, y: 0.56, z: 0.0, yaw: 1.676}   # pose HOME real en casa3 (fijada 2026-08-23; el robot debe arrancar aqui)
     tf_broadcast: true
     transform_tolerance: 1.0
     robot_model_type: "nav2_amcl::DifferentialMotionModel"   # usa deltas de odometria (vale para el coche)
