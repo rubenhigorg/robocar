@@ -48,8 +48,11 @@ export SLAM_LOAD_STATE="$PB"
 export SLAM_CONFIG="robocar_2d_localization.lua"
 run slam ros2 launch robocar_slam slam.launch.py
 run pose_bridge python3 ~/robocar/src/robocar_pkg/robocar_pkg/tf_to_amclpose.py   # TF map->base_link -> /amcl_pose (panel)
-echo "  -> (cartographer localizando ~10 s)"
-sleep 8
+# ESPERAR a que Cartographer localice Y renderice TODO el /map (todos los submaps) ANTES de
+# arrancar Nav2: si no, el static_layer del costmap coge un /map escaso -> sin paredes/inflado
+# -> el robot roza (paso 2026-08-23). ~25 s para el render completo del pbstream.
+echo "  -> (cartographer localizando + renderizando el mapa completo, ~25 s)"
+sleep 25
 unset SLAM_LOAD_STATE SLAM_CONFIG
 # 6) Nav2 (grupo de navegacion; el mapa y map->odom los da Cartographer, NO map_server/amcl)
 run planner    /opt/ros/humble/lib/nav2_planner/planner_server        --ros-args --params-file "$CFG"
