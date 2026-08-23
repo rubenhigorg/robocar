@@ -19,9 +19,11 @@ from launch_ros.actions import Node
 def generate_launch_description():
     config_dir = os.path.join(get_package_share_directory('robocar_slam'), 'config')
 
+    # config seleccionable por env: robocar_2d.lua (mapeo, por defecto) o
+    # robocar_2d_localization.lua (pure-localization sobre un .pbstream congelado).
     carto_args = [
         '-configuration_directory', config_dir,
-        '-configuration_basename', 'robocar_2d.lua',
+        '-configuration_basename', os.environ.get('SLAM_CONFIG', 'robocar_2d.lua'),
     ]
     load_state = os.environ.get('SLAM_LOAD_STATE', '').strip()
     if load_state:
