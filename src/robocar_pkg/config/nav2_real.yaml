@@ -95,7 +95,7 @@ controller_server:
       inflation_cost_scaling_factor: 3.00   # DEBE casar con cost_scaling_factor del local_costmap
       use_rotate_to_heading: false   # ¡el coche NO puede girar en el sitio!
       allow_reversing: false         # solo adelante (la reversa del ESC no es fiable -> desubicaba)
-      use_collision_detection: false  # el planner ya traza libre de colision; evita el falso "collision ahead" al rozar paredes. Seguridad: collision_monitor (IR) + replan global
+      use_collision_detection: true   # comprobar costmap local (laser vivo) -> frena ante pared real aunque AMCL este algo mal localizado
       max_allowed_time_to_collision_up_to_carrot: 1.0
       min_approach_linear_velocity: 0.05
       approach_velocity_scaling_dist: 0.6
