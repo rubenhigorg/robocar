@@ -64,6 +64,8 @@ class CarControlNode(Node):
         self.autonomous_mode = self.get_parameter('autonomous_start').value
         self.meas_speed = 0.0     # velocidad real (encoder/EKF) para el stall-breaker
         self.stall_boost = 0.0
+        self.rev_arm = 0          # ciclos de neutro para ARMAR la reversa del ESC (dwell)
+        self.rev_boost = 0.0      # stall-breaker de reversa
         self.create_subscription(Odometry, '/odometry/filtered', self._odom_cb, 10)
         self.create_subscription(Bool, '/set_autonomous', self._set_auto_cb, 10)  # armar/desarmar desde la web
         self.current_throttle = None
@@ -141,28 +143,45 @@ class CarControlNode(Node):
         max_lin_rev = self.get_parameter('max_linear_rev').value
         if max_lin <= 0.0:
             throttle = stop
+            self.rev_arm = 0
         elif lin > 0.0:
+            self.rev_arm = 0
             frac = min(lin / max_lin, 1.0)
             throttle = start - frac * (start - full)
             throttle = self.clamp(throttle, self.THROTTLE_HARD_FLOOR, stop)
         elif lin < 0.0:
-            frac = min(-lin / max_lin_rev, 1.0)
-            throttle = rev_start + frac * (rev_full - rev_start)
-            throttle = self.clamp(throttle, stop, self.THROTTLE_HARD_CEIL)
+            # QUIRK del ESC: si le pides reversa VINIENDO DE MOVERTE ADELANTE, FRENA en vez de
+            # retroceder. Solucion: un instante de NEUTRO para "armar" la reversa (dwell), luego reversa.
+            prev_t = self.current_throttle if self.current_throttle is not None else stop
+            if self.rev_arm <= 0 and prev_t < stop - 0.3 and abs(self.meas_speed) > 0.03:
+                self.rev_arm = 8                      # ~0.4 s de neutro para armar el ESC
+            if self.rev_arm > 0:
+                self.rev_arm -= 1
+                throttle = stop                       # neutro (arma la reversa)
+            else:
+                frac = min(-lin / max_lin_rev, 1.0)
+                throttle = rev_start + frac * (rev_full - rev_start)
+                throttle = self.clamp(throttle, stop, self.THROTTLE_HARD_CEIL)
         else:
             throttle = stop
-        # STALL-BREAKER: si comando AVANZAR pero el encoder dice que NO me muevo, subo el gas
-        # progresivamente hasta que arranca; cuando ya rueda, aflojo. (idea de Ruben: el robot
-        # sabe si se mueve -> cerrar el lazo en el arranque, rompe el rozamiento estatico del suelo).
+            self.rev_arm = 0
+        # STALL-BREAKER (Ruben): el robot sabe si se mueve (encoder) -> si comando avanzar/retroceder
+        # pero no me muevo, subo el empuje hasta que arranca; al rodar, aflojo. Rompe el rozamiento.
         eps = self.get_parameter('stall_speed_eps').value
+        bmax = self.get_parameter('stall_boost_max').value
         if lin > 0.02:
-            if abs(self.meas_speed) < eps:
-                self.stall_boost = min(self.stall_boost + 0.4, self.get_parameter('stall_boost_max').value)
-            else:
-                self.stall_boost = max(self.stall_boost - 0.6, 0.0)
-            throttle = self.clamp(throttle - self.stall_boost, self.THROTTLE_HARD_FLOOR, stop)  # bajar angulo = mas gas
+            self.rev_boost = 0.0
+            self.stall_boost = (min(self.stall_boost + 0.4, bmax) if abs(self.meas_speed) < eps
+                                else max(self.stall_boost - 0.6, 0.0))
+            throttle = self.clamp(throttle - self.stall_boost, self.THROTTLE_HARD_FLOOR, stop)   # bajar = mas gas
+        elif lin < -0.02 and self.rev_arm <= 0:       # reversa YA armada -> stall-breaker de reversa
+            self.stall_boost = 0.0
+            self.rev_boost = (min(self.rev_boost + 0.4, bmax) if abs(self.meas_speed) < eps
+                              else max(self.rev_boost - 0.6, 0.0))
+            throttle = self.clamp(throttle + self.rev_boost, stop, self.THROTTLE_HARD_CEIL)      # subir = mas reversa
         else:
             self.stall_boost = 0.0
+            self.rev_boost = 0.0
         # Rampa anti-pico: DAR gas (alejarse del neutro, en cualquier sentido) se
         # limita a max_throttle_step por comando; QUITAR gas (hacia el neutro) es
         # instantaneo (freno inmediato).
