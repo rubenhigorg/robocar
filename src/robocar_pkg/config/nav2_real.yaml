@@ -288,8 +288,8 @@ amcl:
     update_min_d: 0.15                     # actualiza tras 0.15 m
     update_min_a: 0.2                       # o 0.2 rad de giro
     resample_interval: 1
-    recovery_alpha_slow: 0.001             # inyeccion de particulas si va perdido (kidnapped)
-    recovery_alpha_fast: 0.1
+    recovery_alpha_slow: 0.0            # 0 = NO inyectar particulas al azar (que AMCL no salte en mapa flojo)
+    recovery_alpha_fast: 0.0            # 0 = idem (estabilidad de la pose fijada)
     save_pose_rate: 0.5
     first_map_only: true                  # /map_amcl solo cambia al cargar mapa nuevo -> re-localiza limpio (sin re-init cada seg)
 
