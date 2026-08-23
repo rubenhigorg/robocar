@@ -53,7 +53,7 @@ run lifecycle_loc /opt/ros/humble/lib/nav2_lifecycle_manager/lifecycle_manager -
 echo "  -> activando Nav2 (lifecycle ~12 s)"
 sleep 12
 # 7) motor real (deadman 0.5s -> neutro) + soporte web
-run car_control  ros2 run robocar_pkg car_control_node
+run car_control  python3 ~/robocar/src/robocar_pkg/robocar_pkg/car_control_node.py --ros-args -p autonomous_start:=true
 run goal_relay   python3 ~/robocar/src/robocar_pkg/robocar_pkg/goal_relay_node.py
 run nav_config   python3 ~/robocar/src/robocar_pkg/robocar_pkg/nav_config_node.py
 run map_areas    python3 ~/robocar/src/robocar_pkg/robocar_pkg/map_areas_node.py

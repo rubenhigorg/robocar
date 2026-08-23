@@ -3,8 +3,9 @@ import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Joy
 from adafruit_servokit import ServoKit
-from std_msgs.msg import Float32MultiArray
+from std_msgs.msg import Float32MultiArray, Bool
 from geometry_msgs.msg import Twist
+from nav_msgs.msg import Odometry
 
 
 class CarControlNode(Node):
@@ -52,9 +53,19 @@ class CarControlNode(Node):
         self.declare_parameter('throttle_rev_start', 97.0)  # umbral de reversa (angulo sobre neutro)
         self.declare_parameter('throttle_rev_full', 108.0)  # reversa a max_linear (conservador)
         self.declare_parameter('max_linear_rev', 0.5)  # m/s que mapea a throttle_rev_full (reversa mas lenta)
+        # NAV_REAL arranca en autonomo (que Nav2 conduzca sin pulsar el boton X del joystick).
+        self.declare_parameter('autonomous_start', False)
+        # STALL-BREAKER: si comando avanzar pero el encoder dice que NO me muevo, subo el gas
+        # gradualmente hasta que arranca (rompe el rozamiento estatico; se adapta a suelo/bateria).
+        self.declare_parameter('stall_boost_max', 14.0)   # grados extra de gas maximos
+        self.declare_parameter('stall_speed_eps', 0.03)   # m/s por debajo = "parado"
 
         self.kit = ServoKit(channels=16)
-        self.autonomous_mode = False
+        self.autonomous_mode = self.get_parameter('autonomous_start').value
+        self.meas_speed = 0.0     # velocidad real (encoder/EKF) para el stall-breaker
+        self.stall_boost = 0.0
+        self.create_subscription(Odometry, '/odometry/filtered', self._odom_cb, 10)
+        self.create_subscription(Bool, '/set_autonomous', self._set_auto_cb, 10)  # armar/desarmar desde la web
         self.current_throttle = None
         # Reposo al arrancar: para los motores y arma el ESC (necesita ver
         # senal de gas-cero un tiempo antes de aceptar comandos).
@@ -140,6 +151,18 @@ class CarControlNode(Node):
             throttle = self.clamp(throttle, stop, self.THROTTLE_HARD_CEIL)
         else:
             throttle = stop
+        # STALL-BREAKER: si comando AVANZAR pero el encoder dice que NO me muevo, subo el gas
+        # progresivamente hasta que arranca; cuando ya rueda, aflojo. (idea de Ruben: el robot
+        # sabe si se mueve -> cerrar el lazo en el arranque, rompe el rozamiento estatico del suelo).
+        eps = self.get_parameter('stall_speed_eps').value
+        if lin > 0.02:
+            if abs(self.meas_speed) < eps:
+                self.stall_boost = min(self.stall_boost + 0.4, self.get_parameter('stall_boost_max').value)
+            else:
+                self.stall_boost = max(self.stall_boost - 0.6, 0.0)
+            throttle = self.clamp(throttle - self.stall_boost, self.THROTTLE_HARD_FLOOR, stop)  # bajar angulo = mas gas
+        else:
+            self.stall_boost = 0.0
         # Rampa anti-pico: DAR gas (alejarse del neutro, en cualquier sentido) se
         # limita a max_throttle_step por comando; QUITAR gas (hacia el neutro) es
         # instantaneo (freno inmediato).
@@ -156,6 +179,16 @@ class CarControlNode(Node):
         self.get_logger().info(
             'cmd_vel -> steer=%.1f throttle=%.1f (lin=%.2f ang=%.2f)'
             % (steer, throttle, msg.linear.x, ang))
+
+    def _odom_cb(self, msg):
+        self.meas_speed = msg.twist.twist.linear.x   # velocidad real para el stall-breaker
+
+    def _set_auto_cb(self, msg):
+        self.autonomous_mode = bool(msg.data)
+        self.get_logger().info('autonomous_mode = %s (via /set_autonomous)' % self.autonomous_mode)
+        if not self.autonomous_mode:
+            self.stall_boost = 0.0
+            self.set_throttle_neutral()
 
     def clamp(self, x, lo, hi):
         return max(lo, min(hi, x))
