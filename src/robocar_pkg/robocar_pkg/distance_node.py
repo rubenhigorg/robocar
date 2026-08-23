@@ -36,6 +36,9 @@ class UltrasoundNode(Node):
                           'left': 'ultrasound_left', 'right': 'ultrasound_right'}
         self.pub_us_range = {k: self.create_publisher(Range, '/us_' + k, 10) for k in self.us_frames}
         self.pub_ir = self.create_publisher(Range, '/ir_range', 10)
+        # filtro de mediana (ventana 5) anti-espurios: los HC-SR04 dan picos cortos (8cm, 81cm...)
+        # intermitentes que hacian frenar en falso al collision_monitor por /ir_range.
+        self._hist = {'center': [], 'left': [], 'right': []}
 
         GPIO.setmode(GPIO.BCM)
 
@@ -85,8 +88,20 @@ class UltrasoundNode(Node):
         msg.emergency_stop = bool(GPIO.input(6)) # emergency_stop
         self.publisher_.publish(msg)
 
-        # --- puente al contrato de nav2 (como sim_sensors) ---
+        # --- puente al contrato de nav2 (como sim_sensors), con filtro de mediana anti-espurios ---
         now = self.get_clock().now().to_msg()
+
+        def med(key, v):
+            h = self._hist[key]
+            if v is not None and v > 0:          # lectura valida (ignora -1 = sin eco)
+                h.append(v)
+                if len(h) > 5:
+                    h.pop(0)
+            if not h:
+                return -1.0                       # sin lecturas validas recientes -> lejos
+            sh = sorted(h)
+            return sh[len(sh)//2]                 # mediana: descarta picos cortos aislados
+        cf = med('center', center_distance); lf = med('left', left_distance); rf = med('right', right_distance)
 
         def mk_range(dist_cm, frame, mx, rad, fov):
             r = Range()
@@ -101,11 +116,11 @@ class UltrasoundNode(Node):
             return r
 
         # ultrasonidos -> /us_* (Range) para la evitacion (range_layer del costmap local)
-        self.pub_us_range['center'].publish(mk_range(center_distance, self.us_frames['center'], self.US_MAX, Range.ULTRASOUND, 0.5))
-        self.pub_us_range['left'].publish(mk_range(left_distance,   self.us_frames['left'],   self.US_MAX, Range.ULTRASOUND, 0.5))
-        self.pub_us_range['right'].publish(mk_range(right_distance, self.us_frames['right'],  self.US_MAX, Range.ULTRASOUND, 0.5))
-        # proximidad frontal (ultrasonido central) -> /ir_range para el collision_monitor (parada)
-        self.pub_ir.publish(mk_range(center_distance, 'base_link', self.IR_MAX, Range.INFRARED, 0.2))
+        self.pub_us_range['center'].publish(mk_range(cf, self.us_frames['center'], self.US_MAX, Range.ULTRASOUND, 0.5))
+        self.pub_us_range['left'].publish(mk_range(lf,   self.us_frames['left'],   self.US_MAX, Range.ULTRASOUND, 0.5))
+        self.pub_us_range['right'].publish(mk_range(rf, self.us_frames['right'],  self.US_MAX, Range.ULTRASOUND, 0.5))
+        # proximidad frontal (ultrasonido central FILTRADO) -> /ir_range para el collision_monitor (parada)
+        self.pub_ir.publish(mk_range(cf, 'base_link', self.IR_MAX, Range.INFRARED, 0.2))
 
 def main(args=None):
     rclpy.init(args=args)
