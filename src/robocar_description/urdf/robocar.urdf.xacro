@@ -123,16 +123,15 @@
       <material name="lidar_red"/>
     </visual>
   </link>
-  <!-- Orientacion del RPLidar C1 en yaw.
-       jul 2026: se puso giro de 180 (0 grados del sensor hacia atras), verificado vs ultrasonidos.
-       2026-08-23: INVERTIDO a 0 -> con el giro de 180 el /scan salia a 180 grados del mapa casa2
-       (heading de la pista correcto, montaje sin cambios), asi AMCL no casaba. Sin giro casa con casa2.
-       Nota: la parada de emergencia va por el ultrasonido central (/ir_range, base_link), independiente
-       de este frame. Si al conducir el costmap del laser no casa con la realidad, revisar este signo. -->
+  <!-- El 0 grados del RPLidar C1 apunta HACIA ATRAS con el montaje actual -> giro de 180 en yaw.
+       Verificado vs ultrasonidos (jul 2026) y por scan-vs-mapa (2026-08-23: 180 encaja 11% de rayos
+       en casa2 vs 2% sin giro -> 180 es el CORRECTO). CUIDADO: el panel pinta /scan SIN aplicar este
+       TF, por eso la vista del laser SIEMPRE parece "al reves" aunque el frame este bien. No fiarse
+       del panel para juzgar el frame; usar scan-vs-mapa (scripts frame_match.py). -->
   <joint name="laser_joint" type="fixed">
     <parent link="base_link"/>
     <child link="laser"/>
-    <origin xyz="${laser_x} 0 ${laser_z}" rpy="0 0 0"/>
+    <origin xyz="${laser_x} 0 ${laser_z}" rpy="0 0 ${pi}"/>
   </joint>
 
   <!-- IMU: frame "imu_link" (usarlo en accelerometer_node, hito 0.5) -->
