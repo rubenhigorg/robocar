@@ -227,8 +227,9 @@ function draw(){
     if(rr){ const p=toPx(rr), rad=Math.max(4,amclConf.sig*PPM), loc=locStable;
       g.strokeStyle=loc?'#2fae6a':'#e0a24a'; g.lineWidth=1.5; g.setLineDash([3,3]);
       g.beginPath();g.arc(p.x,p.y,rad,0,7);g.stroke(); g.setLineDash([]); } }
-  // coche
-  let cp=carRel||{x:0,y:0,yaw:0}, o=toPx(cp);
+  // coche: se dibuja en la pose de AMCL (localizacion real). Antes usaba carRel (odom+Tmo con
+  // histeresis), que en un mapa flojo no se actualiza y dejaba el coche/laser girados.
+  let cp = amclConf ? {x:amclConf.x,y:amclConf.y,yaw:amclConf.yaw} : (carRel||{x:0,y:0,yaw:0}); let o=toPx(cp);
   g.save(); g.translate(o.x,o.y); g.rotate(-cp.yaw); g.fillStyle='#e6ecf3';
   g.beginPath();g.moveTo(0,-10);g.lineTo(-7,7);g.lineTo(7,7);g.closePath();g.fill(); g.restore();
   // badge de confianza de localizacion
@@ -658,12 +659,12 @@ function onCostmap(m){ if(!showCost){ costImg=null; return; } const W=m.info.wid
 // Montaje del RPLidar (URDF laser_joint): x=0.07 m delante de base_link, yaw=pi (el 0 del sensor
 // mira ATRAS). Hay que aplicarlo aqui o el laser se pinta girado 180 respecto al mapa (AMCL si lo aplica).
 const LASER_X=0.07, LASER_YAW=Math.PI;
-function onScan(m){ if(!carRel) return; const pts=[]; const n=m.ranges.length;
-  const c=Math.cos(carRel.yaw), s=Math.sin(carRel.yaw);
+function onScan(m){ const base = amclConf || carRel; if(!base) return; const pts=[]; const n=m.ranges.length;
+  const c=Math.cos(base.yaw), s=Math.sin(base.yaw);      // pose de AMCL (localizacion real), no odom/Tmo
   for(let i=0;i<n;i+=2){ const r=m.ranges[i]; if(!isFinite(r)||r<=0.02)continue;
     const a=m.angle_min+i*m.angle_increment+LASER_YAW;   // + giro del montaje del laser
     const bx=LASER_X+r*Math.cos(a), by=r*Math.sin(a);     // punto en base_link
-    pts.push({x:carRel.x+bx*c-by*s, y:carRel.y+bx*s+by*c}); }
+    pts.push({x:base.x+bx*c-by*s, y:base.y+bx*s+by*c}); }
   scanPts=pts; }
 function onPlan(m){ if(!odom0){navPlan=[];return;} const pts=[];
   (m.poses||[]).forEach(ps=>{ const r=mapToRel(ps.pose.position.x, ps.pose.position.y); if(r) pts.push(r); });
