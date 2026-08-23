@@ -21,11 +21,9 @@ BANCO = {'sim_motion': 'sim_motion_node', 'sim_sensors': 'sim_sensors_node',
 SLAM = {'rplidar': 'rplidar_node', 'encoder': 'encoder_node', 'imu': 'accelerometer_node',
         'car_control': 'car_control_node', 'ekf': 'ekf_node', 'cartographer': 'cartographer_node',
         'occupancy_grid': 'cartographer_occupancy_grid_node'}
-# NAV_REAL usa Cartographer-localization (no map_server/amcl): carto da map->odom + /map,
-# tf_to_amclpose publica /amcl_pose para el panel, y Nav2 navega encima.
 NAV_REAL = {'rplidar': 'rplidar_node', 'encoder': 'encoder_node', 'imu': 'accelerometer_node',
-            'car_control': 'car_control_node', 'ekf': 'ekf_node', 'cartographer': 'cartographer_node',
-            'pose_bridge': 'tf_to_amclpose', 'planner': 'nav2_planner/planner_server',
+            'car_control': 'car_control_node', 'ekf': 'ekf_node', 'map_server': 'nav2_map_server',
+            'amcl': 'nav2_amcl/amcl', 'planner': 'nav2_planner/planner_server',
             'controller': 'nav2_controller/controller_server'}
 # nodos "firma" y singletons
 SINGLETONS = {'rosbridge': 'lib/rosbridge_server/rosbridge_websocket', 'panel/lanzador': 'robocar_launcher',
@@ -58,23 +56,22 @@ class Health(Node):
 
         sim = cnt('sim_map_grid_node') > 0 or cnt('sim_motion_node') > 0 or cnt('sim_sensors_node') > 0
         carto = cnt('cartographer_node') > 0
-        nav = cnt('nav2_planner/planner_server') > 0        # grupo de navegacion Nav2 activo
         mapsrv = cnt('nav2_map_server') > 0
 
-        # escenario activo. NAV_REAL = Cartographer-localization + Nav2 (carto + nav);
-        # SLAM = Cartographer solo (mapeo, sin Nav2). mapsrv = variante antigua (map_server+amcl).
+        # escenario activo
         if sim and carto:
             scenario, expect, others = 'MIXTO (roto)', {}, {}
         elif sim:
             scenario, expect = 'BANCO', BANCO
-            others = {'SLAM': {'cartographer': 'cartographer_node'}, 'NAV_REAL': {'planner': 'nav2_planner/planner_server'}}
-        elif (carto and nav) or mapsrv:
-            scenario, expect = 'NAV_REAL', NAV_REAL
-            others = {'BANCO': {'sim_map_grid': 'sim_map_grid_node', 'sim_motion': 'sim_motion_node'}}
+            others = {'SLAM': SLAM, 'NAV_REAL': {'map_server': 'nav2_map_server'}}
         elif carto:
             scenario, expect = 'SLAM', SLAM
             others = {'BANCO': {'sim_map_grid': 'sim_map_grid_node', 'sim_motion': 'sim_motion_node',
                                 'sim_sensors': 'sim_sensors_node'}}
+        elif mapsrv:
+            scenario, expect = 'NAV_REAL', NAV_REAL
+            others = {'BANCO': {'sim_map_grid': 'sim_map_grid_node', 'sim_motion': 'sim_motion_node'},
+                      'SLAM': {'cartographer': 'cartographer_node'}}
         else:
             scenario, expect, others = 'NINGUNO', {}, {}
 
