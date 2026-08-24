@@ -45,6 +45,7 @@ class UltrasoundNode(Node):
         self._hist = {'center': [], 'left': [], 'right': []}
 
         GPIO.setmode(GPIO.BCM)
+        GPIO.setwarnings(False)
 
         GPIO.setup(TRIG1, GPIO.OUT)
         GPIO.setup(ECHO1, GPIO.IN)
@@ -70,12 +71,14 @@ class UltrasoundNode(Node):
             pulse_start = time.time()
             if pulse_start - t0 > 0.03:
                 return -1.0  # sin eco: sensor mudo/desconectado
+            time.sleep(0.0001)   # CEDER CPU: sin esto el busy-wait quema un nucleo (satura la Pi -> rosbridge cae)
 
         pulse_end = pulse_start
         while GPIO.input(ECHO) == 1:
             pulse_end = time.time()
             if pulse_end - pulse_start > 0.03:
                 return -1.0  # eco atascado en alto
+            time.sleep(0.0001)   # idem (resolucion ~1.7cm, sobra para evitacion)
 
         return round((pulse_end - pulse_start) * 17150, 2)
 
