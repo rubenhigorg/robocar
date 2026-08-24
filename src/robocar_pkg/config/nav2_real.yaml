@@ -224,14 +224,19 @@ collision_monitor:
     source_timeout: 1.0
     base_shift_correction: true
     stop_pub_timeout: 2.0
-    polygons: ["StopZone"]
-    StopZone:
+    polygons: ["FrontApproach"]
+    FrontApproach:
       type: "polygon"
-      points: [0.38, 0.16, 0.38, -0.16, 0.03, -0.16, 0.03, 0.16]   # caja delante del coche
-      action_type: "stop"
+      # FOOTPRINT del coche: 'approach' lo proyecta segun la VELOCIDAD y frena solo si vas a chocar.
+      # Asi un obstaculo DELANTE ya NO bloquea la marcha atras (antes la zona fija 'stop' paraba la
+      # reversa aunque te alejaras). Sin sensor trasero, la reversa va sin proteccion por detras.
+      points: [0.22, 0.13, 0.22, -0.13, -0.15, -0.13, -0.15, 0.13]
+      action_type: "approach"
+      time_before_collision: 1.2      # s de proyeccion (a 0.2 m/s ~0.24 m mas el footprint)
+      simulation_time_step: 0.1
       min_points: 1
       visualize: true
-      polygon_pub_topic: "collision_stop_zone"
+      polygon_pub_topic: "collision_approach_zone"
     observation_sources: ["ir"]
     ir:
       type: "range"
