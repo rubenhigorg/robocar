@@ -158,8 +158,14 @@ class CarControlNode(Node):
         ang = msg.angular.z
         lin = msg.linear.x
         meas = self.meas_speed
+        # La direccion Ackermann se invierte al ir hacia ATRAS. Pero hay que invertir segun la
+        # direccion REAL de movimiento (encoder), NO segun el comando: si el coche aun rueda hacia
+        # delante por inercia (coasting) mientras Nav2 ya manda reversa, invertir aqui haria girar al
+        # lado equivocado. Casi parado -> usar el comando (para armar bien el sentido de la reversa).
+        eps_dir = self.get_parameter('stall_speed_eps').value
+        reversing = (meas < 0.0) if abs(meas) > eps_dir else (lin < 0.0)
         ratio = (ang / max_ang) if max_ang else 0.0
-        if lin < 0.0:
+        if reversing:
             ratio = -ratio                     # reversa: invertir la direccion
         steer = self.clamp(steer_center + ratio * steer_span, 40.0, 170.0)
         self.kit.servo[2].angle = float(steer)
