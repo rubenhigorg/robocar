@@ -29,7 +29,7 @@ class ImuPublisher(Node):
         # --- Parametros ---
         self.declare_parameter('i2c_address', 0x68)
         self.declare_parameter('frame_id', 'imu_link')
-        self.declare_parameter('publish_rate_hz', 50.0)
+        self.declare_parameter('publish_rate_hz', 25.0)   # 50->25: aliviar CPU de la Pi4 (25 Hz sobra para el EKF)
         self.declare_parameter('angular_velocity_variance', 0.0004)    # (rad/s)^2  ~ std 0.02
         self.declare_parameter('linear_acceleration_variance', 0.01)   # (m/s^2)^2  ~ std 0.1
         self.declare_parameter('calibrate_gyro', True)
