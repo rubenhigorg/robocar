@@ -136,7 +136,7 @@ global_costmap:
           raytrace_max_range: 4.5
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
-        inflation_radius: 0.12        # margen visible + clearance para no rozar marcos
+        inflation_radius: 0.25        # margen visible + clearance para no rozar marcos
         cost_scaling_factor: 3.00
       always_send_full_costmap: true
 
@@ -171,7 +171,7 @@ local_costmap:
           raytrace_max_range: 4.5
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
-        inflation_radius: 0.12        # margen visible + clearance para no rozar marcos
+        inflation_radius: 0.25        # margen visible + clearance para no rozar marcos
         cost_scaling_factor: 3.00
       always_send_full_costmap: true
 
