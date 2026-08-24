@@ -34,7 +34,6 @@ run rplidar ros2 run rplidar_ros rplidar_node --ros-args \
 # 3) sensores I2C + ultrasonidos/IR (contrato nav2: /us_* evitacion, /ir_range parada)
 run encoder ros2 run robocar_pkg encoder_node
 run imu     ros2 run robocar_pkg accelerometer_node
-run distance python3 ~/robocar/src/robocar_pkg/robocar_pkg/distance_node.py
 sleep 2
 # 4) EKF -> /odometry/filtered + TF odom->base_link
 run ekf ros2 launch robocar_pkg ekf.launch.py; sleep 3
@@ -42,10 +41,9 @@ run ekf ros2 launch robocar_pkg ekf.launch.py; sleep 3
 run map_server /opt/ros/humble/lib/nav2_map_server/map_server --ros-args --params-file "$CFG" -p yaml_filename:="$MAPYAML"
 # 6) Nav2 + AMCL (controller saca /cmd_vel_raw; collision_monitor -> /cmd_vel)
 run planner    /opt/ros/humble/lib/nav2_planner/planner_server        --ros-args --params-file "$CFG"
-run controller /opt/ros/humble/lib/nav2_controller/controller_server  --ros-args -r /cmd_vel:=/cmd_vel_raw --params-file "$CFG"
+run controller /opt/ros/humble/lib/nav2_controller/controller_server  --ros-args --params-file "$CFG"
 run behavior   /opt/ros/humble/lib/nav2_behaviors/behavior_server     --ros-args --params-file "$CFG"
 run bt_navigator /opt/ros/humble/lib/nav2_bt_navigator/bt_navigator   --ros-args --params-file "$CFG"
-run collision_monitor /opt/ros/humble/lib/nav2_collision_monitor/collision_monitor --ros-args --params-file "$CFG"
 run amcl       /opt/ros/humble/lib/nav2_amcl/amcl                      --ros-args --params-file "$CFG"
 sleep 4
 run lifecycle_nav /opt/ros/humble/lib/nav2_lifecycle_manager/lifecycle_manager --ros-args -r __node:=lifecycle_manager_navigation   --params-file "$CFG"
