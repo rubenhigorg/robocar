@@ -86,8 +86,10 @@ class CarControlNode(Node):
         self.rev_arm = 0          # ciclos de neutro para ARMAR la reversa del ESC (dwell)
         self.steer_filt = None    # direccion filtrada (paso-bajo)
         self.steer_written = None # ultimo angulo escrito al servo (zona muerta)
+        self.estop = False        # emergencia IR frontal (pin 6, activo bajo)
         self.create_subscription(Odometry, '/odometry/filtered', self._odom_cb, 10)
         self.create_subscription(Bool, '/set_autonomous', self._set_auto_cb, 10)  # armar/desarmar desde la web
+        self.create_subscription(Bool, '/emergency_stop', self._estop_cb, 10)     # IR frontal: no empujar paredes
         self.current_throttle = None
         # Reposo al arrancar: para los motores y arma el ESC (necesita ver
         # senal de gas-cero un tiempo antes de aceptar comandos).
@@ -137,6 +139,11 @@ class CarControlNode(Node):
         # Puente Ackermann + LAZO DE VELOCIDAD (PI con el encoder): /cmd_vel (Twist) -> servo + ESC.
         # Solo actua en modo autonomo (igual que lane_info).
         if not self.autonomous_mode:
+            return
+        # EMERGENCIA IR frontal (pin 6): NO empujar hacia delante contra un obstaculo a ~cm.
+        # Permite RETROCEDER para alejarse (el IR mira al frente; en reversa no aplica).
+        if self.estop and msg.linear.x >= -0.01:
+            self.set_throttle_neutral()
             return
 
         now = self.get_clock().now()
@@ -287,6 +294,14 @@ class CarControlNode(Node):
         if not self.autonomous_mode:
             self.vel_i = 0.0
             self.set_throttle_neutral()
+
+    def _estop_cb(self, msg):
+        # IR frontal (pin 6). Emergencia -> parada dura inmediata (no empujar la pared).
+        was = self.estop
+        self.estop = bool(msg.data)
+        if self.estop and not was:
+            self.set_throttle_neutral()
+            self.get_logger().warn('EMERGENCIA IR frontal -> parada (permite retroceder)')
 
     def clamp(self, x, lo, hi):
         return max(lo, min(hi, x))

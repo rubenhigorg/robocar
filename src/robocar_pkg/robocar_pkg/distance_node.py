@@ -1,6 +1,6 @@
 import rclpy
 from rclpy.node import Node
-from std_msgs.msg import String
+from std_msgs.msg import String, Bool
 from messages_pkg.msg import Distance
 from sensor_msgs.msg import Range   # puente al contrato de nav2 (igual que sim_sensors)
 import RPi.GPIO as GPIO
@@ -36,6 +36,10 @@ class UltrasoundNode(Node):
                           'left': 'ultrasound_left', 'right': 'ultrasound_right'}
         self.pub_us_range = {k: self.create_publisher(Range, '/us_' + k, 10) for k in self.us_frames}
         self.pub_ir = self.create_publisher(Range, '/ir_range', 10)
+        # IR de emergencia (pin 6): parada dura anti-empujar-pared (~2 cm). ACTIVO BAJO
+        # (medido 2026-08-24: despejado GPIO6=1, obstaculo=0). Con debounce anti-glitch.
+        self.pub_estop = self.create_publisher(Bool, '/emergency_stop', 10)
+        self._em_lowcount = 0
         # filtro de mediana (ventana 5) anti-espurios: los HC-SR04 dan picos cortos (8cm, 81cm...)
         # intermitentes que hacian frenar en falso al collision_monitor por /ir_range.
         self._hist = {'center': [], 'left': [], 'right': []}
@@ -85,8 +89,15 @@ class UltrasoundNode(Node):
         msg.left_distance = left_distance
         msg.right_distance = right_distance
         msg.center_distance = center_distance
-        msg.emergency_stop = bool(GPIO.input(6)) # emergency_stop
+        # IR de emergencia ACTIVO BAJO: obstaculo = pin LOW. Debounce (2 lecturas seguidas) anti-glitch.
+        if GPIO.input(6) == 0:
+            self._em_lowcount = min(self._em_lowcount + 1, 5)
+        else:
+            self._em_lowcount = 0
+        emergency = self._em_lowcount >= 2
+        msg.emergency_stop = emergency
         self.publisher_.publish(msg)
+        self.pub_estop.publish(Bool(data=emergency))
 
         # --- puente al contrato de nav2 (como sim_sensors), con filtro de mediana anti-espurios ---
         now = self.get_clock().now().to_msg()
