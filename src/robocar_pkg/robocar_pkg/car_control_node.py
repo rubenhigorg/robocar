@@ -66,6 +66,12 @@ class CarControlNode(Node):
         # ANTI-PATINAJE: si doy gas casi a tope y el encoder NO ve movimiento durante stall_timeout,
         # pulso NEUTRO (dejar de patinar -> odometria falsa que desubicaba a AMCL).
         self.declare_parameter('stall_timeout', 1.2)      # s
+        # FRENO ACTIVO: el coche solo llega a neutro (rueda por inercia) -> rebasa los cusps y va
+        # "muy rapido" en las maniobras. Se deja que el lazo entre en la zona de FRENO del ESC
+        # (mandar el sentido contrario mientras rueda = freno) cuando se pasa de velocidad, y se
+        # SUELTA el freno al casi pararse (para no engranar el sentido contrario sin querer).
+        self.declare_parameter('brake_margin', 8.0)       # grados mas alla del neutro para frenar (0 = sin freno)
+        self.declare_parameter('brake_release', 0.10)     # m/s: por debajo, soltar el freno
 
         self.kit = ServoKit(channels=16)
         self.autonomous_mode = self.get_parameter('autonomous_start').value
@@ -150,6 +156,8 @@ class CarControlNode(Node):
         i_max = self.get_parameter('vel_i_max').value
         eps = self.get_parameter('stall_speed_eps').value
         stall_to = self.get_parameter('stall_timeout').value
+        brake_margin = self.get_parameter('brake_margin').value
+        brake_release = self.get_parameter('brake_release').value
 
         # Direccion: angular.z (rad/s) -> canal 2. angular.z > 0 (giro a la izq) -> servo > centro.
         # GEOMETRIA ACKERMANN: para el MISMO giro deseado (omega), el angulo de direccion se INVIERTE
@@ -187,8 +195,11 @@ class CarControlNode(Node):
             frac = min(lin / max_lin, 1.0)
             ff = start - frac * (start - full)             # feed-forward (mapa abierto)
             err = lin - meas                               # v_cmd - v_real
+            # freno activo: si voy hacia delante y me paso, dejar subir por encima del neutro (frena);
+            # al casi pararme, no (evita engranar reversa).
+            hi = stop + brake_margin if meas > brake_release else stop
             throttle = self._pi_throttle(ff, err, dt, kp, ki, i_max, -1,
-                                         self.THROTTLE_HARD_FLOOR, stop)
+                                         self.THROTTLE_HARD_FLOOR, hi)
         else:                                              # ATRAS (lin < 0; mas gas = SUBIR el angulo)
             if self.cmd_dir != -1:
                 self.vel_i = 0.0
@@ -205,8 +216,11 @@ class CarControlNode(Node):
                 frac = min(-lin / max_lin_rev, 1.0)
                 ff = rev_start + frac * (rev_full - rev_start)
                 err = (-lin) - (-meas)                     # magnitud: v_cmd - v_real
+                # freno activo en reversa: si retrocedo y me paso, dejar bajar del neutro (frena);
+                # al casi pararme, no.
+                lo = stop - brake_margin if meas < -brake_release else stop
                 throttle = self._pi_throttle(ff, err, dt, kp, ki, i_max, +1,
-                                             stop, self.THROTTLE_HARD_CEIL)
+                                             lo, self.THROTTLE_HARD_CEIL)
 
         # ANTI-PATINAJE / ANTI-DESUBICACION: si YA doy gas casi a tope y el encoder no ve movimiento
         # durante stall_timeout -> pulso NEUTRO. Evita seguir patinando (odometria falsa -> AMCL se
