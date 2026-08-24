@@ -55,6 +55,8 @@ class CarControlNode(Node):
         self.declare_parameter('max_linear_rev', 0.5)  # m/s que mapea a throttle_rev_full (reversa mas lenta)
         # NAV_REAL arranca en autonomo (que Nav2 conduzca sin pulsar el boton X del joystick).
         self.declare_parameter('autonomous_start', False)
+        # IR de emergencia (pin 6) DESACTIVADO por ahora -> se retoma despues poniendolo a True.
+        self.declare_parameter('emergency_enabled', False)
         # LAZO DE VELOCIDAD (cerrado con el encoder): PI sobre la velocidad REAL (/odometry/filtered)
         # para que la velocidad medida siga a la comandada por Nav2. throttle = feed-forward (mapa
         # abierto) + correccion PI. Asi 0.12 m/s es 0.12 de verdad (antes era lazo abierto y no cuadraba).
@@ -141,8 +143,9 @@ class CarControlNode(Node):
         if not self.autonomous_mode:
             return
         # EMERGENCIA IR frontal (pin 6): NO empujar hacia delante contra un obstaculo a ~cm.
-        # Permite RETROCEDER para alejarse (el IR mira al frente; en reversa no aplica).
-        if self.estop and msg.linear.x >= -0.01:
+        # DESACTIVADA por ahora (emergency_enabled=False); se retoma poniendolo a True. Cuando este
+        # activa: bloquea avanzar si el IR ve algo muy cerca; permite retroceder para alejarse.
+        if self.get_parameter('emergency_enabled').value and self.estop and msg.linear.x >= -0.01:
             self.set_throttle_neutral()
             return
 
