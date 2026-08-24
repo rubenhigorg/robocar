@@ -59,7 +59,7 @@ class CarControlNode(Node):
         # para que la velocidad medida siga a la comandada por Nav2. throttle = feed-forward (mapa
         # abierto) + correccion PI. Asi 0.12 m/s es 0.12 de verdad (antes era lazo abierto y no cuadraba).
         self.declare_parameter('closed_loop', True)       # False -> solo feed-forward (lazo abierto)
-        self.declare_parameter('vel_kp', 18.0)            # grados de throttle por (m/s) de error
+        self.declare_parameter('vel_kp', 10.0)            # grados de throttle por (m/s) de error (bajo -> sin tirones)
         self.declare_parameter('vel_ki', 6.0)             # grados por (m/s*s) (elimina el error permanente)
         self.declare_parameter('vel_i_max', 16.0)         # tope de la parte integral (grados) anti-windup
         self.declare_parameter('stall_speed_eps', 0.03)   # m/s por debajo = "parado"
@@ -70,8 +70,12 @@ class CarControlNode(Node):
         # "muy rapido" en las maniobras. Se deja que el lazo entre en la zona de FRENO del ESC
         # (mandar el sentido contrario mientras rueda = freno) cuando se pasa de velocidad, y se
         # SUELTA el freno al casi pararse (para no engranar el sentido contrario sin querer).
-        self.declare_parameter('brake_margin', 8.0)       # grados mas alla del neutro para frenar (0 = sin freno)
+        self.declare_parameter('brake_margin', 5.0)       # grados mas alla del neutro para frenar (0 = sin freno)
         self.declare_parameter('brake_release', 0.10)     # m/s: por debajo, soltar el freno
+        # FILTRO DE DIRECCION: paso-bajo + zona muerta -> quita el temblor del volante, sobre todo
+        # PARADO (el jitter de AMCL hace que RPP recalcule y mueva el servo sin que el coche avance).
+        self.declare_parameter('steer_lp', 0.30)          # 0..1, menor = mas suave
+        self.declare_parameter('steer_deadband', 0.8)     # grados: no mover el servo por debajo de este cambio
 
         self.kit = ServoKit(channels=16)
         self.autonomous_mode = self.get_parameter('autonomous_start').value
@@ -80,6 +84,8 @@ class CarControlNode(Node):
         self.cmd_dir = 0          # sentido comandado (+1/-1/0): al cambiar, reseteo el integrador
         self.stall_ticks = 0      # ciclos comandando sin moverme (anti-patinaje/desubicacion)
         self.rev_arm = 0          # ciclos de neutro para ARMAR la reversa del ESC (dwell)
+        self.steer_filt = None    # direccion filtrada (paso-bajo)
+        self.steer_written = None # ultimo angulo escrito al servo (zona muerta)
         self.create_subscription(Odometry, '/odometry/filtered', self._odom_cb, 10)
         self.create_subscription(Bool, '/set_autonomous', self._set_auto_cb, 10)  # armar/desarmar desde la web
         self.current_throttle = None
@@ -176,7 +182,13 @@ class CarControlNode(Node):
         if reversing:
             ratio = -ratio                     # reversa: invertir la direccion
         steer = self.clamp(steer_center + ratio * steer_span, 40.0, 170.0)
-        self.kit.servo[2].angle = float(steer)
+        # paso-bajo + zona muerta: filtra el temblor y solo mueve el servo ante cambios reales
+        lp = self.get_parameter('steer_lp').value
+        db = self.get_parameter('steer_deadband').value
+        self.steer_filt = steer if self.steer_filt is None else (lp * steer + (1.0 - lp) * self.steer_filt)
+        if self.steer_written is None or abs(self.steer_filt - self.steer_written) > db:
+            self.kit.servo[2].angle = float(self.steer_filt)
+            self.steer_written = self.steer_filt
 
         # Traccion: linear.x (m/s) -> canales 0 y 1. ESC bidireccional: ADELANTE = BAJAR el angulo
         # desde neutro (93.6 -> 27); ATRAS = SUBIR (93.6 -> ~108). El feed-forward da el angulo base
