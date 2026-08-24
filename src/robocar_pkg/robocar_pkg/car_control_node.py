@@ -152,16 +152,21 @@ class CarControlNode(Node):
         stall_to = self.get_parameter('stall_timeout').value
 
         # Direccion: angular.z (rad/s) -> canal 2. angular.z > 0 (giro a la izq) -> servo > centro.
+        # GEOMETRIA ACKERMANN: para el MISMO giro deseado (omega), el angulo de direccion se INVIERTE
+        # en marcha atras -> delta = atan(L*omega/v); con v<0 cambia el signo. Sin esto, en reversa
+        # el coche gira al lado equivocado y no consigue orientarse (maniobras interminables).
         ang = msg.angular.z
-        steer = steer_center + (ang / max_ang) * steer_span if max_ang else steer_center
-        steer = self.clamp(steer, 40.0, 170.0)
+        lin = msg.linear.x
+        meas = self.meas_speed
+        ratio = (ang / max_ang) if max_ang else 0.0
+        if lin < 0.0:
+            ratio = -ratio                     # reversa: invertir la direccion
+        steer = self.clamp(steer_center + ratio * steer_span, 40.0, 170.0)
         self.kit.servo[2].angle = float(steer)
 
         # Traccion: linear.x (m/s) -> canales 0 y 1. ESC bidireccional: ADELANTE = BAJAR el angulo
         # desde neutro (93.6 -> 27); ATRAS = SUBIR (93.6 -> ~108). El feed-forward da el angulo base
         # segun el mapa; el PI lo corrige para que la velocidad REAL (encoder) siga a la comandada.
-        lin = msg.linear.x
-        meas = self.meas_speed
         if max_lin <= 0.0 or abs(lin) < 1e-3:
             throttle = stop
             self.rev_arm = 0
