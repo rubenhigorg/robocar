@@ -60,7 +60,7 @@ run map_areas    python3 ~/robocar/src/robocar_pkg/robocar_pkg/map_areas_node.py
 run particle_relay python3 ~/robocar/src/robocar_pkg/robocar_pkg/particle_relay_node.py
 run map_edit     python3 ~/robocar/src/robocar_pkg/robocar_pkg/map_edit_node.py
 run health       python3 ~/robocar/src/robocar_pkg/robocar_pkg/robocar_health_node.py
-run rosbridge    ros2 launch rosbridge_server rosbridge_websocket_launch.xml
+run rosbridge    ros2 launch rosbridge_server rosbridge_websocket_launch.xml call_services_in_new_thread:=true default_call_service_timeout:=5.0 send_action_goals_in_new_thread:=true
 sleep 2
 
 echo ""
