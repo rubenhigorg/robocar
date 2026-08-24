@@ -5,6 +5,8 @@ pertenecen, que hacen y su valor mas adecuado. Mantener en sincronia con los fic
 - `src/robocar_pkg/config/nav2_real.yaml` (Nav2: planner, controller, costmaps, amcl, collision_monitor, bt)
 - `src/robocar_pkg/robocar_pkg/car_control_node.py` (lazo de velocidad / puente Ackermann)
 
+**Version machine-readable (para herramientas / LLM):** `docs/parametros.json` (mismo contenido en JSON estructurado: owner, file, name, value, unit, applies, status, que/sube/baja). Mantener los dos en sync.
+
 **Ultima verificacion:** 2026-08-24 (mapa casa4, map_server + AMCL, lazo PI cerrado).
 Plan de pruebas asociado: ver artifact "Plan de pruebas navegacion casa4" (fases P0..P10).
 
@@ -179,17 +181,37 @@ El "director de orquesta": recibe el destino y coordina planner + controller.
 
 ---
 
-## Resumen de lo pendiente de afinar (🔧 / 💡)
+## Changelog 2026-08-24 — valores VALIDADOS en suelo (casa4)
+Sesion de conduccion real. Todo lo de abajo probado y bueno:
+
+| Parametro | Dueno | Antes → Ahora | Por que |
+|---|---|---|---|
+| `motion_model_for_search` | planner | DUBIN → **REEDS_SHEPP** | forward-only no llegaba a destinos que requieren maniobrar |
+| `allow_reversing` | controller | false → **true** | ejecutar maniobras de 3 puntos |
+| `desired_linear_vel` | controller | 0.12 → **0.20** | 0.12 es INALCANZABLE (suelo del hardware ~0.2; coasteaba) |
+| `regulated_linear_scaling_min_speed` | controller | 0.12 → **0.20** | casar con el suelo del hardware |
+| `reverse_penalty` | planner | 2.0 → 1.0 → **2.0** | 1.0 llegaba de culo; 2.0 llega de morro y reversa solo para maniobrar |
+| `change_penalty` | planner | 0.40 → **0.80** | menos maniobras (pocas y largas) |
+| `min_lookahead_dist` | controller | 0.3 → **0.50** | **quita el temblor/vaiven de direccion** a baja velocidad (era lo del "giro improductivo") |
+| `lookahead_dist` | controller | 0.60 → **0.70** | direccion mas suave |
+| `use_collision_detection` | controller | false → **true** | frena ante paredes reales aunque AMCL este algo mal |
+| `vel_kp` | car_control | 18 → **10** | quitar tirones al corregir velocidad |
+| `brake_margin` (nuevo) | car_control | — → **5.0** | FRENO ACTIVO: mata la inercia que hacia rebasar los cusps ("muy rapido") |
+| `brake_release` (nuevo) | car_control | — → **0.10** | soltar el freno al casi pararse (no engranar el sentido contrario) |
+| `steer_lp` (nuevo) | car_control | — → **0.30** | paso-bajo del volante: quita el temblor parado |
+| `steer_deadband` (nuevo) | car_control | — → **0.8** | zona muerta del volante: no micro-mover el servo |
+
+**Comportamientos nuevos en car_control (no son parametros, son logica):**
+- La **inversion de direccion en reversa** se decide por la direccion REAL de movimiento (encoder), no por el comando -> arregla el caso de coasting (rueda adelante por inercia mientras Nav2 ya manda reversa).
+- **Freno activo** usando el quirk del ESC (mandar sentido contrario mientras rueda = frena).
+- **Lazo de velocidad PI cerrado** con el encoder (feed-forward + PI + anti-windup + anti-patinaje).
+
+## Aun pendiente de afinar (🔧 / 💡)
 | Parametro | Dueno | Ahora | Objetivo | Donde se decide |
 |---|---|---|---|---|
-| `desired_linear_vel` | controller | 0.120 | techo fiable interior | P3 (barrido) |
-| `vel_kp` / `vel_ki` / `vel_i_max` | car_control | 18 / 6 / 16 | seguimiento limpio | P9.1 |
-| `stall_timeout` | car_control | 1.2 | no patinar sin cortar arranque | P2.3 |
-| `motion_model_for_search` + `allow_reversing` | planner + controller | DUBIN / false | REEDS_SHEPP / true | tras validar P2-P4 → P5 |
-| `throttle_rev_start/full` | car_control | 97 / 108 | reversa fiable | P5 |
-| `change_penalty` | planner | 0.40 | completar 3 puntos | P5.3 |
 | `regulated_linear_scaling_min_radius` | controller | 2.0 | ~1.0 (no frenar en curvas amplias) | P4 |
 | `use_cost_regulated_linear_velocity_scaling` | controller | false | valorar true | P6 |
 | `robot_radius` / `inflation_radius` | costmaps | 0.12 / 0.15 | pasar puertas sin rozar | P4.5 |
+| `max_planning_time` | planner | 5.0 | ~3.0 (responder antes sin ruta) | — |
 | `update_min_d` / `update_min_a` | amcl | 0.15 / 0.20 | corregir pose antes | P1.2 |
 | `alpha1..5` | amcl | 0.2 | segun deriva real de odom | P1.4 |
