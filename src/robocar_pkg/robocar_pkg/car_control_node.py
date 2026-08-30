@@ -51,8 +51,8 @@ class CarControlNode(Node):
         self.declare_parameter('steer_span', 65.0)         # desviacion max de direccion (grados)
         self.declare_parameter('cmd_vel_timeout', 0.5)     # s sin /cmd_vel -> throttle a neutro
         self.declare_parameter('max_throttle_step', 0.5)   # grados/comando al DAR gas (rampa anti-pico)
-        self.declare_parameter('throttle_rev_start', 97.0)  # umbral de reversa (angulo sobre neutro)
-        self.declare_parameter('throttle_rev_full', 108.0)  # reversa a max_linear (conservador)
+        self.declare_parameter('throttle_rev_start', 96.6)  # umbral de reversa (angulo sobre neutro)
+        self.declare_parameter('throttle_rev_full', 101.0)  # reversa a max_linear (conservador)
         self.declare_parameter('max_linear_rev', 0.5)  # m/s que mapea a throttle_rev_full (reversa mas lenta)
         # NAV_REAL arranca en autonomo (que Nav2 conduzca sin pulsar el boton X del joystick).
         self.declare_parameter('autonomous_start', False)

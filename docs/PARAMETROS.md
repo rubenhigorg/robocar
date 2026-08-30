@@ -36,8 +36,8 @@ Puente `/cmd_vel` (Twist) → servos ESC/direccion + **lazo de velocidad PI cerr
 | `throttle_stop` | NEUTRO del ESC (para y ARMA el ESC) | 93.6 | 93.6 | LIVE | 🔒 calibracion ESC — no tocar sin recalibrar armado |
 | `throttle_start` | umbral donde empieza a moverse (adelante) | 92.5 | 92.5 | LIVE | ✅ feed-forward adelante |
 | `throttle_full` | gas a `max_linear` (adelante, conservador) | 88.1 | 88.1 | LIVE | ✅ |
-| `throttle_rev_start` | umbral de reversa (angulo sobre neutro) | 97.0 | ~97 | LIVE | 🔧 P5: calibrar arranque de reversa |
-| `throttle_rev_full` | reversa a `max_linear_rev` | 108.0 | ~108 | LIVE | 🔧 P5 |
+| `throttle_rev_start` | umbral de reversa (angulo sobre neutro) | 96.6 | 96.6 | LIVE | 🔧 P5: calibrar arranque de reversa |
+| `throttle_rev_full` | reversa a `max_linear_rev` | 101.0 | 101.0 | LIVE | 🔧 P5 |
 | `max_linear` | m/s que mapea a `throttle_full` | 0.7 | 0.7 | LIVE | ✅ escala del feed-forward adelante |
 | `max_linear_rev` | m/s que mapea a `throttle_rev_full` | 0.5 | 0.5 | LIVE | ✅ reversa mas lenta |
 | `max_angular` | rad/s que mapea a giro pleno de direccion | 0.4 | 0.4 | LIVE | ✅ |
