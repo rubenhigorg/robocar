@@ -45,8 +45,8 @@ class CarControlNode(Node):
         self.declare_parameter('max_linear', 0.7)          # m/s -> throttle_full
         self.declare_parameter('max_angular', 0.4)         # rad/s -> direccion a tope
         self.declare_parameter('throttle_stop', 93.6)      # NEUTRO: para y ARMA el ESC
-        self.declare_parameter('throttle_start', 90.0)     # umbral donde empieza a moverse
-        self.declare_parameter('throttle_full', 78.0)      # angulo a max_linear (conservador)
+        self.declare_parameter('throttle_start', 92.5)     # umbral donde empieza a moverse (recalibrado 2 ruedas)
+        self.declare_parameter('throttle_full', 88.1)      # angulo a max_linear (recalibrado 2 ruedas)
         self.declare_parameter('steer_center', 105.0)      # servo direccion centrado
         self.declare_parameter('steer_span', 65.0)         # desviacion max de direccion (grados)
         self.declare_parameter('cmd_vel_timeout', 0.5)     # s sin /cmd_vel -> throttle a neutro
@@ -64,7 +64,7 @@ class CarControlNode(Node):
         self.declare_parameter('closed_loop', True)       # False -> solo feed-forward (lazo abierto)
         self.declare_parameter('vel_kp', 10.0)            # grados de throttle por (m/s) de error (bajo -> sin tirones)
         self.declare_parameter('vel_ki', 6.0)             # grados por (m/s*s) (elimina el error permanente)
-        self.declare_parameter('vel_i_max', 16.0)         # tope de la parte integral (grados) anti-windup
+        self.declare_parameter('vel_i_max', 8.0)          # tope de la parte integral (grados) anti-windup
         self.declare_parameter('stall_speed_eps', 0.03)   # m/s por debajo = "parado"
         # ANTI-PATINAJE: si doy gas casi a tope y el encoder NO ve movimiento durante stall_timeout,
         # pulso NEUTRO (dejar de patinar -> odometria falsa que desubicaba a AMCL).
