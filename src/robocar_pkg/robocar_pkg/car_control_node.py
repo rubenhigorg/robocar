@@ -1,6 +1,7 @@
 import time
 import rclpy
 from rclpy.node import Node
+from rclpy.qos import qos_profile_sensor_data
 from sensor_msgs.msg import Joy
 from adafruit_servokit import ServoKit
 from std_msgs.msg import Float32MultiArray, Bool
@@ -89,7 +90,7 @@ class CarControlNode(Node):
         self.steer_filt = None    # direccion filtrada (paso-bajo)
         self.steer_written = None # ultimo angulo escrito al servo (zona muerta)
         self.estop = False        # emergencia IR frontal (pin 6, activo bajo)
-        self.create_subscription(Odometry, '/odometry/filtered', self._odom_cb, 10)
+        self.create_subscription(Odometry, '/odometry/filtered', self._odom_cb, qos_profile_sensor_data)
         self.create_subscription(Bool, '/set_autonomous', self._set_auto_cb, 10)  # armar/desarmar desde la web
         self.create_subscription(Bool, '/emergency_stop', self._estop_cb, 10)     # IR frontal: no empujar paredes
         self.current_throttle = None
