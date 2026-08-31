@@ -57,8 +57,8 @@ Traza la RUTA global respetando el radio de giro del coche (Ackermann).
 |---|---|---|---|---|---|
 | `motion_model_for_search` | modelo cinematico de busqueda | DUBIN | REEDS_SHEPP | REINICIO | 🔧 DUBIN=solo adelante (ahora). REEDS_SHEPP cuando la reversa este validada (P5) |
 | `minimum_turning_radius` | radio de giro minimo (m) | 0.930 | 0.930 | REINICIO | 🔒 limite FISICO del coche — no bajar |
-| `reverse_penalty` | coste de ir hacia atras | 2.0 | 2.0 | LIVE | ✅ usa reversa solo si hace falta |
-| `change_penalty` | coste de cambiar de sentido | 0.40 | ~0.40 | LIVE | 🔧 P5.3: ↓ si no completa 3 puntos; ↑ si zigzaguea |
+| `reverse_penalty` | coste de ir hacia atras | 3.0 | 3.0 | REINICIO | ✅ prefiere morro; reversa solo para maniobrar |
+| `change_penalty` | coste de cambiar de sentido | 4.0 | 4.0 | REINICIO | ✅ una maniobra limpia, no varias |
 | `non_straight_penalty` | coste de girar vs recto | 1.3 | 1.3 | LIVE | ✅ ↑ rutas mas rectas |
 | `cost_penalty` | evitar acercarse a obstaculos | 2.0 | 2.0 | LIVE | ✅ ↑ mas lejos de paredes |
 | `allow_unknown` | cruzar celdas desconocidas | false | false | LIVE | ✅ el /map guardado no tiene gris |
@@ -76,10 +76,11 @@ CONDUCE: sigue la ruta soltando `/cmd_vel_raw`. `controller_frequency: 20 Hz`, `
 
 | Parametro | Que hace | Actual | Adecuado | Aplicar | Estado · Notas |
 |---|---|---|---|---|---|
-| `desired_linear_vel` | velocidad crucero (m/s) | 0.120 | 🔧 P3 | LIVE | 🔧 subir escalonado hasta el techo fiable en interior |
-| `lookahead_dist` | distancia del punto de persecucion (m) | 0.60 | 0.60 | LIVE | ✅ ↑ suave/corta curvas; ↓ agresivo |
-| `min_lookahead_dist` / `max_lookahead_dist` | limites del lookahead escalado | 0.3 / 0.9 | 0.3 / 0.9 | LIVE | ✅ |
+| `desired_linear_vel` | velocidad crucero (m/s) | 0.400 | 0.400 | LIVE | ✅ rectas rapidas; curvas reguladas a 0.20 |
+| `lookahead_dist` | distancia del punto de persecucion (m) | 0.28 | 0.28 | LIVE | ✅ corto: no recorta esquinas (con lookahead_time 1.2) |
+| `min_lookahead_dist` / `max_lookahead_dist` | limites del lookahead escalado | 0.22 / 0.9 | 0.22 / 0.9 | LIVE | ✅ min bajo: no recorta esquinas |
 | `use_velocity_scaled_lookahead_dist` | lookahead crece con la velocidad | true | true | LIVE | ✅ |
+| `lookahead_time` | t del lookahead escalado (efectivo = v*t) | 1.2 | 1.2 | LIVE | ✅ bajado de 1.5: esquinas pegadas |
 | `use_regulated_linear_velocity_scaling` | frena en curvas cerradas | true | true | LIVE | ✅ |
 | `regulated_linear_scaling_min_radius` | radio bajo el que empieza a frenar (m) | 2.00 | ~1.0 | LIVE | 💡 2.0 > todas las curvas → frena en CASI TODAS. Bajar a ~1.0 para mantener velocidad en curvas amplias |
 | `regulated_linear_scaling_min_speed` | velocidad minima al frenar en curva (m/s) | 0.120 | 0.120 | LIVE | ✅ |
@@ -139,8 +140,8 @@ Filtro de particulas: infiere la pose (map→odom) casando /scan con /map. `robo
 |---|---|---|---|---|---|
 | `update_min_d` | mov lineal para actualizar (m) | 0.15 | 💡 0.05-0.10 | REINICIO | 💡 bajar → corrige la pose antes al moverse (P1.2), a costa de CPU |
 | `update_min_a` | mov angular para actualizar (rad) | 0.20 | 💡 0.10 | REINICIO | 💡 bajar → endereza el giro antes |
-| `min_particles` / `max_particles` | tamano de la nube | 500 / 3000 | 500 / 3000 | REINICIO | ✅ ↑ mas robusto/lento |
-| `alpha1..alpha5` | ruido esperado de la odometria | 0.2 (todos) | 🔧 afinar | REINICIO | 🔧 ajustar segun cuanto derive la odom real; ↑ confia menos en el encoder |
+| `min_particles` / `max_particles` | tamano de la nube | 300 / 800 | 300 / 800 | REINICIO | ✅ bajado: aligera CPU + AMCL mas rapido |
+| `alpha1..alpha5` | ruido esperado de la odometria | a1/a2=0.3, a3-5=0.2 | a1/a2=0.3 | REINICIO | ✅ a1/a2 subidos: desconfia rotacion odom, tira del laser (patinazos) |
 | `recovery_alpha_slow` | inyeccion lenta al perderse | 0.001 | 0.001 | REINICIO | 🔒 NUNCA 0 (mata AMCL — comprobado) |
 | `recovery_alpha_fast` | inyeccion rapida al perderse | 0.10 | 0.10 | REINICIO | ✅ ↑ recupera antes/mas inestable |
 | `laser_max_range` | alcance del laser usado (m) | 4.0 | 4.0 | REINICIO | ✅ (RPLIDAR C1) |
