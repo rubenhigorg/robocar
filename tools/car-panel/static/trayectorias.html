@@ -600,9 +600,9 @@ function connect(){
     send({op:'subscribe',topic:'/trajectory_nav/status',type:'std_msgs/msg/String'});           // texto, sin throttle
     send({op:'subscribe',topic:'/nav2_relay/status',type:'std_msgs/msg/String'});                // texto, sin throttle
     send({op:'subscribe',topic:'/odometry/filtered',type:'nav_msgs/msg/Odometry',throttle_rate:100,queue_length:1});  // 49Hz -> 10Hz
-    send({op:'subscribe',topic:'/scan',type:'sensor_msgs/msg/LaserScan',throttle_rate:200,queue_length:1});           // laser -> 5Hz
+    send({op:'subscribe',topic:'/scan',type:'sensor_msgs/msg/LaserScan',throttle_rate:125,queue_length:1});           // laser -> 5Hz
     send({op:'subscribe',topic:'/map',type:'nav_msgs/msg/OccupancyGrid',throttle_rate:2000,queue_length:1});          // cambia rara vez
-    send({op:'subscribe',topic:'/global_costmap/costmap',type:'nav_msgs/msg/OccupancyGrid',throttle_rate:1000,queue_length:1}); // 1Hz basta
+    /*OFF-carga*/ //send({op:'subscribe',topic:'/global_costmap/costmap',type:'nav_msgs/msg/OccupancyGrid',throttle_rate:3000,queue_length:1}); // 1Hz basta
     send({op:'advertise',topic:'/nav_config/set',type:'std_msgs/msg/String'});
     send({op:'subscribe',topic:'/nav_config',type:'std_msgs/msg/String'});                       // config, sin throttle
     send({op:'advertise',topic:'/map_areas/set',type:'std_msgs/msg/String'});
@@ -611,7 +611,7 @@ function connect(){
     send({op:'advertise',topic:'/initialpose',type:'geometry_msgs/msg/PoseWithCovarianceStamped'});
     send({op:'advertise',topic:'/sim_drift',type:'std_msgs/msg/Bool'});
     send({op:'subscribe',topic:'/amcl_pose',type:'geometry_msgs/msg/PoseWithCovarianceStamped',throttle_rate:200,queue_length:1});
-    send({op:'subscribe',topic:'/particle_cloud_viz',type:'nav2_msgs/msg/ParticleCloud',throttle_rate:300,queue_length:1}); // localizacion
+    /*OFF-carga*/ //send({op:'subscribe',topic:'/particle_cloud_viz',type:'nav2_msgs/msg/ParticleCloud',throttle_rate:1000,queue_length:1}); // localizacion
     send({op:'subscribe',topic:'/plan',type:'nav_msgs/msg/Path',throttle_rate:300,queue_length:1});
     send({op:'advertise',topic:'/sim/load_map',type:'std_msgs/msg/String'});
     send({op:'subscribe',topic:'/sim/maps_list',type:'std_msgs/msg/String'}); };                 // ruta -> ~3Hz
