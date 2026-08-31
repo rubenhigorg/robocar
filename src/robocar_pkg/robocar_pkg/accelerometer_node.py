@@ -95,6 +95,12 @@ class ImuPublisher(Node):
                 self.get_logger().info(
                     'Bias del giroscopio calibrado (rad/s): x=%.4f y=%.4f z=%.4f'
                     % (self.gyro_bias[0], self.gyro_bias[1], self.gyro_bias[2]))
+                bmax = max(abs(b) for b in self.gyro_bias)
+                if bmax > 0.10:
+                    self.get_logger().error(
+                        'BIAS DE GIROSCOPIO SOSPECHOSO (max=%.3f rad/s, esperado <0.05): el robot '
+                        'se MOVIO durante la calibracion -> el yaw derivara y el laser girara en el '
+                        'mapa. REINICIA con el robot COMPLETAMENTE QUIETO (o reinicia este nodo).' % bmax)
             return  # no publicar durante la calibracion
 
         msg = Imu()

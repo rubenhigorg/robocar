@@ -3,9 +3,9 @@
 # guardado) + AMCL + Nav2. Sustituye la cadena sim del banco por la real, dejando Nav2 + web igual.
 #
 #   Cadena:  description(TF) + RPLIDAR(/scan) + encoder + IMU + EKF(/odometry/filtered)
-#            + map_server(/map) + AMCL(map->odom) + Nav2(planner/controller/behavior/bt/collision)
+#            + map_server(/map) + AMCL(map->odom) + Nav2(planner/controller/behavior/bt/amcl)
 #            + car_control(/cmd_vel) + goal_relay/nav_config/map_areas + rosbridge/health
-#   controller -> /cmd_vel_raw -> collision_monitor(LIDAR) -> /cmd_vel -> car_control (deadman 0.5s)
+#   controller -> /cmd_vel -> car_control (deadman 0.5s). Obstaculos = SOLO lidar (costmap + RPP use_collision_detection)
 #
 # Uso:  bash bringupNAVREAL.sh [nombre_mapa]     (por defecto el .yaml mas reciente de ~/robocar/maps)
 # SEGURIDAD: primer arranque con RUEDAS AL AIRE. Parada: bash ~/robocar/scripts/estop.sh
@@ -31,15 +31,16 @@ run description ros2 launch robocar_description description.launch.py; sleep 2
 run rplidar ros2 run rplidar_ros rplidar_node --ros-args \
               -p serial_port:=/dev/serial0 -p serial_baudrate:=460800 \
               -p frame_id:=laser -p scan_mode:=Standard -p angle_compensate:=true
-# 3) sensores I2C + ultrasonidos/IR (contrato nav2: /us_* evitacion, /ir_range parada)
+# 3) sensores I2C: encoder (/wheel_speed) + IMU (/imu). ultrasonidos/IR retirados; obstaculos = solo lidar
 run encoder ros2 run robocar_pkg encoder_node
 run imu     ros2 run robocar_pkg accelerometer_node
+echo "  *** IMU calibrando el giroscopio: NO TOQUES NI MUEVAS EL ROBOT ~5s (si no, el laser girara) ***"
 sleep 2
 # 4) EKF -> /odometry/filtered + TF odom->base_link
 run ekf ros2 launch robocar_pkg ekf.launch.py; sleep 3
 # 5) MAPA cartografiado -> /map (map_server, activado por lifecycle_manager_localization)
 run map_server /opt/ros/humble/lib/nav2_map_server/map_server --ros-args --params-file "$CFG" -p yaml_filename:="$MAPYAML"
-# 6) Nav2 + AMCL (controller saca /cmd_vel_raw; collision_monitor -> /cmd_vel)
+# 6) Nav2 + AMCL (controller publica /cmd_vel directo; sin collision_monitor)
 run planner    /opt/ros/humble/lib/nav2_planner/planner_server        --ros-args --params-file "$CFG"
 run controller /opt/ros/humble/lib/nav2_controller/controller_server  --ros-args --params-file "$CFG"
 run behavior   /opt/ros/humble/lib/nav2_behaviors/behavior_server     --ros-args --params-file "$CFG"
@@ -65,6 +66,7 @@ echo ""
 echo "======================================================================"
 echo " NAVEGACION REAL lista. Mapa: $MAP"
 echo "   1) Abre la web y fija la pose real del coche (2D Pose Estimate)."
+echo "      (el planner tarda ~1 min mas en precomputar; si el 1er destino no responde, reintenta)"
 echo "   2) RUEDAS AL AIRE en el primer arranque; velocidad limitada a 0.25 m/s."
 echo "   3) Parada de emergencia:  bash ~/robocar/scripts/estop.sh"
 echo "======================================================================"
