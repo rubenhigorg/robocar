@@ -30,7 +30,7 @@ run description ros2 launch robocar_description description.launch.py; sleep 2
 # 2) LIDAR real -> /scan
 run rplidar ros2 run rplidar_ros rplidar_node --ros-args \
               -p serial_port:=/dev/serial0 -p serial_baudrate:=460800 \
-              -p frame_id:=laser -p scan_mode:=Standard -p angle_compensate:=true
+              -p frame_id:=laser -p scan_mode:=Standard -p angle_compensate:=false
 # 3) sensores I2C: encoder (/wheel_speed) + IMU (/imu). ultrasonidos/IR retirados; obstaculos = solo lidar
 run encoder ros2 run robocar_pkg encoder_node
 run imu     ros2 run robocar_pkg accelerometer_node
