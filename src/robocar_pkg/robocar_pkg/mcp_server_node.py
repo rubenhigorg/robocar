@@ -52,6 +52,12 @@ class RobocarBridge(Node):
         self.declare_parameter('accept_timeout_s', ACCEPT_TIMEOUT_S)
         self.nav_timeout = float(self.get_parameter('nav_timeout_s').value)
         self.accept_timeout = float(self.get_parameter('accept_timeout_s').value)
+        # F2 (escritura controlada): estilo de conduccion + localizar en home
+        self.cfg_pub = self.create_publisher(String, '/nav_config/set', 10)
+        self.initpose_pub = self.create_publisher(PoseWithCovarianceStamped, '/initialpose', 10)
+        self.declare_parameter('home_x', 0.13)
+        self.declare_parameter('home_y', 0.56)
+        self.declare_parameter('home_yaw', 1.676)
         self.get_logger().info('mcp_server listo (tools MCP en :8090)')
 
     def _areas_cb(self, msg):
@@ -167,11 +173,48 @@ class RobocarBridge(Node):
             gh.cancel_goal_async()
         self.cancel_pub.publish(Empty())   # tambien goals lanzados desde la web
 
+    def set_nav_config(self, changes):
+        self.cfg_pub.publish(String(data=json.dumps(changes)))
+
+    def find_home_zone(self):
+        HOME = ('casa', 'home', 'base', 'dock')
+        with self.lock:
+            for a in self.areas:
+                if a['name'] in HOME:
+                    return a
+        return None
+
+    def localize_home(self):
+        import math
+        hx = float(self.get_parameter('home_x').value)
+        hy = float(self.get_parameter('home_y').value)
+        hyaw = float(self.get_parameter('home_yaw').value)
+        msg = PoseWithCovarianceStamped()
+        msg.header.frame_id = 'map'
+        msg.header.stamp = self.get_clock().now().to_msg()
+        msg.pose.pose.position.x = hx
+        msg.pose.pose.position.y = hy
+        msg.pose.pose.orientation.z = math.sin(hyaw / 2.0)
+        msg.pose.pose.orientation.w = math.cos(hyaw / 2.0)
+        cov = [0.0] * 36
+        cov[0] = 0.25; cov[7] = 0.25; cov[35] = 0.068
+        msg.pose.covariance = cov
+        self.initpose_pub.publish(msg)
+        return {'x': round(hx, 3), 'y': round(hy, 3), 'yaw_deg': round(math.degrees(hyaw), 1)}
+
 
 # ---------- tools MCP ----------
 
 mcp = FastMCP('robocar')
 bridge = None  # se asigna en main()
+
+STYLES = {
+    'lento':   {'velocidad': 0.15, 'velocidad_min_curva': 0.10, 'tolerancia_objetivo': 0.20},
+    'normal':  {'velocidad': 0.30, 'velocidad_min_curva': 0.15, 'tolerancia_objetivo': 0.25},
+    'rapido':  {'velocidad': 0.45, 'velocidad_min_curva': 0.20, 'tolerancia_objetivo': 0.30},
+    'preciso': {'velocidad': 0.15, 'velocidad_min_curva': 0.10, 'tolerancia_objetivo': 0.10,
+                'suavidad': 0.40, 'margen_seguridad': 0.20},
+}
 
 
 @mcp.tool()
@@ -244,6 +287,44 @@ def get_situation() -> dict:
         'pose': snap['pose'],
         'navegando_hacia': snap['navigating_to'],
     }
+
+
+@mcp.tool()
+def set_driving_style(estilo: str) -> dict:
+    """Ajusta el ESTILO de conduccion (velocidad y prudencia). Estilos: "lento" (0.15 m/s, seguro),
+    "normal" (0.30), "rapido" (0.45), "preciso" (lento y ce\u00f1ido, para maniobras finas). En caliente
+    (no reinicia la navegacion). Devuelve OK con lo aplicado, o UNKNOWN_STYLE con la lista."""
+    est = str(estilo).strip().lower()
+    if est not in STYLES:
+        return {'result': 'UNKNOWN_STYLE', 'estilos_validos': list(STYLES.keys())}
+    bridge.set_nav_config(STYLES[est])
+    return {'result': 'OK', 'estilo': est, 'aplicado': STYLES[est]}
+
+
+@mcp.tool()
+def go_home() -> dict:
+    """Lleva el robot a su base (zona etiquetada casa/home/base/dock). Como navigate_to pero al punto
+    de inicio. Devuelve ARRIVED/BLOCKED/... o NO_HOME si no hay zona de base definida (etiquetala en la web)."""
+    problem = bridge.health_problem()
+    if problem:
+        return {'result': 'UNHEALTHY', 'detalle': problem}
+    snap = bridge.snapshot()
+    if snap['navigating_to']:
+        return {'result': 'BLOCKED', 'detalle': 'ya hay una navegacion en curso hacia "%s"' % snap['navigating_to']}
+    area = bridge.find_home_zone()
+    if area is None:
+        return {'result': 'NO_HOME', 'detalle': 'no hay zona de base (casa/home/base/dock) etiquetada en el mapa'}
+    return bridge.navigate_blocking(area['name'], area['goal'][0], area['goal'][1])
+
+
+@mcp.tool()
+def localize_at_home() -> dict:
+    """Fija la localizacion del robot en su punto de inicio CONOCIDO (home) del mapa. Usar SOLO si el
+    robot esta fisicamente en ese punto. Util en NAV_REAL para localizar sin la web. Devuelve la pose
+    fijada; despues conviene mover un poco el robot para que AMCL converja."""
+    p = bridge.localize_home()
+    return {'result': 'OK', 'pose_fijada': p,
+            'nota': 'verifica que el laser cuadra con el mapa; si no, corrige la pose desde la web'}
 
 
 def main():
