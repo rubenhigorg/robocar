@@ -45,6 +45,8 @@ class RobocarBridge(Node):
         self.goal_handle = None
         qos = QoSProfile(depth=1); qos.durability = QoSDurabilityPolicy.TRANSIENT_LOCAL
         self.create_subscription(String, '/map_areas', self._areas_cb, qos)
+        self.nav_config = None
+        self.create_subscription(String, '/nav_config', self._nav_config_cb, qos)
         self.create_subscription(String, '/robocar/health', self._health_cb, 10)
         self.create_subscription(PoseWithCovarianceStamped, '/amcl_pose', self._pose_cb, 10)
         self.cancel_pub = self.create_publisher(Empty, '/nav2_relay/cancel', 10)
@@ -80,6 +82,18 @@ class RobocarBridge(Node):
             return
         with self.lock:
             self.areas = areas
+
+    def _nav_config_cb(self, msg):
+        try:
+            cfg = json.loads(msg.data)
+        except Exception:
+            return
+        with self.lock:
+            self.nav_config = cfg
+
+    def nav_params(self):
+        with self.lock:
+            return json.loads(json.dumps(self.nav_config)) if self.nav_config else None
 
     def _health_cb(self, msg):
         try:
@@ -492,6 +506,58 @@ def describe_surroundings() -> dict:
     if s is None:
         return {'result': 'SIN_DATOS', 'detalle': 'el laser (/scan) no publica aqui'}
     return dict(result='OK', **s)
+
+
+@mcp.tool()
+def list_nav_params() -> dict:
+    """Lista los parametros de navegacion ajustables (los mismos que la web): clave, etiqueta,
+    rango [min,max] o tipo bool, unidad, valor actual, si requiere reinicio de Nav2, y que hace.
+    Usa las claves con set_nav_param. SIN_DATOS si /nav_config no publica (sin entorno Nav2)."""
+    cfg = bridge.nav_params()
+    if not cfg:
+        return {'result': 'SIN_DATOS', 'detalle': '/nav_config no publica (arranca BANCO o NAV_REAL)'}
+    out = []
+    for pr in cfg.get('params', []):
+        it = {'clave': pr['key'], 'etiqueta': pr.get('label'), 'unidad': pr.get('unit', ''),
+              'valor': pr.get('value'), 'reinicio': bool(pr.get('restart')), 'desc': pr.get('desc', '')}
+        if pr.get('type') == 'bool':
+            it['tipo'] = 'bool'
+        else:
+            it['min'] = pr.get('min'); it['max'] = pr.get('max')
+        out.append(it)
+    return {'result': 'OK', 'parametros': out}
+
+
+@mcp.tool()
+def set_nav_param(clave: str, valor: float, confirmar: bool = False) -> dict:
+    """Ajusta UN parametro de navegacion por su clave (ver list_nav_params). Para booleanos pasa
+    1 o 0. Clampa al rango permitido. UNKNOWN_PARAM si la clave no existe. Los parametros marcados
+    'reinicio' (marcha_atras, radio_giro_min) REINICIAN Nav2 ~15s: requieren confirmar=true."""
+    cfg = bridge.nav_params()
+    if not cfg:
+        return {'result': 'SIN_DATOS', 'detalle': '/nav_config no publica (arranca BANCO o NAV_REAL)'}
+    key = str(clave).strip()
+    pr = next((x for x in cfg.get('params', []) if x['key'] == key), None)
+    if pr is None:
+        return {'result': 'UNKNOWN_PARAM', 'claves_validas': [x['key'] for x in cfg.get('params', [])]}
+    if pr.get('restart') and not confirmar:
+        return {'result': 'PENDING_CONFIRM', 'detalle': 'cambiar %s REINICIA Nav2 (~15s). Avisa al usuario y vuelve con confirmar=true' % key}
+    clamped = False
+    if pr.get('type') == 'bool':
+        v = bool(valor)
+    else:
+        v = float(valor)
+        lo, hi = pr.get('min'), pr.get('max')
+        if lo is not None and v < lo: v = lo; clamped = True
+        if hi is not None and v > hi: v = hi; clamped = True
+    bridge.log_action('set_nav_param %s=%s' % (key, v))
+    bridge.set_nav_config({key: v})
+    r = {'result': 'OK', 'clave': key, 'valor_aplicado': v}
+    if clamped:
+        r['nota'] = 'valor ajustado al rango permitido [%s, %s]' % (pr.get('min'), pr.get('max'))
+    if pr.get('restart'):
+        r['reinicio'] = 'Nav2 reiniciando ~15s; reenvia el destino cuando vuelva'
+    return r
 
 
 def main():
