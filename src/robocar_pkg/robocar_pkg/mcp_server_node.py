@@ -22,7 +22,7 @@ from rclpy.node import Node
 from rclpy.action import ActionClient
 from rclpy.qos import QoSProfile, QoSDurabilityPolicy
 from nav2_msgs.action import NavigateToPose
-from geometry_msgs.msg import PoseStamped, PoseWithCovarianceStamped
+from geometry_msgs.msg import PoseStamped, PoseWithCovarianceStamped, Twist
 from std_msgs.msg import String, Empty
 from fastmcp import FastMCP
 
@@ -55,6 +55,7 @@ class RobocarBridge(Node):
         # F2 (escritura controlada): estilo de conduccion + localizar en home
         self.cfg_pub = self.create_publisher(String, '/nav_config/set', 10)
         self.initpose_pub = self.create_publisher(PoseWithCovarianceStamped, '/initialpose', 10)
+        self.cmd_pub = self.create_publisher(Twist, '/cmd_vel', 10)  # F4: SOLO para parada dura (cero)
         self.declare_parameter('home_x', 0.13)
         self.declare_parameter('home_y', 0.56)
         self.declare_parameter('home_yaw', 1.676)
@@ -202,6 +203,21 @@ class RobocarBridge(Node):
         self.initpose_pub.publish(msg)
         return {'x': round(hx, 3), 'y': round(hy, 3), 'yaw_deg': round(math.degrees(hyaw), 1)}
 
+    def current_scenario(self):
+        with self.lock:
+            h = self.health
+        return (h or {}).get('scenario')
+
+    def log_action(self, action):
+        self.get_logger().info('ACCION MCP: %s' % action)
+
+    def hard_stop(self):
+        import time as _t
+        self.cancel_all()            # cancela el goal (web incluida)
+        z = Twist()
+        for _ in range(10):          # fuerza velocidad cero ~0.5 s
+            self.cmd_pub.publish(z); _t.sleep(0.05)
+
 
 # ---------- tools MCP ----------
 
@@ -218,14 +234,14 @@ STYLES = {
 
 
 @mcp.tool()
-def navigate_to(lugar: str) -> dict:
+def navigate_to(lugar: str, confirmar: bool = False) -> dict:
     """Lleva el robot a un lugar etiquetado del mapa (p. ej. "cocina"). Usa nombres de
     list_known_places; NUNCA inventes lugares. La navegacion tarda decenas de segundos y esta
     llamada espera al resultado. Devuelve result: ARRIVED (llegue), BLOCKED (no pude llegar:
     NO reintentes a ciegas, informa al usuario), CANCELLED, TIMEOUT, UNKNOWN_PLACE (con la
     lista de lugares validos), UNHEALTHY (el sistema no esta listo; di que falla) o
     NAV_UNAVAILABLE. El robot es tipo coche (Ackermann): no gira sobre si mismo y en sitios
-    estrechos maniobra en 3 puntos (k-turn); eso es normal, no un fallo."""
+    estrechos maniobra en 3 puntos (k-turn); eso es normal, no un fallo. En NAV_REAL (coche real) requiere confirmar=true (avisa antes al usuario); en BANCO no hace falta."""
     problem = bridge.health_problem()
     if problem:
         return {'result': 'UNHEALTHY', 'detalle': problem}
@@ -239,6 +255,10 @@ def navigate_to(lugar: str) -> dict:
     if area is None:
         return {'result': 'UNKNOWN_PLACE',
                 'lugares_conocidos': [a['name'] for a in snap['areas']]}
+    if bridge.current_scenario() == 'NAV_REAL' and not confirmar:
+        return {'result': 'PENDING_CONFIRM',
+                'detalle': 'esto MOVERA el coche real hacia "%s". Avisa al usuario y vuelve a llamar con confirmar=true' % name}
+    bridge.log_action('navigate_to %s (confirmar=%s)' % (name, confirmar))
     return bridge.navigate_blocking(name, area['goal'][0], area['goal'][1])
 
 
@@ -266,6 +286,7 @@ def list_known_places() -> dict:
 def stop_navigation() -> dict:
     """Detiene INMEDIATAMENTE la navegacion en curso (tambien si se lanzo desde la web).
     Siempre segura de llamar, aunque el robot este parado."""
+    bridge.log_action('stop_navigation')
     bridge.cancel_all()
     return {'result': 'STOPPED'}
 
@@ -297,14 +318,15 @@ def set_driving_style(estilo: str) -> dict:
     est = str(estilo).strip().lower()
     if est not in STYLES:
         return {'result': 'UNKNOWN_STYLE', 'estilos_validos': list(STYLES.keys())}
+    bridge.log_action('set_driving_style %s' % est)
     bridge.set_nav_config(STYLES[est])
     return {'result': 'OK', 'estilo': est, 'aplicado': STYLES[est]}
 
 
 @mcp.tool()
-def go_home() -> dict:
+def go_home(confirmar: bool = False) -> dict:
     """Lleva el robot a su base (zona etiquetada casa/home/base/dock). Como navigate_to pero al punto
-    de inicio. Devuelve ARRIVED/BLOCKED/... o NO_HOME si no hay zona de base definida (etiquetala en la web)."""
+    de inicio. Devuelve ARRIVED/BLOCKED/... o NO_HOME si no hay zona de base definida (etiquetala en la web). En NAV_REAL requiere confirmar=true."""
     problem = bridge.health_problem()
     if problem:
         return {'result': 'UNHEALTHY', 'detalle': problem}
@@ -314,6 +336,10 @@ def go_home() -> dict:
     area = bridge.find_home_zone()
     if area is None:
         return {'result': 'NO_HOME', 'detalle': 'no hay zona de base (casa/home/base/dock) etiquetada en el mapa'}
+    if bridge.current_scenario() == 'NAV_REAL' and not confirmar:
+        return {'result': 'PENDING_CONFIRM',
+                'detalle': 'esto MOVERA el coche real a la base "%s". Avisa al usuario y vuelve con confirmar=true' % area['name']}
+    bridge.log_action('go_home %s (confirmar=%s)' % (area['name'], confirmar))
     return bridge.navigate_blocking(area['name'], area['goal'][0], area['goal'][1])
 
 
@@ -322,9 +348,20 @@ def localize_at_home() -> dict:
     """Fija la localizacion del robot en su punto de inicio CONOCIDO (home) del mapa. Usar SOLO si el
     robot esta fisicamente en ese punto. Util en NAV_REAL para localizar sin la web. Devuelve la pose
     fijada; despues conviene mover un poco el robot para que AMCL converja."""
+    bridge.log_action('localize_at_home')
     p = bridge.localize_home()
     return {'result': 'OK', 'pose_fijada': p,
             'nota': 'verifica que el laser cuadra con el mapa; si no, corrige la pose desde la web'}
+
+
+@mcp.tool()
+def emergency_stop() -> dict:
+    """PARADA DE EMERGENCIA: cancela la navegacion en curso Y fuerza al robot a detenerse en el
+    acto (velocidad cero directa). Mas contundente que stop_navigation. Siempre segura de llamar,
+    aunque el robot este parado. Usala si algo va mal o el usuario dice para/stop/emergencia."""
+    bridge.log_action('EMERGENCY_STOP')
+    bridge.hard_stop()
+    return {'result': 'EMERGENCY_STOPPED'}
 
 
 def main():
