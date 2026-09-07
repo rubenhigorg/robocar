@@ -26,7 +26,7 @@ from geometry_msgs.msg import PoseStamped, PoseWithCovarianceStamped
 from std_msgs.msg import String, Empty
 from fastmcp import FastMCP
 
-NAV_TIMEOUT_S = 120.0     # tope de espera de una navegacion (banco: sobra; real: revisar)
+NAV_TIMEOUT_S = 300.0     # default (parametrizable nav_timeout_s); real con maniobras 3-puntos = largo
 ACCEPT_TIMEOUT_S = 5.0    # tope para que Nav2 acepte el goal
 
 
@@ -48,6 +48,10 @@ class RobocarBridge(Node):
         self.create_subscription(PoseWithCovarianceStamped, '/amcl_pose', self._pose_cb, 10)
         self.cancel_pub = self.create_publisher(Empty, '/nav2_relay/cancel', 10)
         self.ac = ActionClient(self, NavigateToPose, '/navigate_to_pose')
+        self.declare_parameter('nav_timeout_s', NAV_TIMEOUT_S)
+        self.declare_parameter('accept_timeout_s', ACCEPT_TIMEOUT_S)
+        self.nav_timeout = float(self.get_parameter('nav_timeout_s').value)
+        self.accept_timeout = float(self.get_parameter('accept_timeout_s').value)
         self.get_logger().info('mcp_server listo (tools MCP en :8090)')
 
     def _areas_cb(self, msg):
@@ -94,6 +98,11 @@ class RobocarBridge(Node):
             return 'sin datos de salud (robocar_health no publica); no se si el sistema esta listo'
         if h.get('scenario') not in ('BANCO', 'NAV_REAL'):
             return 'entorno %s activo: no hay pila de navegacion (hace falta BANCO o NAV_REAL)' % h.get('scenario')
+        if h.get('scenario') == 'NAV_REAL':
+            with self.lock:
+                localizado = self.pose is not None
+            if not localizado:
+                return 'no localizado: AMCL sin pose. Fija la pose del robot desde la web (pista) antes de navegar'
         if not h.get('ok'):
             fails = '; '.join('%s (%s)' % (c['label'], c['info'])
                               for c in h.get('checks', []) if not c['ok']) or h.get('summary', '')
@@ -109,7 +118,7 @@ class RobocarBridge(Node):
         goal.pose.pose.position.x = float(gx)
         goal.pose.pose.position.y = float(gy)
         goal.pose.pose.orientation.w = 1.0
-        if not self.ac.wait_for_server(timeout_sec=ACCEPT_TIMEOUT_S):
+        if not self.ac.wait_for_server(timeout_sec=self.accept_timeout):
             return {'result': 'NAV_UNAVAILABLE', 'detalle': 'Nav2 no responde (accion /navigate_to_pose)'}
         done = threading.Event()
         outcome = {}
@@ -131,7 +140,7 @@ class RobocarBridge(Node):
         with self.lock:
             self.navigating_to = name
         self.ac.send_goal_async(goal).add_done_callback(on_accepted)
-        finished = done.wait(NAV_TIMEOUT_S)
+        finished = done.wait(self.nav_timeout)
         with self.lock:
             gh = self.goal_handle
             self.goal_handle = None
@@ -140,7 +149,7 @@ class RobocarBridge(Node):
             if gh is not None:
                 gh.cancel_goal_async()
             return {'result': 'TIMEOUT',
-                    'detalle': 'sin resultado en %.0f s; navegacion cancelada' % NAV_TIMEOUT_S}
+                    'detalle': 'sin resultado en %.0f s; navegacion cancelada' % self.nav_timeout}
         st = outcome.get('status')
         if st == 4:
             return {'result': 'ARRIVED'}

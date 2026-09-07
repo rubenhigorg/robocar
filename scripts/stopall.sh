@@ -21,7 +21,7 @@ LAUNCHER="robocar_launcher.py"
 SELF_PGID=$(ps -o pgid= -p $$ | tr -d ' ')
 
 # procesos ROS/robocar por los que localizar sus GRUPOS de proceso
-ROSPAT='/opt/ros/|robocar/src|robocar_pkg|rosbridge_server|rosapi|rplidar|nav2_|cartographer|rf2o|/ekf|amcl|robot_state_publisher|robocar_slam|robocar_description|map_server|lifecycle_manager|collision_monitor|sim_motion|sim_sensors|sim_map|goal_relay|nav_config|map_areas|particle_relay|slam_checkpoint|map_edit|sim_map_loader|robocar_health|trajectory_nav|encoder_node|accelerometer_node|car_control|steer_yaw|odom_cov|wheel_twist'
+ROSPAT='/opt/ros/|robocar/src|robocar_pkg|rosbridge_server|rosapi|rplidar|nav2_|cartographer|rf2o|/ekf|amcl|robot_state_publisher|robocar_slam|robocar_description|map_server|lifecycle_manager|collision_monitor|sim_motion|sim_sensors|sim_map|goal_relay|nav_config|map_areas|particle_relay|slam_checkpoint|map_edit|sim_map_loader|robocar_health|trajectory_nav|encoder_node|accelerometer_node|car_control|steer_yaw|odom_cov|wheel_twist|mcp_server'
 
 collect_pgids(){
   ps -eo pgid,args | grep -E "$ROSPAT" | grep -vE "grep|$LAUNCHER|_ros2_daemon|ros2 daemon" \
@@ -42,7 +42,7 @@ for n in rosbridge_websocket rosapi_node rplidar_node cartographer_node cartogra
          steer_yaw_node odom_cov_node wheel_twistcov_node robot_state_publisher \
          sim_motion_node sim_sensors_node sim_map_grid_node sim_map_loader_node trajectory_nav_node \
          goal_relay_node nav_config_node map_areas_node particle_relay_node slam_checkpoint_node \
-         map_edit_node robocar_health_node "ros2 launch rosbridge" "ros2 launch robocar"; do
+         map_edit_node robocar_health_node mcp_server_node "ros2 launch rosbridge" "ros2 launch robocar"; do
   pkill -9 -f "$n" 2>/dev/null
 done
 sleep 1
