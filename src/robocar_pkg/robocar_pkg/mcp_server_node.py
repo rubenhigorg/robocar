@@ -20,10 +20,11 @@ import threading
 import rclpy
 from rclpy.node import Node
 from rclpy.action import ActionClient
-from rclpy.qos import QoSProfile, QoSDurabilityPolicy
-from nav2_msgs.action import NavigateToPose
+from rclpy.qos import QoSProfile, QoSDurabilityPolicy, qos_profile_sensor_data
+from nav2_msgs.action import NavigateToPose, ComputePathToPose
 from geometry_msgs.msg import PoseStamped, PoseWithCovarianceStamped, Twist
 from std_msgs.msg import String, Empty
+from sensor_msgs.msg import LaserScan
 from fastmcp import FastMCP
 
 NAV_TIMEOUT_S = 300.0     # default (parametrizable nav_timeout_s); real con maniobras 3-puntos = largo
@@ -56,6 +57,17 @@ class RobocarBridge(Node):
         self.cfg_pub = self.create_publisher(String, '/nav_config/set', 10)
         self.initpose_pub = self.create_publisher(PoseWithCovarianceStamped, '/initialpose', 10)
         self.cmd_pub = self.create_publisher(Twist, '/cmd_vel', 10)  # F4: SOLO para parada dura (cero)
+        # F1 (lectura): energia, laser, feedback de nav, planner para distancia
+        self.energy = None
+        self.scan = None
+        self.nav_distance = None
+        try:
+            from messages_pkg.msg import Energy
+            self.create_subscription(Energy, '/energy', self._energy_cb, 10)
+        except Exception:
+            self.get_logger().warn('messages_pkg/Energy no disponible; get_battery dara SIN_DATOS')
+        self.create_subscription(LaserScan, '/scan', self._scan_cb, qos_profile_sensor_data)
+        self.planner_ac = ActionClient(self, ComputePathToPose, '/compute_path_to_pose')
         self.declare_parameter('home_x', 0.13)
         self.declare_parameter('home_y', 0.56)
         self.declare_parameter('home_yaw', 1.676)
@@ -146,7 +158,8 @@ class RobocarBridge(Node):
 
         with self.lock:
             self.navigating_to = name
-        self.ac.send_goal_async(goal).add_done_callback(on_accepted)
+            self.nav_distance = None
+        self.ac.send_goal_async(goal, feedback_callback=self._nav_feedback).add_done_callback(on_accepted)
         finished = done.wait(self.nav_timeout)
         with self.lock:
             gh = self.goal_handle
@@ -218,6 +231,72 @@ class RobocarBridge(Node):
         for _ in range(10):          # fuerza velocidad cero ~0.5 s
             self.cmd_pub.publish(z); _t.sleep(0.05)
 
+    def _energy_cb(self, msg):
+        with self.lock:
+            self.energy = {'bateria_1_V': round(msg.voltage_battery_1, 2),
+                           'bateria_2_V': round(msg.voltage_battery_2, 2),
+                           'bateria_3_V': round(msg.voltage_battery_3, 2),
+                           'corriente_A': round(msg.current, 2)}
+
+    def _scan_cb(self, msg):
+        self.scan = msg
+
+    def _nav_feedback(self, fb):
+        try:
+            self.nav_distance = round(fb.feedback.distance_remaining, 2)
+        except Exception:
+            pass
+
+    def surroundings(self):
+        import math
+        sc = self.scan
+        if sc is None:
+            return None
+        sect = {'frente': [], 'izquierda': [], 'atras': [], 'derecha': []}
+        for i, r in enumerate(sc.ranges):
+            if r is None or r <= 0.0 or math.isinf(r) or math.isnan(r) or r < sc.range_min:
+                continue
+            ang = math.degrees(sc.angle_min + i * sc.angle_increment)
+            a = (ang + 180.0) % 360.0 - 180.0
+            if -30 <= a <= 30: sect['frente'].append(r)
+            elif 60 <= a <= 120: sect['izquierda'].append(r)
+            elif a >= 150 or a <= -150: sect['atras'].append(r)
+            elif -120 <= a <= -60: sect['derecha'].append(r)
+        return {k + '_min_m': (round(min(v), 2) if v else None) for k, v in sect.items()}
+
+    def compute_distance(self, gx, gy):
+        import threading, math
+        if not self.planner_ac.wait_for_server(timeout_sec=self.accept_timeout):
+            return None
+        goal = ComputePathToPose.Goal()
+        goal.goal = PoseStamped()
+        goal.goal.header.frame_id = 'map'
+        goal.goal.pose.position.x = float(gx)
+        goal.goal.pose.position.y = float(gy)
+        goal.goal.pose.orientation.w = 1.0
+        goal.use_start = False
+        done = threading.Event(); res = {}
+        def on_res(fut):
+            try: res['path'] = fut.result().result.path
+            except Exception: res['path'] = None
+            done.set()
+        def on_acc(fut):
+            gh = fut.result()
+            if not gh.accepted:
+                done.set(); return
+            gh.get_result_async().add_done_callback(on_res)
+        self.planner_ac.send_goal_async(goal).add_done_callback(on_acc)
+        if not done.wait(10.0):
+            return None
+        path = res.get('path')
+        if not path or not path.poses:
+            return None
+        d = 0.0; ps = path.poses
+        for i in range(1, len(ps)):
+            d += math.hypot(ps[i].pose.position.x - ps[i-1].pose.position.x,
+                            ps[i].pose.position.y - ps[i-1].pose.position.y)
+        return round(d, 2)
+
 
 # ---------- tools MCP ----------
 
@@ -234,7 +313,7 @@ STYLES = {
 
 
 @mcp.tool()
-def navigate_to(lugar: str, confirmar: bool = False) -> dict:
+def navigate_to(lugar: str, confirmar: bool = False, esperar: bool = True) -> dict:
     """Lleva el robot a un lugar etiquetado del mapa (p. ej. "cocina"). Usa nombres de
     list_known_places; NUNCA inventes lugares. La navegacion tarda decenas de segundos y esta
     llamada espera al resultado. Devuelve result: ARRIVED (llegue), BLOCKED (no pude llegar:
@@ -258,7 +337,12 @@ def navigate_to(lugar: str, confirmar: bool = False) -> dict:
     if bridge.current_scenario() == 'NAV_REAL' and not confirmar:
         return {'result': 'PENDING_CONFIRM',
                 'detalle': 'esto MOVERA el coche real hacia "%s". Avisa al usuario y vuelve a llamar con confirmar=true' % name}
-    bridge.log_action('navigate_to %s (confirmar=%s)' % (name, confirmar))
+    bridge.log_action('navigate_to %s (confirmar=%s, esperar=%s)' % (name, confirmar, esperar))
+    if not esperar:
+        import threading
+        threading.Thread(target=lambda: bridge.navigate_blocking(name, area['goal'][0], area['goal'][1]),
+                         daemon=True).start()
+        return {'result': 'EN_CURSO', 'hacia': name, 'detalle': 'navegando; consulta get_nav_status / stop_navigation'}
     return bridge.navigate_blocking(name, area['goal'][0], area['goal'][1])
 
 
@@ -362,6 +446,52 @@ def emergency_stop() -> dict:
     bridge.log_action('EMERGENCY_STOP')
     bridge.hard_stop()
     return {'result': 'EMERGENCY_STOPPED'}
+
+
+@mcp.tool()
+def get_battery() -> dict:
+    """Estado de energia: tensiones de las 3 baterias (V) y corriente (A). Util para decidir si hay
+    bateria para una tarea. SIN_DATOS si el sensor de energia (/energy) no publica en este entorno."""
+    with bridge.lock:
+        e = dict(bridge.energy) if bridge.energy else None
+    if e is None:
+        return {'result': 'SIN_DATOS', 'detalle': 'el sensor de energia (/energy) no publica aqui'}
+    return dict(result='OK', **e)
+
+
+@mcp.tool()
+def get_nav_status() -> dict:
+    """Estado de la navegacion en curso: si esta navegando, hacia donde y distancia restante (m).
+    Pensada para usar tras navigate_to(esperar=false) y seguir el progreso."""
+    snap = bridge.snapshot()
+    return {'navegando': snap['navigating_to'] is not None, 'hacia': snap['navigating_to'],
+            'distancia_restante_m': bridge.nav_distance}
+
+
+@mcp.tool()
+def distance_to(lugar: str) -> dict:
+    """Distancia por RUTA (m) y tiempo estimado (s) hasta un lugar etiquetado, SIN mover el robot
+    (planifica y mide). UNKNOWN_PLACE si no existe; NO_PATH si no hay ruta posible."""
+    name = str(lugar).strip().lower()
+    snap = bridge.snapshot()
+    area = next((a for a in snap['areas'] if a['name'] == name), None)
+    if area is None:
+        return {'result': 'UNKNOWN_PLACE', 'lugares_conocidos': [a['name'] for a in snap['areas']]}
+    d = bridge.compute_distance(area['goal'][0], area['goal'][1])
+    if d is None:
+        return {'result': 'NO_PATH', 'detalle': 'no se pudo planificar una ruta al lugar'}
+    vel = 0.25
+    return {'result': 'OK', 'lugar': name, 'distancia_m': d, 'eta_s': round(d / vel, 1)}
+
+
+@mcp.tool()
+def describe_surroundings() -> dict:
+    """Obstaculos alrededor del robot (del laser): distancia minima (m) por sector -- frente,
+    izquierda, derecha, atras. null en un sector = despejado. SIN_DATOS si el laser no publica."""
+    s = bridge.surroundings()
+    if s is None:
+        return {'result': 'SIN_DATOS', 'detalle': 'el laser (/scan) no publica aqui'}
+    return dict(result='OK', **s)
 
 
 def main():
